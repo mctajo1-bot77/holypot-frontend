@@ -9,4 +9,8 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  preview: {
+    host: true,                    // permite acceso externo (Render domain)
+    port: process.env.PORT || 4173 // usa $PORT Render o 4173 local
+  }
 })
