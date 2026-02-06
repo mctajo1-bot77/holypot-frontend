@@ -10,12 +10,12 @@ export default defineConfig({
     },
   },
   preview: {
-    host: true,                    // permite acceso externo (Render domain)
-    port: process.env.PORT || 4173 // usa $PORT Render o 4173 local
-    preview: {
-  host: true,
-  port: process.env.PORT || 4173,
-  allowedHosts: ['holypot-landing.onrender.com', 'localhost']
-}
+    host: true,                                      // acceso externo
+    port: process.env.PORT || 4173,                   // puerto Render o local
+    allowedHosts: [                                   // permite estos hosts
+      'holypot-landing.onrender.com',
+      'localhost',
+      '.onrender.com'                                 // wildcard para todos subdominios Render (pro)
+    ]
   }
 })
