@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Card, Button } from "@/components/ui/card";  // ← Agregado Button aquí (Card ya estaba)
+import { Card } from "@/components/ui/card";           // ← Card solo
+import { Button } from "@/components/ui/button";         // ← Button separado
 import { Trophy } from "lucide-react";
-import { Link } from "react-router-dom";  // ← Nuevo import para navegación
-import logo from "@/assets/Holypot-logo.webp";  // ← TU LOGO LOCAL .WEBP (guárdalo en src/assets)
+import { Link } from "react-router-dom";                 // ← Para navegación
+import logo from "@/assets/Holypot-logo.webp";
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -66,7 +67,7 @@ const LandingHeaderWinners = () => {
             alt="Holypot Logo" 
             className="h-32 w-32 object-contain drop-shadow-2xl animate-float"
             onError={(e) => {
-              e.target.src = "https://via.placeholder.com/128/0A0A0A/FFFFFF?text=Holypot"; // fallback oscuro
+              e.target.src = "https://via.placeholder.com/128/0A0A0A/FFFFFF?text=Holypot";
             }}
           />
           <div className="absolute -inset-8 rounded-full bg-holy/20 blur-3xl animate-pulse-slow-halo" />
