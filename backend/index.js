@@ -189,6 +189,23 @@ function authenticateAdmin(req, res, next) {
   });
 }
 
+// NUEVO ENDPOINT /api/me – VALIDA COOKIE Y DEVUELVE INFO USER
+app.get('/api/me', authenticateToken, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: { id: true, email: true, nickname: true, walletAddress: true }
+    });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    // Para admin, si el token tiene role: 'admin', podemos agregarlo (opcional)
+    const isAdmin = req.user.role === 'admin';
+    res.json({ user: { ...user, role: isAdmin ? 'admin' : 'user' } });
+  } catch (error) {
+    console.error('Error /api/me:', error);
+    res.status(500).json({ error: "Error interno" });
+  }
+});
+
 async function emitLiveData() {
   try {
     const entries = await prisma.entry.findMany({
