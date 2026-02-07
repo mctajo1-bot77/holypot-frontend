@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import LandingHeaderWinners from '../components/LandingHeaderWinners';
 import background from "@/assets/background.jpg";
 import { useNavigate } from 'react-router-dom';
+import { X } from "lucide-react";
 
 const API_BASE = 'http://localhost:5000/api';
 const HCAPTCHA_SITEKEY = 'a0b26f92-ba34-47aa-be42-c936e488a6f4';
@@ -317,7 +318,7 @@ const LandingPage = () => {
               Estas reglas forman parte integrante de los Términos y Condiciones de Uso de Holypot Trading SAS y pueden ser modificadas con notificación previa.
             </p>
 
-            {/* BOTÓN VER REGLAS COMPLETAS – ESTILO QUE TE ENCANTÓ */}
+            {/* BOTÓN VER REGLAS COMPLETAS */}
             <div className="text-center mt-20">
               <Button 
                 onClick={() => navigate('/rules')}
@@ -348,13 +349,13 @@ const LandingPage = () => {
         </p>
       </footer>
 
-            {/* MODAL FORMULARIO - MEJORADO: SCROLL + CIERRE X + CLICK FUERA */}
+      {/* MODAL FORMULARIO - MEJORADO: SCROLL + CIERRE X + CLICK FUERA */}
       {showForm && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={() => setShowForm(false)} // cierre clic fuera
         >
-          <div 
+          <div
             className="bg-black/40 backdrop-blur-xl border border-borderSubtle rounded-3xl shadow-2xl p-10 max-w-lg w-full max-h-[90vh] overflow-y-auto relative"
             onClick={(e) => e.stopPropagation()} // evita cierre al clickear dentro
           >
@@ -370,6 +371,7 @@ const LandingPage = () => {
             <h2 className="text-4xl font-bold text-center mb-8 text-holy">
               Inscribirse en {selectedLevel.toUpperCase()}
             </h2>
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <Input type="email" placeholder="Email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
               <Input type="password" placeholder="Contraseña" required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
@@ -424,5 +426,8 @@ const LandingPage = () => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
 
 export default LandingPage;
