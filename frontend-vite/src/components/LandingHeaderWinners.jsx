@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Card } from "@/components/ui/card";
+import { Card, Button } from "@/components/ui/card";  // ← Agregado Button aquí (Card ya estaba)
 import { Trophy } from "lucide-react";
+import { Link } from "react-router-dom";  // ← Nuevo import para navegación
 import logo from "@/assets/Holypot-logo.webp";  // ← TU LOGO LOCAL .WEBP (guárdalo en src/assets)
 
 const API_BASE = 'http://localhost:5000/api';
@@ -48,7 +49,15 @@ const LandingHeaderWinners = () => {
   const formatNumber = (num) => new Intl.NumberFormat('es-ES').format(Math.round(num || 0));
 
   return (
-    <div className="flex items-center justify-between w-full max-w-7xl mx-auto px-6">
+    <div className="relative flex items-center justify-between w-full max-w-7xl mx-auto px-6">
+      {/* BOTÓN INICIAR SESIÓN - pequeño, arriba derecha */}
+      <Button
+        asChild
+        className="absolute top-4 right-6 text-sm py-2 px-6 bg-gradient-to-r from-holy to-purple-600 text-black font-bold rounded-full shadow-lg hover:scale-105 transition duration-300 z-10"
+      >
+        <Link to="/login">Iniciar Sesión</Link>
+      </Button>
+
       {/* IZQUIERDA: LOGO + TEXTO */}
       <div className="text-left flex items-center gap-8">
         <div className="relative">
