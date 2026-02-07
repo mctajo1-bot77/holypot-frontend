@@ -348,10 +348,25 @@ const LandingPage = () => {
         </p>
       </footer>
 
-      {/* MODAL FORMULARIO */}
+            {/* MODAL FORMULARIO - MEJORADO: SCROLL + CIERRE X + CLICK FUERA */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-black/40 backdrop-blur-xl border border-borderSubtle rounded-3xl shadow-2xl p-10 max-w-lg w-full">
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowForm(false)} // cierre clic fuera
+        >
+          <div 
+            className="bg-black/40 backdrop-blur-xl border border-borderSubtle rounded-3xl shadow-2xl p-10 max-w-lg w-full max-h-[90vh] overflow-y-auto relative"
+            onClick={(e) => e.stopPropagation()} // evita cierre al clickear dentro
+          >
+            {/* Botón cerrar X */}
+            <button
+              onClick={() => setShowForm(false)}
+              className="absolute top-4 right-4 text-white hover:text-gray-300 transition z-10"
+              aria-label="Cerrar formulario"
+            >
+              <X className="w-10 h-10" />
+            </button>
+
             <h2 className="text-4xl font-bold text-center mb-8 text-holy">
               Inscribirse en {selectedLevel.toUpperCase()}
             </h2>
@@ -409,8 +424,5 @@ const LandingPage = () => {
           </div>
         </div>
       )}
-    </div>
-  );
-};
 
 export default LandingPage;
