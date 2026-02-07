@@ -6,7 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import background from "@/assets/background.jpg";
 
-const API_BASE = 'http://localhost:5000/api';
+// URL dinámica: localhost en desarrollo, backend Render en producción
+const API_BASE = import.meta.env.DEV 
+  ? 'http://localhost:5000/api' 
+  : 'https://holypot-backend.onrender.com/api';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('admin@holypot.com');
@@ -18,18 +21,18 @@ const AdminLogin = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // withCredentials: true → recibe cookie HttpOnly del backend
       await axios.post(`${API_BASE}/admin-login`, { email, password }, { withCredentials: true });
       navigate('/admin', { replace: true });
     } catch (err) {
-      alert('Error login admin: ' + (err.response?.data?.error || err.message));
+      alert('Error login admin: ' + (err.response?.data?.error || err.message || 'Network Error'));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
     <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center">
-      {/* FONDO ESPACIO + OVERLAY DARK */}
+      {/* FONDO */}
       <div className="fixed inset-0 -z-10">
         <img 
           src={background} 
@@ -39,7 +42,7 @@ const AdminLogin = () => {
         <div className="absolute inset-0 bg-black/60" />
       </div>
 
-      {/* CARD CENTRAL GLASS FLOTANTE */}
+      {/* CARD CENTRAL */}
       <div className="relative group">
         <div className="absolute inset-0 bg-gradient-to-br from-holy/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition duration-700" />
         <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-10 max-w-md w-full hover:scale-105 transition-all duration-500">
