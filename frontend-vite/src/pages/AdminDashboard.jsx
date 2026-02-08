@@ -9,8 +9,17 @@ import { Badge } from "@/components/ui/badge";
 import { io } from "socket.io-client";
 import background from "@/assets/background.jpg";
 
-const API_BASE = 'http://localhost:5000/api';
-const socket = io('http://localhost:5000');
+const API_BASE = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api` 
+  : 'http://localhost:5000/api';
+
+const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+  transports: ['websocket', 'polling'],
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  timeout: 10000
+});
 
 const formatNumber = (num) => {
   return new Intl.NumberFormat('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num || 0);
