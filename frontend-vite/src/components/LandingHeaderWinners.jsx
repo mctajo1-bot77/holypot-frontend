@@ -6,7 +6,10 @@ import { Trophy } from "lucide-react";
 import { Link } from "react-router-dom";                 // ← Para navegación
 import logo from "@/assets/Holypot-logo.webp";
 
-const API_BASE = 'http://localhost:5000/api';
+// ✅ API_BASE DINÁMICA – funciona local y producción
+const API_BASE = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api` 
+  : 'http://localhost:5000/api';
 
 const LandingHeaderWinners = () => {
   const [winners, setWinners] = useState({ basic: [], medium: [], premium: [] });
