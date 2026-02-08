@@ -10,7 +10,11 @@ import background from "@/assets/background.jpg";
 import { useNavigate } from 'react-router-dom';
 import { X } from "lucide-react";
 
-const API_BASE = 'http://localhost:5000/api';
+// ✅ API_BASE DINÁMICA – funciona local y producción
+const API_BASE = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api` 
+  : 'http://localhost:5000/api';
+
 const HCAPTCHA_SITEKEY = 'a0b26f92-ba34-47aa-be42-c936e488a6f4';
 
 const LandingPage = () => {
@@ -111,9 +115,9 @@ const LandingPage = () => {
     <div className="min-h-screen text-white relative overflow-hidden">
       {/* FONDO */}
       <div className="fixed inset-0 -z-10">
-        <img 
-          src={background} 
-          alt="Fondo Holypot" 
+        <img
+          src={background}
+          alt="Fondo Holypot"
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-black/60" />
@@ -150,7 +154,7 @@ const LandingPage = () => {
                 <p className="text-3xl font-bold text-holy mb-8">
                   Prize pool: {formatNumber(competitions.basic?.prizePool || 0)} USDT
                 </p>
-                <Button 
+                <Button
                   onClick={() => openForm('basic')}
                   className="w-full bg-gradient-to-r from-profit to-green-600 text-black text-2xl py-6 font-bold rounded-full shadow-lg hover:shadow-profit/50 hover:scale-105 transition duration-300"
                 >
@@ -170,7 +174,7 @@ const LandingPage = () => {
                 <p className="text-3xl font-bold text-holy mb-8">
                   Prize pool: {formatNumber(competitions.medium?.prizePool || 0)} USDT
                 </p>
-                <Button 
+                <Button
                   onClick={() => openForm('medium')}
                   className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white text-2xl py-6 font-bold rounded-full shadow-lg hover:shadow-blue-500/50 hover:scale-105 transition duration-300"
                 >
@@ -190,7 +194,7 @@ const LandingPage = () => {
                 <p className="text-3xl font-bold text-holy mb-8">
                   Prize pool: {formatNumber(competitions.premium?.prizePool || 0)} USDT
                 </p>
-                <Button 
+                <Button
                   onClick={() => openForm('premium')}
                   className="w-full bg-gradient-to-r from-holy to-purple-600 text-black text-2xl py-6 font-bold rounded-full shadow-lg hover:shadow-holy/50 hover:scale-105 transition duration-300"
                 >
@@ -320,7 +324,7 @@ const LandingPage = () => {
 
             {/* BOTÓN VER REGLAS COMPLETAS */}
             <div className="text-center mt-20">
-              <Button 
+              <Button
                 onClick={() => navigate('/rules')}
                 className="bg-gradient-to-r from-holy to-purple-600 text-black text-2xl px-12 py-6 font-bold rounded-full shadow-lg hover:shadow-holy/50 hover:scale-105 transition duration-300"
               >
@@ -371,7 +375,6 @@ const LandingPage = () => {
             <h2 className="text-4xl font-bold text-center mb-8 text-holy">
               Inscribirse en {selectedLevel.toUpperCase()}
             </h2>
-
             <form onSubmit={handleSubmit} className="space-y-6">
               <Input type="email" placeholder="Email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
               <Input type="password" placeholder="Contraseña" required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
@@ -414,8 +417,8 @@ const LandingPage = () => {
                 <Button type="button" onClick={() => setShowForm(false)} className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-xl py-5 rounded-full">
                   Cancelar
                 </Button>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="flex-1 bg-gradient-to-r from-holy to-purple-600 text-black text-xl py-5 font-bold rounded-full hover:scale-105 transition"
                   disabled={!captchaToken}
                 >
