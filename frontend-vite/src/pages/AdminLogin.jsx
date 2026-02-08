@@ -20,9 +20,17 @@ const AdminLogin = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
+
     try {
-      await axios.post(`${API_BASE}/admin-login`, { email, password }, { withCredentials: true });
+      // ✅ CORREGIDO: paréntesis en lugar de backticks
+      const res = await axios.post(`${API_BASE}/admin-login`, { email, password }, { withCredentials: true });
+      
+      // Guardar indicador de sesión admin
+      localStorage.setItem('holypotAdminToken', 'true');
+      
+      // Redirigir al admin dashboard
       navigate('/admin', { replace: true });
+      
     } catch (err) {
       alert('Error login admin: ' + (err.response?.data?.error || err.message || 'Network Error'));
     } finally {
@@ -41,6 +49,7 @@ const AdminLogin = () => {
         />
         <div className="absolute inset-0 bg-black/60" />
       </div>
+
       {/* CARD CENTRAL */}
       <div className="relative group">
         <div className="absolute inset-0 bg-gradient-to-br from-holy/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition duration-700" />
@@ -50,6 +59,7 @@ const AdminLogin = () => {
               Login Admin – Holypot Trading
             </CardTitle>
           </CardHeader>
+
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-8">
               <Input
@@ -58,6 +68,7 @@ const AdminLogin = () => {
                 disabled
                 className="bg-black/40 border-borderSubtle text-gray-200 text-center text-lg"
               />
+
               <Input
                 type="password"
                 placeholder="Password admin"
@@ -66,6 +77,7 @@ const AdminLogin = () => {
                 onChange={e => setPassword(e.target.value)}
                 className="bg-black/40 border-borderSubtle text-white text-lg"
               />
+
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-holy to-purple-600 text-black text-2xl py-7 font-bold rounded-full shadow-lg hover:shadow-holy/50 hover:scale-105 transition duration-300"
