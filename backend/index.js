@@ -386,6 +386,11 @@ app.post('/api/admin-login', async (req, res) => {
   res.json({ success: true });
 });
 
+// GET para /api/admin-login (evita "Cannot GET" – mensaje informativo)
+app.get('/api/admin-login', (req, res) => {
+  res.status(405).json({ error: "Método GET no permitido – usa POST para login admin" });
+});
+
 // Webhook NowPayments + HMAC VERIFICATION
 app.post('/api/webhook-nowpayments', express.raw({type: 'application/json'}), async (req, res) => {
   const body = req.body.toString();
