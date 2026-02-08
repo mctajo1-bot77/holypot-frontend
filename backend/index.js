@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express = require('express');
-app.set('trust proxy', 1); // Confía en proxies de Render (soluciona X-Forwarded-For)
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 const axios = require('axios');
@@ -16,6 +15,7 @@ const z = require('zod');
 const JWT_SECRET = process.env.JWT_SECRET || 'holypotsecret2026';
 
 const app = express();
+app.set('trust proxy', 1); // Confía en proxies de Render (soluciona X-Forwarded-For)
 
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -417,7 +417,7 @@ app.post('/api/webhook-nowpayments', express.raw({type: 'application/json'}), as
 });
 
 // Competencias activas
-app.get('/api/competitions/active', async (req, g res) => {
+app.get('/api/competitions/active', async (req, res) => {
   try {
     const entries = await prisma.entry.findMany({
       where: { status: "confirmed" },
@@ -870,7 +870,7 @@ app.get('/api/ranking', async (req, res) => {
   }
 });
 
-// ADMIN DATA – OPTIMIZADO (mismo resultado, más rápido)
+// ADMIN DATA – OPTIMIZADO PARA BASIC-256mb (mismo resultado, más rápido)
 app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
   try {
     // Query eficiente: solo campos necesarios
@@ -1084,8 +1084,10 @@ app.post('/api/manual-create-confirm', async (req, res) => {
 // NUEVO ENDPOINT TOTAL PREMIOS PAGADOS HISTÓRICOS (público)
 app.get('/api/total-prizes-paid', async (req, res) => {
   try {
-    const total = await prisma.payout.sum({ field: 'amount' });
-    res.json({ totalPaid: total || 0 });
+    const total = await prisma.payout.aggregate({
+      _sum: { amount: true }
+    });
+    res.json({ totalPaid: total._sum.amount || 0 });
   } catch (error) {
     console.error('Error total prizes:', error);
     res.status(500).json({ error: 'Error calculando total premios' });
