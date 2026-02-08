@@ -1,85 +1,310 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { io } from "socket.io-client";
 import background from "@/assets/background.jpg";
 
-// URL dinámica: localhost en desarrollo, backend Render en producción
-const API_BASE = import.meta.env.DEV 
-  ? 'http://localhost:5000/api' 
-  : 'https://holypot-backend.onrender.com/api';
+// ✅ CONFIGURACIÓN DINÁMICA: Detecta automáticamente si estás en desarrollo o producción
+const API_BASE = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api` 
+  : 'http://localhost:5000/api';
 
-const AdminLogin = () => {
-  const [email, setEmail] = useState('admin@holypot.com');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+// ✅ SOCKET.IO OPTIMIZADO: Reconexión automática y transporte eficiente
+const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+  transports: ['websocket', 'polling'],
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  timeout: 10000
+});
+
+const formatNumber = (num) => {
+  return new Intl.NumberFormat('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num || 0);
+};
+
+const AdminDashboard = () => {
+  const [data, setData] = useState(null);
+  const [payouts, setPayouts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const fetchData = async () => {
+    const token = localStorage.getItem('holypotAdminToken');
+    if (!token) {
+      navigate('/admin-login');
+      return;
+    }
+
     try {
-      await axios.post(`${API_BASE}/admin-login`, { email, password }, { withCredentials: true });
-      navigate('/admin', { replace: true });
-    } catch (err) {
-      alert('Error login admin: ' + (err.response?.data?.error || err.message || 'Network Error'));
-    } finally {
+      // Data principal
+      const res = await axios.get(`${API_BASE}/admin/data`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setData(res.data);
+
+      // Payouts separado (si falla, [] y no rompe)
+      try {
+        const payoutsRes = await axios.get(`${API_BASE}/admin/payouts`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setPayouts(payoutsRes.data || []);
+      } catch (payoutErr) {
+        console.warn('Payouts endpoint no disponible – usando []');
+        setPayouts([]);
+      }
+
       setLoading(false);
+    } catch (err) {
+      setLoading(false);
+      alert('Error cargando datos admin – sesión expirada');
+      localStorage.removeItem('holypotAdminToken');
+      navigate('/admin-login');
     }
   };
 
+  useEffect(() => {
+    fetchData();
+
+    socket.on('liveUpdate', () => {
+      fetchData();
+    });
+
+    return () => socket.off('liveUpdate');
+  }, [navigate]);
+
+  const viewAsUser = (entryId) => {
+    localStorage.setItem('holypotEntryId', entryId);
+    window.open('/dashboard', '_blank');
+  };
+
+  const exportCSV = (level) => {
+    const csv = data.competencias[level].top3CSV;
+    const blob = new Blob([`Wallet,Amount USDT\n${csv}`], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `holypot_${level}_pagos.csv`;
+    a.click();
+  };
+
+  if (loading) return <p className="text-center text-3xl mt-40 text-gray-200">Cargando panel admin...</p>;
+
   return (
-    <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center">
-      {/* FONDO */}
+    <div className="min-h-screen text-white relative overflow-hidden">
+      {/* FONDO ESPACIO + OVERLAY */}
       <div className="fixed inset-0 -z-10">
-        <img 
-          src={background} 
-          alt="Fondo Holypot" 
-          className="w-full h-full object-cover"
-        />
+        <img src={background} alt="Fondo" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-black/60" />
       </div>
 
-      {/* CARD CENTRAL */}
-      <div className="relative group">
-        <div className="absolute inset-0 bg-gradient-to-br from-holy/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition duration-700" />
-        <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-10 max-w-md w-full hover:scale-105 transition-all duration-500">
-          <CardHeader className="text-center">
-            <CardTitle className="text-4xl font-bold text-holy mb-4">
-              Login Admin – Holypot Trading
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-8">
-              <Input 
-                type="email" 
-                value={email} 
-                disabled 
-                className="bg-black/40 border-borderSubtle text-gray-200 text-center text-lg"
-              />
-              <Input 
-                type="password" 
-                placeholder="Password admin" 
-                required 
-                value={password} 
-                onChange={e => setPassword(e.target.value)} 
-                className="bg-black/40 border-borderSubtle text-white text-lg"
-              />
-              <Button 
-                type="submit" 
-                className="w-full bg-gradient-to-r from-holy to-purple-600 text-black text-2xl py-7 font-bold rounded-full shadow-lg hover:shadow-holy/50 hover:scale-105 transition duration-300"
-                disabled={loading}
-              >
-                {loading ? 'Entrando...' : 'LOGIN ADMIN'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+      {/* HEADER GLASS AZUL SUTIL */}
+      <header className="relative bg-primary/65 backdrop-blur-md border-b border-holy/20 shadow-md py-8">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <h1 className="text-5xl font-bold text-holy">Panel Admin Holypot 🚀</h1>
+          <Button 
+            onClick={() => {
+              localStorage.removeItem('holypotAdminToken');
+              navigate('/admin-login');
+            }} 
+            className="mt-6 bg-gradient-to-r from-holy to-purple-600 text-black text-xl px-8 py-4 font-bold rounded-full hover:scale-105 transition"
+          >
+            Logout
+          </Button>
+        </div>
+      </header>
+
+      {/* OVERVIEW LIVE GLASS */}
+      <div className="max-w-7xl mx-auto px-8 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-holy/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
+            <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-8 text-center hover:scale-105 transition-all duration-500">
+              <CardTitle className="text-2xl mb-4 text-gray-200">Inscripciones totales</CardTitle>
+              <p className="text-5xl font-bold text-holy">{data.overview.inscripcionesTotal}</p>
+            </Card>
+          </div>
+
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-profit/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
+            <Card className="relative bg-black/30 backdrop-blur-xl border border-profit/40 rounded-3xl shadow-2xl p-8 text-center hover:scale-105 transition-all duration-500">
+              <CardTitle className="text-2xl mb-4 text-gray-200">Revenue plataforma</CardTitle>
+              <p className="text-5xl font-bold text-profit">{formatNumber(data.overview.revenuePlataforma)} USDT</p>
+            </Card>
+          </div>
+
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
+            <Card className="relative bg-black/30 backdrop-blur-xl border border-blue-500/40 rounded-3xl shadow-2xl p-8 text-center hover:scale-105 transition-all duration-500">
+              <CardTitle className="text-2xl mb-4 text-gray-200">Prize pool total</CardTitle>
+              <p className="text-5xl font-bold text-holy">{formatNumber(data.overview.prizePoolTotal)} USDT</p>
+            </Card>
+          </div>
+        </div>
+
+        {/* TABS COMPETENCIAS / USUARIOS / PAYOUTS */}
+        <Tabs defaultValue="competencias" className="max-w-7xl mx-auto">
+          <TabsList className="grid w-full grid-cols-3 mb-8 bg-black/40 backdrop-blur-md border border-holy/20 rounded-xl">
+            <TabsTrigger value="competencias" className="text-xl py-4 text-white">Competencias</TabsTrigger>
+            <TabsTrigger value="usuarios" className="text-xl py-4 text-white">Usuarios</TabsTrigger>
+            <TabsTrigger value="payouts" className="text-xl py-4 text-white">Payouts</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="competencias">
+            {Object.keys(data.competencias).map(level => (
+              <div key={level} className="relative group mb-16">
+                <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
+                <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-10 hover:scale-103 transition-all duration-500">
+                  <CardHeader>
+                    <CardTitle className="text-3xl text-holy">
+                      {level.toUpperCase()} – {data.competencias[level].participantes} participantes – Prize pool: {formatNumber(data.competencias[level].prizePool)} USDT
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader className="bg-black/40">
+                          <TableRow>
+                            <TableHead className="text-holy">Pos</TableHead>
+                            <TableHead className="text-holy">Trader</TableHead>
+                            <TableHead className="text-holy">Wallet</TableHead>
+                            <TableHead className="text-holy">Retorno %</TableHead>
+                            <TableHead className="text-holy">Capital Live</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {data.competencias[level].ranking.map((r, i) => (
+                            <TableRow key={i} className="hover:bg-white/10 transition">
+                              <TableCell className="font-bold text-gray-200">#{i + 1}</TableCell>
+                              <TableCell className="text-gray-200">{r.displayName || 'Anónimo'}</TableCell>
+                              <TableCell className="font-mono text-sm text-gray-300">{r.wallet}</TableCell>
+                              <TableCell className="text-gray-200">{r.retorno}</TableCell>
+                              <TableCell className="text-gray-200">{formatNumber(r.liveCapital)} USDT</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <Button 
+                      onClick={() => exportCSV(level)} 
+                      className="mt-8 bg-gradient-to-r from-holy to-green-600 text-black text-xl px-8 py-5 font-bold rounded-full shadow-lg hover:scale-105 transition"
+                    >
+                      Exportar CSV pagos top 3
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            ))}
+          </TabsContent>
+
+          <TabsContent value="usuarios">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
+              <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-10">
+                <CardHeader>
+                  <CardTitle className="text-3xl text-holy">Lista completa de usuarios (capital live)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-black/40">
+                        <TableRow>
+                          <TableHead className="text-holy">Trader</TableHead>
+                          <TableHead className="text-holy">Wallet</TableHead>
+                          <TableHead className="text-holy">Level</TableHead>
+                          <TableHead className="text-holy">Status</TableHead>
+                          <TableHead className="text-holy">Capital Live</TableHead>
+                          <TableHead className="text-holy">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {data.usuarios.map(u => (
+                          <TableRow key={u.id} className="hover:bg-white/10 transition">
+                            <TableCell className="text-gray-200">{u.displayName}</TableCell>
+                            <TableCell className="font-mono text-sm text-gray-300">{u.wallet}</TableCell>
+                            <TableCell className="text-gray-200">{u.level.toUpperCase()}</TableCell>
+                            <TableCell className="text-gray-200">{u.status}</TableCell>
+                            <TableCell className="text-gray-200">{formatNumber(u.virtualCapital)} USDT</TableCell>
+                            <TableCell>
+                              <Button 
+                                onClick={() => viewAsUser(u.id)} 
+                                className="bg-gradient-to-r from-holy to-blue-600 text-black px-6 py-3 font-bold rounded-full hover:scale-105 transition"
+                              >
+                                Ver como usuario
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* TAB PAYOUTS HISTORIAL */}
+          <TabsContent value="payouts">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
+              <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-10">
+                <CardHeader>
+                  <CardTitle className="text-3xl text-holy text-center">Historial Payouts (premios pagados)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-black/40">
+                        <TableRow>
+                          <TableHead className="text-holy">Fecha</TableHead>
+                          <TableHead className="text-holy">Trader</TableHead>
+                          <TableHead className="text-holy">Level</TableHead>
+                          <TableHead className="text-holy">Posición</TableHead>
+                          <TableHead className="text-holy">Premio</TableHead>
+                          <TableHead className="text-holy">Status</TableHead>
+                          <TableHead className="text-holy">Payment ID</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {payouts.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8 text-gray-400">
+                              No hay payouts aún – ¡espera primeras competencias!
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          payouts.map((p) => (
+                            <TableRow key={p.id} className="hover:bg-white/10 transition">
+                              <TableCell className="text-gray-200">{new Date(p.date).toLocaleDateString('es-ES')}</TableCell>
+                              <TableCell className="text-gray-200">{p.user?.nickname || 'Anónimo'}</TableCell>
+                              <TableCell className="text-gray-200">{p.level.toUpperCase()}</TableCell>
+                              <TableCell className="text-gray-200">#{p.position}</TableCell>
+                              <TableCell className="text-profit font-bold">{formatNumber(p.amount)} USDT</TableCell>
+                              <TableCell>
+                                <Badge variant={p.status === 'confirmed' ? "default" : "secondary"} className={p.status === 'confirmed' ? "bg-profit text-black" : "bg-gray-600 text-white"}>
+                                  {p.status === 'confirmed' ? 'Confirmado' : 'Pending'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="font-mono text-sm text-gray-300">{p.paymentId || '-'}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
 };
 
-export default AdminLogin;
+export default AdminDashboard;
