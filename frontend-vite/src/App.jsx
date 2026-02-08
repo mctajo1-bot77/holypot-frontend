@@ -29,9 +29,21 @@ import logo from "@/assets/Holypot-logo.webp";
 import background from "@/assets/background.jpg";
 import EditPositionModal from "@/components/EditPositionModal";
 
-const API_BASE = 'http://localhost:5000/api';
-const socket = io('http://localhost:5000');
+// ✅ CONFIGURACIÓN DINÁMICA: Detecta automáticamente si estás en desarrollo o producción
+const API_BASE = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api` 
+  : 'http://localhost:5000/api';
 
+// ✅ SOCKET.IO OPTIMIZADO: Reconexión automática y transporte eficiente
+const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+  transports: ['websocket', 'polling'], // Intenta WebSocket primero, luego polling
+  reconnection: true,                    // Reconexión automática si se cae
+  reconnectionAttempts: 5,              // Máximo 5 intentos
+  reconnectionDelay: 1000,              // Espera 1 segundo entre intentos
+  timeout: 10000                        // Timeout de 10 segundos
+});
+
+// ✅ INTERCEPTOR AXIOS: Agrega token automáticamente a todas las peticiones
 axios.interceptors.request.use(config => {
   const userToken = localStorage.getItem('holypotToken');
   const adminToken = localStorage.getItem('holypotAdminToken');
