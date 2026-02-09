@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '@/services/apiClient';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,10 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { io } from "socket.io-client";
 import background from "@/assets/background.jpg";
 
-const API_BASE = import.meta.env.VITE_API_URL 
-  ? `${import.meta.env.VITE_API_URL}/api` 
-  : 'http://localhost:5000/api';
-
+// Socket dinámico
 const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
   transports: ['websocket', 'polling'],
   reconnection: true,
@@ -33,24 +29,14 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   const fetchData = async () => {
-    const token = localStorage.getItem('holypotAdminToken');
-    if (!token) {
-      navigate('/admin-login');
-      return;
-    }
-
     try {
-      // Data principal
-      const res = await apiClient.get(`${API_BASE}/admin/data`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // Data principal – apiClient envía cookie automáticamente
+      const res = await apiClient.get('/admin/data');
       setData(res.data);
 
-      // Payouts separado (si falla, [] y no rompe)
+      // Payouts separado
       try {
-        const payoutsRes = await apiClient.get(`${API_BASE}/admin/payouts`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const payoutsRes = await apiClient.get('/admin/payouts');
         setPayouts(payoutsRes.data || []);
       } catch (payoutErr) {
         console.warn('Payouts endpoint no disponible – usando []');
@@ -61,18 +47,15 @@ const AdminDashboard = () => {
     } catch (err) {
       setLoading(false);
       alert('Error cargando datos admin – sesión expirada');
-      localStorage.removeItem('holypotAdminToken');
       navigate('/admin-login');
     }
   };
 
   useEffect(() => {
     fetchData();
-
     socket.on('liveUpdate', () => {
       fetchData();
     });
-
     return () => socket.off('liveUpdate');
   }, [navigate]);
 
@@ -105,11 +88,10 @@ const AdminDashboard = () => {
       <header className="relative bg-primary/65 backdrop-blur-md border-b border-holy/20 shadow-md py-8">
         <div className="max-w-7xl mx-auto px-6 text-center">
           <h1 className="text-5xl font-bold text-holy">Panel Admin Holypot 🚀</h1>
-          <Button 
+          <Button
             onClick={() => {
-              localStorage.removeItem('holypotAdminToken');
               navigate('/admin-login');
-            }} 
+            }}
             className="mt-6 bg-gradient-to-r from-holy to-purple-600 text-black text-xl px-8 py-4 font-bold rounded-full hover:scale-105 transition"
           >
             Logout
@@ -127,7 +109,6 @@ const AdminDashboard = () => {
               <p className="text-5xl font-bold text-holy">{data.overview.inscripcionesTotal}</p>
             </Card>
           </div>
-
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-profit/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
             <Card className="relative bg-black/30 backdrop-blur-xl border border-profit/40 rounded-3xl shadow-2xl p-8 text-center hover:scale-105 transition-all duration-500">
@@ -135,7 +116,6 @@ const AdminDashboard = () => {
               <p className="text-5xl font-bold text-profit">{formatNumber(data.overview.revenuePlataforma)} USDT</p>
             </Card>
           </div>
-
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
             <Card className="relative bg-black/30 backdrop-blur-xl border border-blue-500/40 rounded-3xl shadow-2xl p-8 text-center hover:scale-105 transition-all duration-500">
@@ -188,9 +168,8 @@ const AdminDashboard = () => {
                         </TableBody>
                       </Table>
                     </div>
-
-                    <Button 
-                      onClick={() => exportCSV(level)} 
+                    <Button
+                      onClick={() => exportCSV(level)}
                       className="mt-8 bg-gradient-to-r from-holy to-green-600 text-black text-xl px-8 py-5 font-bold rounded-full shadow-lg hover:scale-105 transition"
                     >
                       Exportar CSV pagos top 3
@@ -230,8 +209,8 @@ const AdminDashboard = () => {
                             <TableCell className="text-gray-200">{u.status}</TableCell>
                             <TableCell className="text-gray-200">{formatNumber(u.virtualCapital)} USDT</TableCell>
                             <TableCell>
-                              <Button 
-                                onClick={() => viewAsUser(u.id)} 
+                              <Button
+                                onClick={() => viewAsUser(u.id)}
                                 className="bg-gradient-to-r from-holy to-blue-600 text-black px-6 py-3 font-bold rounded-full hover:scale-105 transition"
                               >
                                 Ver como usuario
