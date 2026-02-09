@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import apiClient from '@/services/apiClient';
+import apiClient from '@/api'; // Nuevo path
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
