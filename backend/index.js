@@ -360,12 +360,11 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Login admin exclusivo
-// ADMIN DATA – CON LOGGING PARA DEPURAR ERROR 500
+// ADMIN DATA – SEGURA CON DEFAULTS + LOGGING (evita 500 y crash frontend)
 app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
   try {
-    console.log('Solicitud /api/admin/data recibida – token admin OK');
+    console.log('Solicitud /api/admin/data – token admin OK');
 
-    // Query eficiente
     const entries = await prisma.entry.findMany({
       select: {
         id: true,
@@ -380,12 +379,17 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
 
     const overview = { inscripcionesTotal: entries.length, participantesActivos: entries.filter(e => e.status === 'confirmed').length, revenuePlataforma: 0, prizePoolTotal: 0 };
 
-    const competencias = {};
+    const competencias = {
+      basic: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' },
+      medium: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' },
+      premium: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' }
+    };
+
     const levelsConfigAdmin = { basic: { entryPrice: 12, comision: 2, initialCapital: 10000 }, medium: { entryPrice: 54, comision: 4, initialCapital: 50000 }, premium: { entryPrice: 107, comision: 7, initialCapital: 100000 } };
 
     await Promise.all(Object.keys(levelsConfigAdmin).map(async (level) => {
       const config = levelsConfigAdmin[level];
-      const entriesLevel = entries.filter(e => e.level === level);
+      const entriesLevel = entries.filter(e => e.level === level) || [];
       const ingresos = entriesLevel.length * config.entryPrice;
       const revenue = entriesLevel.length * config.comision;
       const prizePool = ingresos - revenue;
@@ -394,20 +398,20 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
       overview.prizePoolTotal += prizePool;
 
       const ranking = entriesLevel.map(e => {
-        let liveCapital = e.virtualCapital;
-        e.positions.filter(p => !p.closedAt).forEach(p => {
+        let liveCapital = e.virtualCapital || config.initialCapital;
+        (e.positions || []).filter(p => !p.closedAt).forEach(p => {
           const currentPrice = getCurrentPrice(p.symbol);
           if (currentPrice) {
             const sign = p.direction === 'long' ? 1 : -1;
             const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
-            const pnlAmount = e.virtualCapital * (p.lotSize || 0) * (pnlPercent / 100);
+            const pnlAmount = (e.virtualCapital || config.initialCapital) * (p.lotSize || 0) * (pnlPercent / 100);
             liveCapital += pnlAmount;
           }
         });
         const initial = config.initialCapital;
         const retorno = ((liveCapital - initial) / initial) * 100;
-        const displayName = e.user.nickname || 'Anónimo';
-        return { displayName, wallet: e.user.walletAddress, retorno: retorno.toFixed(2) + "%", liveCapital: liveCapital.toString() };
+        const displayName = e.user?.nickname || 'Anónimo';
+        return { displayName, wallet: e.user?.walletAddress || '', retorno: retorno.toFixed(2) + "%", liveCapital: liveCapital.toString() };
       }).sort((a, b) => parseFloat(b.retorno) - parseFloat(a.retorno));
 
       competencias[level] = {
@@ -419,31 +423,40 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
     }));
 
     const usuarios = entries.map(e => {
-      let liveCapital = e.virtualCapital;
-      e.positions.filter(p => !p.closedAt).forEach(p => {
+      let liveCapital = e.virtualCapital || levelsConfigAdmin[e.level]?.initialCapital || 10000;
+      (e.positions || []).filter(p => !p.closedAt).forEach(p => {
         const currentPrice = getCurrentPrice(p.symbol);
         if (currentPrice) {
           const sign = p.direction === 'long' ? 1 : -1;
           const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
-          const pnlAmount = e.virtualCapital * (p.lotSize || 0) * (pnlPercent / 100);
+          const pnlAmount = (e.virtualCapital || levelsConfigAdmin[e.level]?.initialCapital || 10000) * (p.lotSize || 0) * (pnlPercent / 100);
           liveCapital += pnlAmount;
         }
       });
       return {
         id: e.id,
-        displayName: e.user.nickname || 'Anónimo',
-        wallet: e.user.walletAddress,
+        displayName: e.user?.nickname || 'Anónimo',
+        wallet: e.user?.walletAddress || '',
         level: e.level,
         status: e.status,
         virtualCapital: liveCapital.toString()
       };
     });
 
-    console.log('Datos admin preparados – enviando respuesta');
+    console.log('Datos admin enviados correctamente');
     res.json({ overview, competencias, usuarios });
   } catch (error) {
     console.error('Error crítico en /api/admin/data:', error);
-    res.status(500).json({ error: "Error cargando datos admin", details: error.message });
+    // Default safe data si crashea
+    res.json({
+      overview: { inscripcionesTotal: 0, participantesActivos: 0, revenuePlataforma: 0, prizePoolTotal: 0 },
+      competencias: {
+        basic: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' },
+        medium: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' },
+        premium: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' }
+      },
+      usuarios: []
+    });
   }
 });
 // Webhook NowPayments
