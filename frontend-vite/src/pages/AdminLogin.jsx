@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import apiClient from '@/services/apiClient'; // Usa el cliente centralizado
+import apiClient from '@/api';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
