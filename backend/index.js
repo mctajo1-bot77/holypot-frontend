@@ -15,8 +15,7 @@ const z = require('zod');
 const JWT_SECRET = process.env.JWT_SECRET || 'holypotsecret2026';
 
 const app = express();
-app.set('trust proxy', 1);
-
+app.set('trust proxy', 1); // Confía en proxies de Render (soluciona X-Forwarded-For)
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
@@ -34,8 +33,8 @@ const ADMIN_PASSWORD = 'holypotadmin2026';
 
 // Configuración única de niveles
 const levelsConfig = {
-  basic: { name: "Basic", entryPrice: 12, comision: 2, initialCapital: 10000 },
-  medium: { name: "Medium", entryPrice: 54, comision: 4, initialCapital: 50000 },
+  basic:   { name: "Basic",   entryPrice: 12,  comision: 2,  initialCapital: 10000 },
+  medium:  { name: "Medium",  entryPrice: 54,  comision: 4,  initialCapital: 50000 },
   premium: { name: "Premium", entryPrice: 107, comision: 7, initialCapital: 100000 }
 };
 
@@ -73,11 +72,12 @@ socketFinnhub.on('message', async (data) => {
       const price = t.p;
       livePrices[symbol] = price;
 
+      // VELA 1MIN CORRECTA (acumula high/low, preserva open, close = último)
       const nowSec = Math.floor(Date.now() / 1000);
       const currentMinute = Math.floor(nowSec / 60) * 60;
 
       const candleDate = new Date(currentMinute * 1000);
-      candleDate.setUTCHours(0, 0, 0, 0);
+      candleDate.setUTCHours(0, 0, 0, 0); // día UTC
 
       try {
         const existing = await prisma.dailyCandle.findUnique({
@@ -118,10 +118,12 @@ socketFinnhub.on('message', async (data) => {
             }
           });
         }
+        console.log(`Vela 1min actualizada para ${symbol} time=${currentMinute} price=${price}`);
       } catch (err) {
         console.error('Error vela 1min:', err);
       }
     }
+    console.log('Precios live + velas 1min actualizadas:', livePrices);
     emitLiveData();
   }
 });
@@ -146,9 +148,9 @@ const io = new Server(server, {
   }
 });
 
-// RATE LIMITING
+// RATE LIMITING (protección brute force + spam trades)
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 15 * 60 * 1000, // 15 min
   max: 5,
   message: 'Demasiados intentos – espera 15 min'
 });
@@ -156,16 +158,17 @@ app.use('/api/login', loginLimiter);
 app.use('/api/admin-login', loginLimiter);
 
 const tradeLimiter = rateLimit({
-  windowMs: 1000,
+  windowMs: 1000, // 1 segundo
   max: 3,
   message: 'Demasiados trades rápidos – espera'
 });
 app.use('/api/open-trade', tradeLimiter);
 
-// JWT middleware general
+// JWT middleware general (lee cookie)
 function authenticateToken(req, res, next) {
   const token = req.cookies.holypotToken;
   if (!token) return res.status(401).json({ error: "Token required" });
+
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ error: "Token invalid" });
     req.user = user;
@@ -173,18 +176,37 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// JWT middleware ADMIN
+// JWT middleware ADMIN - LEE HEADER O COOKIE
 function authenticateAdmin(req, res, next) {
-  const token = req.cookies.holypotToken;
-  if (!token) return res.status(401).json({ error: "Token required" });
+  // ✅ Leer de Authorization header O cookie
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ') 
+    ? authHeader.substring(7) 
+    : req.cookies.holypotToken;
+  
+  if (!token) {
+    console.log('❌ Token admin no encontrado');
+    return res.status(401).json({ error: "Token required" });
+  }
+
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err || user.email !== ADMIN_EMAIL) return res.status(403).json({ error: "Acceso admin denegado" });
+    if (err) {
+      console.log('❌ Token admin inválido:', err.message);
+      return res.status(403).json({ error: "Token invalid" });
+    }
+    
+    if (user.role !== 'admin' && user.email !== ADMIN_EMAIL) {
+      console.log('❌ No es admin:', user.email);
+      return res.status(403).json({ error: "Acceso admin denegado" });
+    }
+    
+    console.log('✅ Token admin válido:', user.email);
     req.user = user;
     next();
   });
 }
 
-// /api/me
+// NUEVO ENDPOINT /api/me – VALIDA COOKIE Y DEVUELVE INFO USER
 app.get('/api/me', authenticateToken, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
@@ -205,9 +227,12 @@ async function emitLiveData() {
     const entries = await prisma.entry.findMany({
       include: { user: true, positions: true }
     });
+
     const dataToEmit = await Promise.all(entries.map(async (entry) => {
       let liveCapital = entry.virtualCapital;
+
       const openPositions = entry.positions.filter(p => !p.closedAt);
+
       openPositions.forEach(p => {
         const currentPrice = getCurrentPrice(p.symbol);
         if (currentPrice) {
@@ -217,12 +242,15 @@ async function emitLiveData() {
           liveCapital += pnlAmount;
         }
       });
+
       // CIERRE AUTOMÁTICO TP/SL
       await Promise.all(openPositions.map(async (p) => {
         const currentPrice = getCurrentPrice(p.symbol);
         if (!currentPrice) return;
+
         let shouldClose = false;
         let reason = '';
+
         if (p.takeProfit || p.stopLoss) {
           if (p.direction === 'long') {
             if (p.takeProfit && currentPrice >= p.takeProfit) { shouldClose = true; reason = 'TP_hit'; }
@@ -232,18 +260,22 @@ async function emitLiveData() {
             if (p.stopLoss && currentPrice >= p.stopLoss) { shouldClose = true; reason = 'SL_hit'; }
           }
         }
+
         if (shouldClose) {
           const sign = p.direction === 'long' ? 1 : -1;
           const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
           const pnlAmount = entry.virtualCapital * (p.lotSize || 0) * (pnlPercent / 100);
+
           await prisma.entry.update({
             where: { id: entry.id },
             data: { virtualCapital: entry.virtualCapital + pnlAmount }
           });
+
           await prisma.position.update({
             where: { id: p.id },
             data: { closedAt: new Date(), currentPnl: pnlPercent, closeReason: reason }
           });
+
           io.emit('tradeClosedAuto', {
             entryId: entry.id,
             positionId: p.id,
@@ -253,7 +285,9 @@ async function emitLiveData() {
           });
         }
       }));
+
       const liveCapitalInt = Math.floor(liveCapital);
+
       return {
         entryId: entry.id,
         liveCapital: liveCapitalInt,
@@ -262,6 +296,7 @@ async function emitLiveData() {
           const livePnl = !p.closedAt && currentPrice
             ? (p.direction === 'long' ? 1 : -1) * ((currentPrice - p.entryPrice) / p.entryPrice) * 100
             : (p.currentPnl || 0);
+
           return {
             id: p.id,
             symbol: p.symbol,
@@ -276,6 +311,7 @@ async function emitLiveData() {
         livePrices: livePrices
       };
     }));
+
     io.emit('liveUpdate', dataToEmit);
   } catch (error) {
     console.error('Error emitLiveData:', error);
@@ -285,7 +321,7 @@ async function emitLiveData() {
 // Emit live data cada segundo
 setInterval(emitLiveData, 1000);
 
-// LOGOUT
+// LOGOUT (clear cookie)
 app.post('/api/logout', (req, res) => {
   res.clearCookie('holypotToken', {
     httpOnly: true,
@@ -295,7 +331,7 @@ app.post('/api/logout', (req, res) => {
   res.json({ success: true });
 });
 
-// REGISTER
+// REGISTER + COOKIE SEGURA + ZOD VALIDATION
 app.post('/api/register', async (req, res) => {
   const schema = z.object({
     email: z.string().email(),
@@ -303,149 +339,117 @@ app.post('/api/register', async (req, res) => {
     walletAddress: z.string(),
     nickname: z.string().min(3)
   });
+
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+
   const { email, password, walletAddress, nickname } = parsed.data;
+
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
+
     const existingNick = await prisma.user.findUnique({ where: { nickname } });
     if (existingNick) return res.status(400).json({ error: "Nickname ya usado – elige otro" });
+
     const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        walletAddress,
+      data: { 
+        email, 
+        password: hashedPassword, 
+        walletAddress, 
         nickname,
         emailVerified: false
       }
     });
+
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+
     res.cookie('holypotToken', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
+
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: "Error register", details: error.message });
   }
 });
 
-// Login normal
+// Login normal + COOKIE SEGURA + ZOD
 app.post('/api/login', async (req, res) => {
   const schema = z.object({
     email: z.string().email(),
     password: z.string().min(8)
   });
+
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+
   const { email, password } = parsed.data;
+
   try {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.password) return res.status(400).json({ error: "User not found or no password" });
+
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ error: "Password incorrect" });
+
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+
     res.cookie('holypotToken', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
+
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: "Error login", details: error.message });
   }
 });
 
-// Login admin exclusivo
-// ADMIN DATA – SEGURA CON PLACEHOLDER + GUARDS + LOGGING (evita 500 y crash frontend)
-app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
-  try {
-    console.log('Solicitud /api/admin/data – token admin OK');
-
-    const entries = await prisma.entry.findMany({
-      select: {
-        id: true,
-        level: true,
-        status: true,
-        virtualCapital: true,
-        user: { select: { id: true, email: true, nickname: true, walletAddress: true } },
-        positions: { select: { id: true, symbol: true, direction: true, lotSize: true, entryPrice: true, closedAt: true } }
-      }
-    });
-    console.log(`Entries cargadas: ${entries.length}`);
-
-    const overview = { inscripcionesTotal: entries.length, participantesActivos: entries.filter(e => e.status === 'confirmed').length, revenuePlataforma: 0, prizePoolTotal: 0 };
-
-    const competencias = {};
-    const levelsConfigAdmin = { basic: { entryPrice: 12, comision: 2, initialCapital: 10000 }, medium: { entryPrice: 54, comision: 4, initialCapital: 50000 }, premium: { entryPrice: 107, comision: 7, initialCapital: 100000 } };
-
-    await Promise.all(Object.keys(levelsConfigAdmin).map(async (level) => {
-      const config = levelsConfigAdmin[level];
-      const entriesLevel = entries.filter(e => e.level === level);
-      const ingresos = entriesLevel.length * config.entryPrice;
-      const revenue = entriesLevel.length * config.comision;
-      const prizePool = ingresos - revenue;
-
-      overview.revenuePlataforma += revenue;
-      overview.prizePoolTotal += prizePool;
-
-      const ranking = entriesLevel.map(e => {
-        let liveCapital = e.virtualCapital || config.initialCapital;
-        (e.positions || []).filter(p => !p.closedAt).forEach(p => {
-          if (!p.symbol || !p.entryPrice) return; // Guard null
-          const currentPrice = getCurrentPrice(p.symbol) || p.entryPrice; // Placeholder si no hay precio live
-          const sign = p.direction === 'long' ? 1 : -1;
-          const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
-          const pnlAmount = (e.virtualCapital || config.initialCapital) * (p.lotSize || 0) * (pnlPercent / 100);
-          liveCapital += pnlAmount;
-        });
-        const initial = config.initialCapital;
-        const retorno = ((liveCapital - initial) / initial) * 100;
-        const displayName = e.user?.nickname || 'Anónimo';
-        return { displayName, wallet: e.user?.walletAddress || '', retorno: retorno.toFixed(2) + "%", liveCapital: liveCapital.toString() };
-      }).sort((a, b) => parseFloat(b.retorno) - parseFloat(a.retorno));
-
-      competencias[level] = {
-        participantes: entriesLevel.length,
-        prizePool,
-        ranking: ranking.slice(0, 10),
-        top3CSV: ranking.slice(0, 3).map((r, i) => `${r.wallet},${(prizePool * [0.5, 0.3, 0.2][i]).toFixed(2)}`).join('\n')
-      };
-    }));
-
-    const usuarios = entries.map(e => {
-      let liveCapital = e.virtualCapital || levelsConfigAdmin[e.level]?.initialCapital || 10000;
-      (e.positions || []).filter(p => !p.closedAt).forEach(p => {
-        if (!p.symbol || !p.entryPrice) return; // Guard null
-        const currentPrice = getCurrentPrice(p.symbol) || p.entryPrice; // Placeholder si no hay precio live
-        const sign = p.direction === 'long' ? 1 : -1;
-        const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
-        const pnlAmount = (e.virtualCapital || levelsConfigAdmin[e.level]?.initialCapital || 10000) * (p.lotSize || 0) * (pnlPercent / 100);
-        liveCapital += pnlAmount;
-      });
-      return {
-        id: e.id,
-        displayName: e.user?.nickname || 'Anónimo',
-        wallet: e.user?.walletAddress || '',
-        level: e.level,
-        status: e.status,
-        virtualCapital: liveCapital.toString()
-      };
-    });
-
-    console.log('Datos admin enviados correctamente');
-    res.json({ overview, competencias, usuarios });
-  } catch (error) {
-    console.error('Error crítico en /api/admin/data:', error);
-    res.status(500).json({ error: "Error interno del servidor al cargar datos." });
+// Login admin exclusivo + COOKIE SEGURA + DEVUELVE TOKEN
+app.post('/api/admin-login', async (req, res) => {
+  const schema = z.object({
+    email: z.string().email(),
+    password: z.string()
+  });
+  
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+  
+  const { email, password } = parsed.data;
+  
+  if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
+    console.log('❌ Credenciales admin incorrectas');
+    return res.status(401).json({ error: "Credenciales admin inválidas" });
   }
+  
+  const token = jwt.sign({ email: ADMIN_EMAIL, role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
+  
+  res.cookie('holypotToken', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'none',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  });
+  
+  console.log('✅ Admin login exitoso - token creado');
+  res.json({ success: true, token });
 });
-// Webhook NowPayments
+
+// GET para /api/admin-login (evita "Cannot GET")
+app.get('/api/admin-login', (req, res) => {
+  res.status(405).json({ error: "Método GET no permitido – usa POST para login admin" });
+});
+
+// Webhook NowPayments + HMAC VERIFICATION
 app.post('/api/webhook-nowpayments', express.raw({type: 'application/json'}), async (req, res) => {
   const body = req.body.toString();
+
+  // HMAC VERIFICATION
   const signature = req.headers['x-nowpayments-sig'];
   const secret = process.env.NOWPAYMENTS_SECRET;
   if (secret) {
@@ -457,6 +461,7 @@ app.post('/api/webhook-nowpayments', express.raw({type: 'application/json'}), as
       return res.status(401).send('Invalid signature');
     }
   }
+
   try {
     const data = JSON.parse(body);
     if (data.payment_status === 'finished' || data.payment_status === 'confirmed') {
@@ -479,18 +484,21 @@ app.get('/api/competitions/active', async (req, res) => {
       where: { status: "confirmed" },
       include: { user: true }
     });
+
     const competitions = Object.entries(levelsConfig).map(([level, config]) => {
       const confirmed = entries.filter(e => e.level === level);
       const participants = confirmed.length;
       const ingresos = participants * config.entryPrice;
       const revenue = participants * config.comision;
       const prizePool = ingresos - revenue;
+
       const now = new Date();
       const utcNow = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
       const endOfDayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59);
       const msLeft = endOfDayUTC - utcNow;
       const hoursLeft = Math.floor(msLeft / (1000 * 60 * 60));
       const minutesLeft = Math.floor((msLeft % (1000 * 60 * 60)) / (1000 * 60));
+
       return {
         level,
         name: config.name,
@@ -501,6 +509,7 @@ app.get('/api/competitions/active', async (req, res) => {
         timeLeft: `${hoursLeft}h ${minutesLeft}m`
       };
     });
+
     res.json(competitions);
   } catch (error) {
     res.status(500).json({ error: "Error cargando competencias", details: error.message });
@@ -509,19 +518,25 @@ app.get('/api/competitions/active', async (req, res) => {
 
 // Create payment CON BLOQUEO 18:00 UTC
 app.post('/api/create-payment', async (req, res) => {
-  const {
-    email, password, walletAddress,
-    fullName, country, birthDate,
-    level, acceptTerms
+  const { 
+    email, password, walletAddress, 
+    fullName, country, birthDate, 
+    level, acceptTerms 
   } = req.body;
+
   if (!acceptTerms) return res.status(400).json({ error: 'Debes aceptar términos y condiciones' });
+
   if (!levelsConfig[level]) return res.status(400).json({ error: 'Nivel inválido' });
+
+  // BLOQUEO INSCRIPCIÓN DESPUÉS 18:00 UTC
   const now = new Date();
   const utcHour = now.getUTCHours();
   if (utcHour >= 18) {
     return res.status(400).json({ error: 'Inscripciones cerradas después de las 18:00 UTC. ¡Vuelve mañana a las 00:00 UTC!' });
   }
+
   const { entryPrice: total, initialCapital: capital } = levelsConfig[level];
+
   try {
     let user = await prisma.user.findUnique({ where: { email } });
     if (user && user.password) {
@@ -529,30 +544,34 @@ app.post('/api/create-payment', async (req, res) => {
       const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
       user = await prisma.user.upsert({
         where: { email },
-        update: {
-          walletAddress,
+        update: { 
+          walletAddress, 
           password: hashedPassword
         },
-        create: {
-          email,
-          walletAddress,
+        create: { 
+          email, 
+          walletAddress, 
           password: hashedPassword
         }
       });
     }
+
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+
     const response = await axios.post(`${NOWPAYMENTS_API}/invoice`, {
       price_amount: total,
       price_currency: "usd",
       pay_currency: "usdttrc20",
-      ipn_callback_url: `${process.env.BACKEND_URL || 'https://holypot-backend.onrender.com'}/api/webhook-nowpayments`,
+      ipn_callback_url: "https://tu-dominio.com/api/webhook-nowpayments",
       order_description: `Inscripción Holypot ${level.toUpperCase()} - ${email}`,
-      success_url: `${process.env.FRONTEND_URL || 'https://holypot-landing.onrender.com'}/dashboard`,
-      cancel_url: `${process.env.FRONTEND_URL || 'https://holypot-landing.onrender.com'}/`
+      success_url: "http://localhost:5173/dashboard",
+      cancel_url: "http://localhost:5173/"
     }, {
       headers: { 'x-api-key': API_KEY, 'Content-Type': 'application/json' }
     });
+
     const paymentData = response.data;
+
     const entry = await prisma.entry.create({
       data: {
         user: { connect: { id: user.id } },
@@ -562,6 +581,7 @@ app.post('/api/create-payment', async (req, res) => {
         virtualCapital: capital
       }
     });
+
     res.json({
       message: "Pago creado – redirigiendo...",
       paymentUrl: paymentData.invoice_url,
@@ -614,7 +634,7 @@ app.post('/api/manual-confirm', async (req, res) => {
   }
 });
 
-// OPEN TRADE
+// OPEN TRADE (AHORA CON TP/SL + VALIDACIÓN LÓGICA)
 app.post('/api/open-trade', authenticateToken, async (req, res) => {
   const { entryId, symbol, direction, lotSize, takeProfit, stopLoss } = req.body;
   const dir = direction.toLowerCase();
@@ -622,20 +642,25 @@ app.post('/api/open-trade', authenticateToken, async (req, res) => {
   const currentPrice = getCurrentPrice(symbol);
   if (!currentPrice) return res.status(400).json({ error: "Precio no disponible" });
   if (lotSize < 0.01 || lotSize > 1.0) return res.status(400).json({ error: "LotSize 0.01-1.0" });
+
   try {
     const entry = await prisma.entry.findUnique({
       where: { id: entryId },
       include: { positions: { where: { closedAt: null } } }
     });
     if (!entry || entry.status !== "confirmed") return res.status(400).json({ error: "Entry no confirmada" });
+
     const todayStart = new Date();
     todayStart.setUTCHours(0, 0, 0, 0);
     const tradesToday = await prisma.position.count({
       where: { entryId, openedAt: { gte: todayStart } }
     });
     if (tradesToday >= 20) return res.status(400).json({ error: "Límite 20 trades/día" });
+
     const openLot = entry.positions.reduce((sum, p) => sum + (p.lotSize || 0), 0);
     if (openLot + lotSize > 1.0) return res.status(400).json({ error: "Máximo 1.0 lot total abierto" });
+
+    // Validación lógica TP/SL (opcional, pero evita valores absurdos)
     if (takeProfit !== undefined && takeProfit !== null) {
       const tp = parseFloat(takeProfit);
       if (dir === 'long' && tp <= currentPrice) return res.status(400).json({ error: "TP debe ser mayor al precio actual en LONG" });
@@ -646,6 +671,7 @@ app.post('/api/open-trade', authenticateToken, async (req, res) => {
       if (dir === 'long' && sl >= currentPrice) return res.status(400).json({ error: "SL debe ser menor al precio actual en LONG" });
       if (dir === 'short' && sl <= currentPrice) return res.status(400).json({ error: "SL debe ser mayor al precio actual en SHORT" });
     }
+
     await prisma.position.create({
       data: {
         entryId,
@@ -657,7 +683,9 @@ app.post('/api/open-trade', authenticateToken, async (req, res) => {
         stopLoss: stopLoss ? parseFloat(stopLoss) : null
       }
     });
+
     emitLiveData();
+
     res.json({ message: `¡Trade abierto! ${dir.toUpperCase()} ${symbol} ${lotSize} lot a ${currentPrice.toFixed(2)}` });
   } catch (error) {
     res.status(500).json({ error: "Error open trade", details: error.message });
@@ -667,26 +695,33 @@ app.post('/api/open-trade', authenticateToken, async (req, res) => {
 // CLOSE TRADE
 app.post('/api/close-trade', authenticateToken, async (req, res) => {
   const { positionId } = req.body;
+
   try {
     const position = await prisma.position.findUnique({
       where: { id: positionId },
       include: { entry: true }
     });
     if (!position || position.closedAt) return res.status(400).json({ error: "Position no abierta" });
+
     const currentPrice = getCurrentPrice(position.symbol);
     if (!currentPrice) return res.status(400).json({ error: "Precio temporalmente no disponible para cerrar" });
+
     const sign = position.direction === "long" ? 1 : -1;
     const pnlPercent = sign * ((currentPrice - position.entryPrice) / position.entryPrice) * 100;
     const pnlAmount = position.entry.virtualCapital * (position.lotSize || 0) * (pnlPercent / 100);
+
     await prisma.entry.update({
       where: { id: position.entryId },
       data: { virtualCapital: position.entry.virtualCapital + pnlAmount }
     });
+
     await prisma.position.update({
       where: { id: positionId },
       data: { closedAt: new Date(), currentPnl: pnlPercent }
     });
+
     emitLiveData();
+
     res.json({
       message: `¡Trade cerrado! P&L: ${pnlPercent.toFixed(2)}% (${pnlAmount > 0 ? '+' : ''}${pnlAmount.toFixed(2)})`,
       newVirtualCapital: position.entry.virtualCapital + pnlAmount
@@ -700,17 +735,20 @@ app.post('/api/close-trade', authenticateToken, async (req, res) => {
 app.post('/api/edit-position', authenticateToken, async (req, res) => {
   const { positionId, lotSize, takeProfit, stopLoss } = req.body;
   if (!positionId) return res.status(400).json({ error: "positionId required" });
+
   try {
     const position = await prisma.position.findUnique({
       where: { id: positionId },
       include: { entry: { include: { positions: true } } }
     });
     if (!position || position.closedAt) return res.status(400).json({ error: "Position no abierta" });
+
     const currentOpenLot = position.entry.positions
       .filter(p => !p.closedAt && p.id !== positionId)
       .reduce((sum, p) => sum + (p.lotSize || 0), 0);
     const newLot = lotSize ? parseFloat(lotSize) : position.lotSize;
     if (currentOpenLot + newLot > 1.0) return res.status(400).json({ error: "Máximo 1.0 lot total abierto" });
+
     await prisma.position.update({
       where: { id: positionId },
       data: {
@@ -719,6 +757,7 @@ app.post('/api/edit-position', authenticateToken, async (req, res) => {
         stopLoss: stopLoss ? parseFloat(stopLoss) : position.stopLoss
       }
     });
+
     emitLiveData();
     res.json({ message: "Position editada – lotSize, TP/SL actualizados" });
   } catch (error) {
@@ -730,13 +769,16 @@ app.post('/api/edit-position', authenticateToken, async (req, res) => {
 app.get('/api/my-positions', authenticateToken, async (req, res) => {
   const { entryId } = req.query;
   if (!entryId) return res.status(400).json({ error: "entryId required" });
+
   try {
     const entry = await prisma.entry.findUnique({
       where: { id: entryId },
       include: { positions: true }
     });
     if (!entry) return res.status(404).json({ error: "Entry no encontrada" });
+
     let liveCapital = entry.virtualCapital;
+
     const positionsWithLivePnl = entry.positions.map(p => {
       const currentPrice = getCurrentPrice(p.symbol);
       let livePnl = p.currentPnl || 0;
@@ -755,9 +797,11 @@ app.get('/api/my-positions', authenticateToken, async (req, res) => {
         livePnl: livePnl.toFixed(2)
       };
     });
+
     const totalRiskPercent = entry.positions.filter(p => !p.closedAt).reduce((sum, p) => sum + (p.lotSize || 0) * 10, 0);
-    res.json({
-      positions: positionsWithLivePnl,
+
+    res.json({ 
+      positions: positionsWithLivePnl, 
       totalRiskPercent,
       virtualCapital: liveCapital.toString(),
       livePrices: livePrices
@@ -785,16 +829,20 @@ app.get('/api/my-advice', authenticateToken, async (req, res) => {
 app.get('/api/my-profile', authenticateToken, async (req, res) => {
   const entryId = req.query.entryId;
   if (!entryId) return res.status(400).json({ error: "entryId required en query params" });
+
   try {
     const entry = await prisma.entry.findUnique({
       where: { id: entryId },
       include: { user: true, positions: true }
     });
+
     if (!entry) return res.status(404).json({ error: "Entry no encontrada" });
+
     const isAdmin = req.user.role === 'admin';
     if (!isAdmin && entry.userId !== req.user.userId) {
       return res.status(403).json({ error: "Acceso denegado – entry no pertenece al usuario" });
     }
+
     let liveCapital = entry.virtualCapital;
     entry.positions.filter(p => !p.closedAt).forEach(p => {
       const currentPrice = getCurrentPrice(p.symbol);
@@ -805,11 +853,16 @@ app.get('/api/my-profile', authenticateToken, async (req, res) => {
         liveCapital += pnlAmount;
       }
     });
+
     const initial = levelsConfig[entry.level].initialCapital;
     const dailyReturn = ((liveCapital - initial) / initial) * 100;
+
+    // STATS REALES DE POSITIONS
     const buys = entry.positions.filter(p => p.direction === 'long').length;
     const sells = entry.positions.filter(p => p.direction === 'short').length;
     const totalTrades = buys + sells;
+
+    // Top assets (symbol + count total trades)
     const assetCount = {};
     entry.positions.forEach(p => {
       assetCount[p.symbol] = (assetCount[p.symbol] || 0) + 1;
@@ -818,6 +871,7 @@ app.get('/api/my-profile', authenticateToken, async (req, res) => {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
       .map(([symbol, count]) => ({ symbol, buys: entry.positions.filter(p => p.symbol === symbol && p.direction === 'long').length, sells: count - entry.positions.filter(p => p.symbol === symbol && p.direction === 'long').length }));
+
     const stats = {
       dailyReturn: dailyReturn.toFixed(2),
       buys,
@@ -828,9 +882,11 @@ app.get('/api/my-profile', authenticateToken, async (req, res) => {
       totalTrades,
       topAssets
     };
+
     const history = [
       { date: new Date().toLocaleDateString('es-ES'), level: entry.level.toUpperCase(), return: dailyReturn.toFixed(2), position: 0, prize: 0 }
     ];
+
     res.json({
       nickname: entry.user.nickname || 'Anónimo',
       currentPosition: '#-',
@@ -854,7 +910,9 @@ app.get('/api/last-winners', async (req, res) => {
         where: { level, status: "confirmed" },
         include: { user: true, positions: true }
       });
+
       const initial = levelsConfig[level].initialCapital;
+
       const ranking = entries.map(e => {
         let liveCapital = e.virtualCapital;
         e.positions.filter(p => !p.closedAt).forEach(p => {
@@ -873,14 +931,18 @@ app.get('/api/last-winners', async (req, res) => {
           prize: 0
         };
       });
+
       ranking.sort((a, b) => b.retorno - a.retorno);
+
       const top3 = ranking.slice(0, 3).map((r, i) => ({
         position: i + 1,
         nickname: r.nickname,
         prize: 0
       }));
+
       winners[level] = top3;
     }
+
     res.json(winners);
   } catch (error) {
     console.error('Error last-winners:', error);
@@ -892,12 +954,15 @@ app.get('/api/last-winners', async (req, res) => {
 app.get('/api/ranking', async (req, res) => {
   const { level = 'basic' } = req.query;
   if (!levelsConfig[level]) return res.status(400).json({ error: "Nivel inválido" });
+
   try {
     const entries = await prisma.entry.findMany({
       where: { level, status: "confirmed" },
       include: { user: true, positions: true }
     });
+
     const initial = levelsConfig[level].initialCapital;
+
     const ranking = entries.map(e => {
       let liveCapital = e.virtualCapital;
       e.positions.filter(p => !p.closedAt).forEach(p => {
@@ -911,12 +976,14 @@ app.get('/api/ranking', async (req, res) => {
       });
       const retorno = ((liveCapital - initial) / initial) * 100;
       const displayName = e.user.nickname || 'Anónimo';
+
       return {
         displayName,
         retorno: retorno.toFixed(2) + "%",
         liveCapital: liveCapital.toString()
       };
     });
+
     ranking.sort((a, b) => parseFloat(b.retorno) - parseFloat(a.retorno));
     res.json(ranking.slice(0, 10));
   } catch (error) {
@@ -938,12 +1005,9 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
         positions: { select: { id: true, symbol: true, direction: true, lotSize: true, entryPrice: true, closedAt: true } }
       }
     });
-
     const overview = { inscripcionesTotal: entries.length, participantesActivos: entries.filter(e => e.status === 'confirmed').length, revenuePlataforma: 0, prizePoolTotal: 0 };
-
     const competencias = {};
     const levelsConfigAdmin = { basic: { entryPrice: 12, comision: 2, initialCapital: 10000 }, medium: { entryPrice: 54, comision: 4, initialCapital: 50000 }, premium: { entryPrice: 107, comision: 7, initialCapital: 100000 } };
-
     // Cálculos paralelos – más rápido
     await Promise.all(Object.keys(levelsConfigAdmin).map(async (level) => {
       const config = levelsConfigAdmin[level];
@@ -951,15 +1015,13 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
       const ingresos = entriesLevel.length * config.entryPrice;
       const revenue = entriesLevel.length * config.comision;
       const prizePool = ingresos - revenue;
-
       overview.revenuePlataforma += revenue;
       overview.prizePoolTotal += prizePool;
-
       const ranking = entriesLevel.map(e => {
         let liveCapital = e.virtualCapital;
         e.positions.filter(p => !p.closedAt).forEach(p => {
           const currentPrice = getCurrentPrice(p.symbol);
-          if (currentPrice) {
+          if (currentPrice !== null && p.entryPrice && p.entryPrice !== 0) { // check null + division 0
             const sign = p.direction === 'long' ? 1 : -1;
             const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
             const pnlAmount = e.virtualCapital * (p.lotSize || 0) * (pnlPercent / 100);
@@ -971,7 +1033,6 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
         const displayName = e.user.nickname || 'Anónimo';
         return { displayName, wallet: e.user.walletAddress, retorno: retorno.toFixed(2) + "%", liveCapital: liveCapital.toString() };
       }).sort((a, b) => parseFloat(b.retorno) - parseFloat(a.retorno));
-
       competencias[level] = {
         participantes: entriesLevel.length,
         prizePool,
@@ -979,12 +1040,11 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
         top3CSV: ranking.slice(0, 3).map((r, i) => `${r.wallet},${(prizePool * [0.5, 0.3, 0.2][i]).toFixed(2)}`).join('\n')
       };
     }));
-
     const usuarios = entries.map(e => {
       let liveCapital = e.virtualCapital;
       e.positions.filter(p => !p.closedAt).forEach(p => {
         const currentPrice = getCurrentPrice(p.symbol);
-        if (currentPrice) {
+        if (currentPrice !== null && p.entryPrice && p.entryPrice !== 0) {
           const sign = p.direction === 'long' ? 1 : -1;
           const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
           const pnlAmount = e.virtualCapital * (p.lotSize || 0) * (pnlPercent / 100);
@@ -1000,7 +1060,6 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
         virtualCapital: liveCapital.toString()
       };
     });
-
     res.json({ overview, competencias, usuarios });
   } catch (error) {
     console.error('Error admin data:', error);
@@ -1011,26 +1070,35 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
 // Admin viejo
 app.get('/admin', async (req, res) => {
   if (req.query.pass !== ADMIN_PASSWORD) return res.status(401).json({ error: "Password incorrecto" });
+
   try {
     const entries = await prisma.entry.findMany({
       include: { user: true, positions: true }
     });
+
     const resumenGlobal = { inscripcionesTotal: entries.length, ingresosBrutos: 0, revenuePlataforma: 0, prizePool: 0 };
     const competenciasPorLevel = {};
+
     for (const level of Object.keys(levelsConfig)) {
       const config = levelsConfig[level];
       const entriesLevel = entries.filter(e => e.level === level);
       const confirmedLevel = entriesLevel.filter(e => e.status === "confirmed");
+
       const ingresosLevel = entriesLevel.length * config.entryPrice;
       const revenueLevel = entriesLevel.length * config.comision;
       const prizePoolLevel = ingresosLevel - revenueLevel;
+
       resumenGlobal.ingresosBrutos += ingresosLevel;
       resumenGlobal.revenuePlataforma += revenueLevel;
       resumenGlobal.prizePool += prizePoolLevel;
+
       const competenciaActiva = confirmedLevel.length > 5;
+
       const rankingEntries = [];
+
       for (const e of confirmedLevel) {
         let liveCapital = e.virtualCapital;
+
         for (const p of e.positions.filter(pos => !pos.closedAt)) {
           const currentPrice = getCurrentPrice(p.symbol);
           if (currentPrice) {
@@ -1040,8 +1108,10 @@ app.get('/admin', async (req, res) => {
             liveCapital += pnlAmount;
           }
         }
+
         const retorno = ((liveCapital - config.initialCapital) / config.initialCapital) * 100;
         const displayName = e.user.nickname || 'Anónimo';
+
         rankingEntries.push({
           displayName,
           wallet: e.user.walletAddress,
@@ -1050,7 +1120,9 @@ app.get('/admin', async (req, res) => {
           openPositions: e.positions.filter(pos => !pos.closedAt).length
         });
       }
+
       rankingEntries.sort((a, b) => parseFloat(b.retornoPorcentaje) - parseFloat(a.retornoPorcentaje));
+
       const rankingLevel = rankingEntries.map((r, i) => ({
         posicion: i + 1,
         displayName: r.displayName,
@@ -1060,6 +1132,7 @@ app.get('/admin', async (req, res) => {
         openPositions: r.openPositions,
         montoPremio: i < 3 ? (prizePoolLevel * [0.5, 0.3, 0.2][i]).toFixed(2) + " USDT" : "0 USDT"
       }));
+
       competenciasPorLevel[level] = {
         inscripcionesTotal: entriesLevel.length,
         ingresosBrutos: ingresosLevel + " USDT",
@@ -1071,6 +1144,7 @@ app.get('/admin', async (req, res) => {
         nota: "Ranking LIVE MULTIPLE TRADES FINNHUB LOTSIZE PRO ACTIVO 🔥"
       };
     }
+
     const csvData = [];
     Object.values(competenciasPorLevel).forEach(c => {
       if (c.competenciaActiva) {
@@ -1080,6 +1154,7 @@ app.get('/admin', async (req, res) => {
       }
     });
     const csvString = "Wallet,Amount\n" + (csvData.join("\n") || "No pagos aprobados");
+
     res.json({
       message: "Admin Holypot – MULTIPLE TRADES LIVE FINNHUB LOTSIZE PRO ACTIVO 🔥",
       resumenGlobal: {
@@ -1100,12 +1175,14 @@ app.get('/admin', async (req, res) => {
 app.post('/api/manual-create-confirm', async (req, res) => {
   const { email, walletAddress, level } = req.body;
   if (!email || !walletAddress || !level) return res.status(400).json({ error: "Email, wallet and level required" });
+
   const levels = {
     basic: { capital: 10000 },
     medium: { capital: 50000 },
     premium: { capital: 100000 }
   };
   if (!levels[level]) return res.status(400).json({ error: "Nivel inválido" });
+
   try {
     let user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -1113,6 +1190,7 @@ app.post('/api/manual-create-confirm', async (req, res) => {
     } else {
       await prisma.user.update({ where: { id: user.id }, data: { walletAddress } });
     }
+
     const entry = await prisma.entry.create({
       data: {
         userId: user.id,
@@ -1121,14 +1199,17 @@ app.post('/api/manual-create-confirm', async (req, res) => {
         virtualCapital: levels[level].capital
       }
     });
+
     await prisma.entry.update({
       where: { id: entry.id },
       data: { status: "confirmed" }
     });
+
     emitLiveData();
-    res.json({
-      message: "¡User + entry creados y confirmados manualmente! Capital virtual activado – ve al dashboard",
-      entryId: entry.id
+
+    res.json({ 
+      message: "¡User + entry creados y confirmados manualmente! Capital virtual activado – ve al dashboard", 
+      entryId: entry.id 
     });
   } catch (error) {
     res.status(500).json({ error: "Error manual create-confirm", details: error.message });
@@ -1166,7 +1247,9 @@ app.get('/api/my-payouts', authenticateToken, async (req, res) => {
 app.get('/api/candles/:symbol', async (req, res) => {
   const { symbol } = req.params;
   const from = parseInt(req.query.from) || 0;
+
   console.log(`GET /api/candles/${symbol}?from=${from} llamado`);
+
   try {
     const candles = await prisma.dailyCandle.findMany({
       where: {
@@ -1175,6 +1258,7 @@ app.get('/api/candles/:symbol', async (req, res) => {
       },
       orderBy: { time: 'asc' }
     });
+
     console.log(`Velas encontradas para ${symbol}: ${candles.length}`);
     res.json({ candles });
   } catch (err) {
@@ -1191,20 +1275,25 @@ server.listen(PORT, () => console.log(`Servidor en http://localhost:${PORT}`));
 // CRON CIERRE DIARIO 21:00 UTC + ROLLOVER + CONSEJOS IA + LIMPIEZA VELAS
 cron.schedule('0 21 * * *', async () => {
   console.log('🔥 CRON 21:00 UTC – Cierre competencia diaria + rollover + consejos IA + limpieza velas');
+
   try {
     const entriesToday = await prisma.entry.findMany({
       where: { status: 'confirmed' },
       include: { user: true, positions: true }
     });
+
     const byLevel = {};
     Object.keys(levelsConfig).forEach(level => {
       byLevel[level] = entriesToday.filter(e => e.level === level);
     });
+
     for (const [level, entries] of Object.entries(byLevel)) {
       const participants = entries.length;
       const config = levelsConfig[level];
       const prizePool = participants * config.entryPrice - participants * config.comision;
+
       console.log(`Nivel ${level.toUpperCase()}: ${participants} participantes – Prize pool: ${prizePool} USDT`);
+
       // CIERRE FORZADO POSICIONES
       for (const entry of entries) {
         const openPositions = entry.positions.filter(p => !p.closedAt);
@@ -1213,18 +1302,22 @@ cron.schedule('0 21 * * *', async () => {
           const sign = p.direction === 'long' ? 1 : -1;
           const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
           const pnlAmount = entry.virtualCapital * (p.lotSize || 0) * (pnlPercent / 100);
+
           await prisma.entry.update({
             where: { id: entry.id },
             data: { virtualCapital: entry.virtualCapital + pnlAmount }
           });
+
           await prisma.position.update({
             where: { id: p.id },
             data: { closedAt: new Date(), currentPnl: pnlPercent }
           });
         }
       }
+
       if (participants < 5) {
         console.log(`❌ ${level.toUpperCase()}: Menos de 5 participantes → ROLLOVER GRATIS`);
+
         for (const entry of entries) {
           await prisma.entry.update({
             where: { id: entry.id },
@@ -1233,16 +1326,20 @@ cron.schedule('0 21 * * *', async () => {
         }
         continue;
       }
+
       // CÁLCULO GANADORES
       const finalRanking = entries.map(e => {
         const retorno = ((e.virtualCapital - config.initialCapital) / config.initialCapital) * 100;
         return { entry: e, retorno };
       }).sort((a, b) => b.retorno - a.retorno);
+
       const prizes = [0.5, 0.3, 0.2];
+
       // GUARDAR PREMIO HISTÓRICO + LOG
       for (let i = 0; i < Math.min(3, finalRanking.length); i++) {
         const winner = finalRanking[i];
         const prizeAmount = prizePool * prizes[i];
+
         await prisma.payout.create({
           data: {
             userId: winner.entry.userId,
@@ -1251,26 +1348,33 @@ cron.schedule('0 21 * * *', async () => {
             amount: prizeAmount
           }
         });
+
         console.log(`🏆 ${i+1}º ${level.toUpperCase()}: ${winner.entry.user.nickname || winner.entry.user.email} – Premio ${prizeAmount.toFixed(2)} USDT guardado`);
       }
+
       console.log(`✅ Competencia ${level.toUpperCase()} cerrada`);
     }
+
     // LIMPIEZA AUTOMÁTICA VELAS DE AYER
     const yesterday = new Date(Date.now() - 86400000);
     yesterday.setUTCHours(0, 0, 0, 0);
+
     await prisma.dailyCandle.deleteMany({
       where: {
         date: { lt: yesterday }
       }
     });
     console.log('🧹 Velas de ayer limpiadas');
+
     // GENERACIÓN CONSEJOS IA
     for (const entry of entriesToday) {
       let liveCapital = entry.virtualCapital;
       let openLotTotal = 0;
       const symbolCount = {};
+
       entry.positions.forEach(p => {
         symbolCount[p.symbol] = (symbolCount[p.symbol] || 0) + 1;
+
         if (!p.closedAt) {
           openLotTotal += p.lotSize || 0;
           const currentPrice = getCurrentPrice(p.symbol);
@@ -1282,12 +1386,15 @@ cron.schedule('0 21 * * *', async () => {
           }
         }
       });
+
       const initial = levelsConfig[entry.level].initialCapital;
       const dailyReturn = ((liveCapital - initial) / initial) * 100;
+
       const buys = entry.positions.filter(p => p.direction === 'long').length;
       const sells = entry.positions.filter(p => p.direction === 'short').length;
       const riskUsed = openLotTotal * 10;
       const topAsset = Object.keys(symbolCount).sort((a, b) => symbolCount[b] - symbolCount[a])[0] || 'Ninguno';
+
       const prompt = `
 Analiza el desempeño del trader ${entry.user.nickname || 'Anónimo'} hoy:
 - Retorno del día: ${dailyReturn.toFixed(2)}%
@@ -1295,11 +1402,13 @@ Analiza el desempeño del trader ${entry.user.nickname || 'Anónimo'} hoy:
 - Operaciones SHORT: ${sells}
 - Riesgo actualmente usado: ${riskUsed.toFixed(1)}%
 - Activo más operado: ${topAsset}
+
 Genera un consejo breve y motivador en español:
 1. Resumen positivo del día.
 2. 3 sugerencias concretas para mejorar mañana.
 Máximo 250 caracteres, tono entusiasta y profesional.
 `;
+
       try {
         const response = await axios.post('https://api.x.ai/v1/chat/completions', {
           model: "grok-beta",
@@ -1312,7 +1421,9 @@ Máximo 250 caracteres, tono entusiasta y profesional.
             'Content-Type': 'application/json'
           }
         });
+
         const advice = response.data.choices[0].message.content.trim();
+
         await prisma.advice.create({
           data: {
             userId: entry.user.id,
@@ -1324,6 +1435,7 @@ Máximo 250 caracteres, tono entusiasta y profesional.
         console.error('Error Grok API:', grokError.response?.data || grokError.message);
       }
     }
+
     emitLiveData();
   } catch (error) {
     console.error('Error en cron diario:', error);
