@@ -30,11 +30,9 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      // Data principal – apiClient envía cookie automáticamente
       const res = await apiClient.get('/admin/data');
       setData(res.data);
 
-      // Payouts separado
       try {
         const payoutsRes = await apiClient.get('/admin/payouts');
         setPayouts(payoutsRes.data || []);
@@ -53,9 +51,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchData();
-    socket.on('liveUpdate', () => {
-      fetchData();
-    });
+    socket.on('liveUpdate', fetchData);
     return () => socket.off('liveUpdate');
   }, [navigate]);
 
@@ -89,9 +85,7 @@ const AdminDashboard = () => {
         <div className="max-w-7xl mx-auto px-6 text-center">
           <h1 className="text-5xl font-bold text-holy">Panel Admin Holypot 🚀</h1>
           <Button
-            onClick={() => {
-              navigate('/admin-login');
-            }}
+            onClick={() => navigate('/admin-login')}
             className="mt-6 bg-gradient-to-r from-holy to-purple-600 text-black text-xl px-8 py-4 font-bold rounded-full hover:scale-105 transition"
           >
             Logout
@@ -226,7 +220,6 @@ const AdminDashboard = () => {
             </div>
           </TabsContent>
 
-          {/* TAB PAYOUTS HISTORIAL */}
           <TabsContent value="payouts">
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
