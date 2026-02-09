@@ -33,13 +33,12 @@ const API_KEY = process.env.NOWPAYMENTS_API_KEY;
 const ADMIN_EMAIL = 'admin@holypot.com';
 const ADMIN_PASSWORD = 'holypotadmin2026';
 // ========== COOKIE CONFIG PARA CROSS-SITE (Render) ==========
-const isProduction = !!(process.env.NODE_ENV === 'production' || process.env.FRONTEND_URL?.includes('onrender.com'));
 function getCookieOptions() {
   return {
     httpOnly: true,
-    secure: isProduction,               // true en producción (HTTPS)
-    sameSite: isProduction ? 'none' : 'strict',  // 'none' permite cross-site en producción
-    maxAge: 7 * 24 * 60 * 60 * 1000     // 7 días
+    secure: true,
+    sameSite: 'none',
+    maxAge: 7 * 24 * 60 * 60 * 1000
   };
 }
 // =============================================================
@@ -176,7 +175,7 @@ app.use('/api/open-trade', tradeLimiter);
 
 // JWT middleware general
 function authenticateToken(req, res, next) {
-  const token = req.cookies.holypotToken;
+  const token = (req.cookies && req.cookies.holypotToken) || null;
   if (!token) return res.status(401).json({ error: "Token required" });
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
@@ -188,11 +187,11 @@ function authenticateToken(req, res, next) {
 
 // JWT middleware ADMIN
 function authenticateAdmin(req, res, next) {
-  const token = req.cookies.holypotToken;
+  const token = (req.cookies && req.cookies.holypotToken) || null;
   if (!token) return res.status(401).json({ error: "Token required" });
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err || user.email !== ADMIN_EMAIL) return res.status(403).json({ error: "Acceso admin denegado" });
+    if (err || !user || user.email !== ADMIN_EMAIL) return res.status(403).json({ error: "Acceso admin denegado" });
     req.user = user;
     next();
   });
@@ -314,15 +313,11 @@ async function emitLiveData() {
 setInterval(emitLiveData, 1000);
 
 // LOGOUT
-app.post('/api/logout', (req, res) => {
-  res.clearCookie('holypotToken', {
+res.clearCookie('holypotToken', {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'strict'
+    secure: true,
+    sameSite: 'none'
   });
-  // Opcional: Envía una respuesta al cliente
-  res.status(200).send('Logout exitoso');
-});
 
 // REGISTER
 app.post('/api/register', async (req, res) => {
