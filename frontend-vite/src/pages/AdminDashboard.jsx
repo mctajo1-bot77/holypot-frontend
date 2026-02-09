@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from '@/services/apiClient';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -40,14 +40,14 @@ const AdminDashboard = () => {
 
     try {
       // Data principal
-      const res = await axios.get(`${API_BASE}/admin/data`, {
+      const res = await apiClient.get(`${API_BASE}/admin/data`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setData(res.data);
 
       // Payouts separado (si falla, [] y no rompe)
       try {
-        const payoutsRes = await axios.get(`${API_BASE}/admin/payouts`, {
+        const payoutsRes = await apiClient.get(`${API_BASE}/admin/payouts`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setPayouts(payoutsRes.data || []);
