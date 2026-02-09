@@ -360,32 +360,92 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Login admin exclusivo
-app.post('/api/admin-login', async (req, res) => {
-  const schema = z.object({
-    email: z.string().email(),
-    password: z.string()
-  });
-  const parsed = schema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
-  const { email, password } = parsed.data;
-  if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
-    return res.status(401).json({ error: "Credenciales admin inválidas" });
+// ADMIN DATA – CON LOGGING PARA DEPURAR ERROR 500
+app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
+  try {
+    console.log('Solicitud /api/admin/data recibida – token admin OK');
+
+    // Query eficiente
+    const entries = await prisma.entry.findMany({
+      select: {
+        id: true,
+        level: true,
+        status: true,
+        virtualCapital: true,
+        user: { select: { id: true, email: true, nickname: true, walletAddress: true } },
+        positions: { select: { id: true, symbol: true, direction: true, lotSize: true, entryPrice: true, closedAt: true } }
+      }
+    });
+    console.log(`Entries cargadas: ${entries.length}`);
+
+    const overview = { inscripcionesTotal: entries.length, participantesActivos: entries.filter(e => e.status === 'confirmed').length, revenuePlataforma: 0, prizePoolTotal: 0 };
+
+    const competencias = {};
+    const levelsConfigAdmin = { basic: { entryPrice: 12, comision: 2, initialCapital: 10000 }, medium: { entryPrice: 54, comision: 4, initialCapital: 50000 }, premium: { entryPrice: 107, comision: 7, initialCapital: 100000 } };
+
+    await Promise.all(Object.keys(levelsConfigAdmin).map(async (level) => {
+      const config = levelsConfigAdmin[level];
+      const entriesLevel = entries.filter(e => e.level === level);
+      const ingresos = entriesLevel.length * config.entryPrice;
+      const revenue = entriesLevel.length * config.comision;
+      const prizePool = ingresos - revenue;
+
+      overview.revenuePlataforma += revenue;
+      overview.prizePoolTotal += prizePool;
+
+      const ranking = entriesLevel.map(e => {
+        let liveCapital = e.virtualCapital;
+        e.positions.filter(p => !p.closedAt).forEach(p => {
+          const currentPrice = getCurrentPrice(p.symbol);
+          if (currentPrice) {
+            const sign = p.direction === 'long' ? 1 : -1;
+            const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
+            const pnlAmount = e.virtualCapital * (p.lotSize || 0) * (pnlPercent / 100);
+            liveCapital += pnlAmount;
+          }
+        });
+        const initial = config.initialCapital;
+        const retorno = ((liveCapital - initial) / initial) * 100;
+        const displayName = e.user.nickname || 'Anónimo';
+        return { displayName, wallet: e.user.walletAddress, retorno: retorno.toFixed(2) + "%", liveCapital: liveCapital.toString() };
+      }).sort((a, b) => parseFloat(b.retorno) - parseFloat(a.retorno));
+
+      competencias[level] = {
+        participantes: entriesLevel.length,
+        prizePool,
+        ranking: ranking.slice(0, 10),
+        top3CSV: ranking.slice(0, 3).map((r, i) => `${r.wallet},${(prizePool * [0.5, 0.3, 0.2][i]).toFixed(2)}`).join('\n')
+      };
+    }));
+
+    const usuarios = entries.map(e => {
+      let liveCapital = e.virtualCapital;
+      e.positions.filter(p => !p.closedAt).forEach(p => {
+        const currentPrice = getCurrentPrice(p.symbol);
+        if (currentPrice) {
+          const sign = p.direction === 'long' ? 1 : -1;
+          const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
+          const pnlAmount = e.virtualCapital * (p.lotSize || 0) * (pnlPercent / 100);
+          liveCapital += pnlAmount;
+        }
+      });
+      return {
+        id: e.id,
+        displayName: e.user.nickname || 'Anónimo',
+        wallet: e.user.walletAddress,
+        level: e.level,
+        status: e.status,
+        virtualCapital: liveCapital.toString()
+      };
+    });
+
+    console.log('Datos admin preparados – enviando respuesta');
+    res.json({ overview, competencias, usuarios });
+  } catch (error) {
+    console.error('Error crítico en /api/admin/data:', error);
+    res.status(500).json({ error: "Error cargando datos admin", details: error.message });
   }
-  const token = jwt.sign({ email: ADMIN_EMAIL, role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
-  res.cookie('holypotToken', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000
-  });
-  res.json({ success: true });
 });
-
-// GET para /api/admin-login (evita "Cannot GET")
-app.get('/api/admin-login', (req, res) => {
-  res.status(405).json({ error: "Método GET no permitido – usa POST para login admin" });
-});
-
 // Webhook NowPayments
 app.post('/api/webhook-nowpayments', express.raw({type: 'application/json'}), async (req, res) => {
   const body = req.body.toString();
