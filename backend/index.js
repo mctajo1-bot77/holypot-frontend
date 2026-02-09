@@ -1087,7 +1087,7 @@ app.post('/api/manual-create-confirm', async (req, res) => {
   }
 });
 
-// NUEVO ENDPOINT TOTAL PREMIOS PAGADOS HISTÓRICOS (público) – CORREGIDO
+// NUEVO ENDPOINT TOTAL PREMIOS PAGADOS HISTÓRICOS (público) – CORREGIDO PARA PRISMA 5+
 app.get('/api/total-prizes-paid', async (req, res) => {
   try {
     const result = await prisma.payout.aggregate({
