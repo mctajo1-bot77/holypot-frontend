@@ -1219,19 +1219,30 @@ app.post('/api/manual-create-confirm', async (req, res) => {
 });
 
 // NUEVO ENDPOINT TOTAL PREMIOS PAGADOS HISTÓRICOS (público) – CORREGIDO Prisma aggregate
+// NUEVO ENDPOINT TOTAL PREMIOS PAGADOS HISTÓRICOS (público)
 app.get('/api/total-prizes-paid', async (req, res) => {
   try {
+    // Usamos aggregate con _sum porque Prisma no tiene un método .sum() directo
     const result = await prisma.payout.aggregate({
       _sum: {
-        amount: true
+        amount: true // Asegúrate de que 'amount' es el nombre exacto del campo en tu esquema
       }
     });
-    res.json({ totalPaid: result._sum.amount || 0 });
+
+    // Si no hay registros, result._sum.amount será null, por eso usamos || 0
+    res.json({ 
+      totalPaid: result._sum.amount || 0 
+    });
+
   } catch (error) {
     console.error('Error total prizes:', error);
-    res.status(500).json({ error: 'Error calculando total premios' });
+    res.status(500).json({ 
+      error: 'Error calculando total premios',
+      details: error.message 
+    });
   }
 });
+
 
 // MY-PAYOUTS (historial premios usuario – evita 404 y carga modal ganador)
 app.get('/api/my-payouts', authenticateToken, async (req, res) => {
