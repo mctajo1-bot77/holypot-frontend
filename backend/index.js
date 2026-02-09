@@ -15,7 +15,7 @@ const z = require('zod');
 const JWT_SECRET = process.env.JWT_SECRET || 'holypotsecret2026';
 
 const app = express();
-app.set('trust proxy', 1); // Confía en proxies de Render
+app.set('trust proxy', 1);
 
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -73,7 +73,6 @@ socketFinnhub.on('message', async (data) => {
       const price = t.p;
       livePrices[symbol] = price;
 
-      // VELA 1MIN CORRECTA
       const nowSec = Math.floor(Date.now() / 1000);
       const currentMinute = Math.floor(nowSec / 60) * 60;
 
@@ -167,6 +166,7 @@ app.use('/api/open-trade', tradeLimiter);
 function authenticateToken(req, res, next) {
   const token = req.cookies.holypotToken;
   if (!token) return res.status(401).json({ error: "Token required" });
+
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ error: "Token invalid" });
     req.user = user;
@@ -178,6 +178,7 @@ function authenticateToken(req, res, next) {
 function authenticateAdmin(req, res, next) {
   const token = req.cookies.holypotToken;
   if (!token) return res.status(401).json({ error: "Token required" });
+
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err || user.email !== ADMIN_EMAIL) return res.status(403).json({ error: "Acceso admin denegado" });
     req.user = user;
@@ -416,7 +417,7 @@ app.post('/api/webhook-nowpayments', express.raw({type: 'application/json'}), as
   }
 });
 
-// Competencias activas (sintaxis corregida)
+// Competencias activas
 app.get('/api/competitions/active', async (req, res) => {
   try {
     const entries = await prisma.entry.findMany({
@@ -451,7 +452,7 @@ app.get('/api/competitions/active', async (req, res) => {
   }
 });
 
-// Create payment CON BLOQUEO 18:00 UTC (corregido success/cancel URL a producción)
+// Create payment CON BLOQUEO 18:00 UTC
 app.post('/api/create-payment', async (req, res) => {
   const {
     email, password, walletAddress,
@@ -558,7 +559,7 @@ app.post('/api/manual-confirm', async (req, res) => {
   }
 });
 
-// OPEN TRADE (AHORA CON TP/SL + VALIDACIÓN LÓGICA)
+// OPEN TRADE
 app.post('/api/open-trade', authenticateToken, async (req, res) => {
   const { entryId, symbol, direction, lotSize, takeProfit, stopLoss } = req.body;
   const dir = direction.toLowerCase();
@@ -580,7 +581,6 @@ app.post('/api/open-trade', authenticateToken, async (req, res) => {
     if (tradesToday >= 20) return res.status(400).json({ error: "Límite 20 trades/día" });
     const openLot = entry.positions.reduce((sum, p) => sum + (p.lotSize || 0), 0);
     if (openLot + lotSize > 1.0) return res.status(400).json({ error: "Máximo 1.0 lot total abierto" });
-    // Validación lógica TP/SL (opcional, pero evita valores absurdos)
     if (takeProfit !== undefined && takeProfit !== null) {
       const tp = parseFloat(takeProfit);
       if (dir === 'long' && tp <= currentPrice) return res.status(400).json({ error: "TP debe ser mayor al precio actual en LONG" });
