@@ -23,16 +23,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-const prisma = new PrismaClient({
-  log: ['query', 'info', 'warn', 'error'],
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL.includes('?') 
-        ? `${process.env.DATABASE_URL}&sslmode=no-verify&connect_timeout=30`
-        : `${process.env.DATABASE_URL}?sslmode=no-verify&connect_timeout=30`
-    }
-  }
-});
+const prisma = new PrismaClient();
 
 const NOWPAYMENTS_API = 'https://api.nowpayments.io/v1';
 const API_KEY = process.env.NOWPAYMENTS_API_KEY;
@@ -1087,7 +1078,7 @@ app.post('/api/manual-create-confirm', async (req, res) => {
   }
 });
 
-// NUEVO ENDPOINT TOTAL PREMIOS PAGADOS HISTÓRICOS (público) – CORREGIDO PARA PRISMA 5+
+// NUEVO ENDPOINT TOTAL PREMIOS PAGADOS HISTÓRICOS (público) – CORREGIDO
 app.get('/api/total-prizes-paid', async (req, res) => {
   try {
     const result = await prisma.payout.aggregate({
