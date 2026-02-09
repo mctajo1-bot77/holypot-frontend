@@ -15,7 +15,7 @@ const z = require('zod');
 const JWT_SECRET = process.env.JWT_SECRET || 'holypotsecret2026';
 
 const app = express();
-app.set('trust proxy', 1); // Confía en proxies de Render (soluciona X-Forwarded-For)
+app.set('trust proxy', 1); // Confía en proxies de Render
 
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -73,12 +73,12 @@ socketFinnhub.on('message', async (data) => {
       const price = t.p;
       livePrices[symbol] = price;
 
-      // VELA 1MIN CORRECTA (acumula high/low, preserva open, close = último)
+      // VELA 1MIN CORRECTA
       const nowSec = Math.floor(Date.now() / 1000);
       const currentMinute = Math.floor(nowSec / 60) * 60;
 
       const candleDate = new Date(currentMinute * 1000);
-      candleDate.setUTCHours(0, 0, 0, 0); // día UTC
+      candleDate.setUTCHours(0, 0, 0, 0);
 
       try {
         const existing = await prisma.dailyCandle.findUnique({
@@ -119,12 +119,10 @@ socketFinnhub.on('message', async (data) => {
             }
           });
         }
-        console.log(`Vela 1min actualizada para ${symbol} time=${currentMinute} price=${price}`);
       } catch (err) {
         console.error('Error vela 1min:', err);
       }
     }
-    console.log('Precios live + velas 1min actualizadas:', livePrices);
     emitLiveData();
   }
 });
@@ -149,9 +147,9 @@ const io = new Server(server, {
   }
 });
 
-// RATE LIMITING (protección brute force + spam trades)
+// RATE LIMITING
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min
+  windowMs: 15 * 60 * 1000,
   max: 5,
   message: 'Demasiados intentos – espera 15 min'
 });
@@ -159,17 +157,16 @@ app.use('/api/login', loginLimiter);
 app.use('/api/admin-login', loginLimiter);
 
 const tradeLimiter = rateLimit({
-  windowMs: 1000, // 1 segundo
+  windowMs: 1000,
   max: 3,
   message: 'Demasiados trades rápidos – espera'
 });
 app.use('/api/open-trade', tradeLimiter);
 
-// JWT middleware general (lee cookie)
+// JWT middleware general
 function authenticateToken(req, res, next) {
   const token = req.cookies.holypotToken;
   if (!token) return res.status(401).json({ error: "Token required" });
-
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ error: "Token invalid" });
     req.user = user;
@@ -177,11 +174,10 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// JWT middleware ADMIN (lee cookie)
+// JWT middleware ADMIN
 function authenticateAdmin(req, res, next) {
   const token = req.cookies.holypotToken;
   if (!token) return res.status(401).json({ error: "Token required" });
-
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err || user.email !== ADMIN_EMAIL) return res.status(403).json({ error: "Acceso admin denegado" });
     req.user = user;
@@ -189,7 +185,7 @@ function authenticateAdmin(req, res, next) {
   });
 }
 
-// NUEVO ENDPOINT /api/me – VALIDA COOKIE Y DEVUELVE INFO USER
+// /api/me
 app.get('/api/me', authenticateToken, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
@@ -290,7 +286,7 @@ async function emitLiveData() {
 // Emit live data cada segundo
 setInterval(emitLiveData, 1000);
 
-// LOGOUT (clear cookie)
+// LOGOUT
 app.post('/api/logout', (req, res) => {
   res.clearCookie('holypotToken', {
     httpOnly: true,
@@ -300,7 +296,7 @@ app.post('/api/logout', (req, res) => {
   res.json({ success: true });
 });
 
-// REGISTER + COOKIE SEGURA + ZOD VALIDATION
+// REGISTER
 app.post('/api/register', async (req, res) => {
   const schema = z.object({
     email: z.string().email(),
@@ -328,7 +324,7 @@ app.post('/api/register', async (req, res) => {
     res.cookie('holypotToken', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
     res.json({ success: true });
@@ -337,7 +333,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// Login normal + COOKIE SEGURA + ZOD
+// Login normal
 app.post('/api/login', async (req, res) => {
   const schema = z.object({
     email: z.string().email(),
@@ -364,7 +360,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Login admin exclusivo + COOKIE SEGURA
+// Login admin exclusivo
 app.post('/api/admin-login', async (req, res) => {
   const schema = z.object({
     email: z.string().email(),
@@ -380,21 +376,20 @@ app.post('/api/admin-login', async (req, res) => {
   res.cookie('holypotToken', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'none',
+    sameSite: 'strict',
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
   res.json({ success: true });
 });
 
-// GET para /api/admin-login (evita "Cannot GET" – mensaje informativo)
+// GET para /api/admin-login (evita "Cannot GET")
 app.get('/api/admin-login', (req, res) => {
   res.status(405).json({ error: "Método GET no permitido – usa POST para login admin" });
 });
 
-// Webhook NowPayments + HMAC VERIFICATION
+// Webhook NowPayments
 app.post('/api/webhook-nowpayments', express.raw({type: 'application/json'}), async (req, res) => {
   const body = req.body.toString();
-  // HMAC VERIFICATION
   const signature = req.headers['x-nowpayments-sig'];
   const secret = process.env.NOWPAYMENTS_SECRET;
   if (secret) {
@@ -421,7 +416,7 @@ app.post('/api/webhook-nowpayments', express.raw({type: 'application/json'}), as
   }
 });
 
-// Competencias activas
+// Competencias activas (sintaxis corregida)
 app.get('/api/competitions/active', async (req, res) => {
   try {
     const entries = await prisma.entry.findMany({
@@ -456,7 +451,7 @@ app.get('/api/competitions/active', async (req, res) => {
   }
 });
 
-// Create payment CON BLOQUEO 18:00 UTC
+// Create payment CON BLOQUEO 18:00 UTC (corregido success/cancel URL a producción)
 app.post('/api/create-payment', async (req, res) => {
   const {
     email, password, walletAddress,
@@ -465,7 +460,6 @@ app.post('/api/create-payment', async (req, res) => {
   } = req.body;
   if (!acceptTerms) return res.status(400).json({ error: 'Debes aceptar términos y condiciones' });
   if (!levelsConfig[level]) return res.status(400).json({ error: 'Nivel inválido' });
-  // BLOQUEO INSCRIPCIÓN DESPUÉS 18:00 UTC
   const now = new Date();
   const utcHour = now.getUTCHours();
   if (utcHour >= 18) {
@@ -495,10 +489,10 @@ app.post('/api/create-payment', async (req, res) => {
       price_amount: total,
       price_currency: "usd",
       pay_currency: "usdttrc20",
-      ipn_callback_url: "https://tu-dominio.com/api/webhook-nowpayments",
+      ipn_callback_url: `${process.env.BACKEND_URL || 'https://holypot-backend.onrender.com'}/api/webhook-nowpayments`,
       order_description: `Inscripción Holypot ${level.toUpperCase()} - ${email}`,
-      success_url: "http://localhost:5173/dashboard",
-      cancel_url: "http://localhost:5173/"
+      success_url: `${process.env.FRONTEND_URL || 'https://holypot-landing.onrender.com'}/dashboard`,
+      cancel_url: `${process.env.FRONTEND_URL || 'https://holypot-landing.onrender.com'}/`
     }, {
       headers: { 'x-api-key': API_KEY, 'Content-Type': 'application/json' }
     });
