@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import apiClient from '@/services/apiClient';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,7 @@ const AdminLogin = () => {
 
     try {
       // ✅ CORREGIDO: paréntesis en lugar de backticks
-      const res = await axios.post(`${API_BASE}/admin-login`, { email, password }, { withCredentials: true });
+      const res = await apiClient.post(`${API_BASE}/admin-login`, { email, password }, { withCredentials: true });
       
       // Guardar indicador de sesión admin
       localStorage.setItem('holypotAdminToken', 'true');
