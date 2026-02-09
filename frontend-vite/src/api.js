@@ -10,4 +10,4 @@ const apiClient = axios.create({
   withCredentials: true // Envía cookie HttpOnly automáticamente
 });
 
-export default apiClient;
+export default api;
