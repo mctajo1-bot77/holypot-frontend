@@ -11,6 +11,8 @@ const cron = require('node-cron');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const z = require('zod');
+const cookieParser = require('cookie-parser');
+app.use(cookieParser());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'holypotsecret2026';
 
