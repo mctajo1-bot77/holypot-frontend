@@ -1216,11 +1216,13 @@ app.post('/api/manual-create-confirm', async (req, res) => {
   }
 });
 
-// NUEVO ENDPOINT TOTAL PREMIOS PAGADOS HISTÓRICOS (público) – CORREGIDO
+// NUEVO ENDPOINT TOTAL PREMIOS PAGADOS HISTÓRICOS (público) – CORREGIDO Prisma aggregate
 app.get('/api/total-prizes-paid', async (req, res) => {
   try {
     const result = await prisma.payout.aggregate({
-      _sum: { amount: true }
+      _sum: {
+        amount: true
+      }
     });
     res.json({ totalPaid: result._sum.amount || 0 });
   } catch (error) {
