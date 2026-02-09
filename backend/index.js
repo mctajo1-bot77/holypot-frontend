@@ -318,10 +318,11 @@ setInterval(emitLiveData, 1000);
 app.post('/api/logout', (req, res) => {
   res.clearCookie('holypotToken', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict'
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'strict'
   });
-  res.json({ success: true });
+  // Opcional: Envía una respuesta al cliente
+  res.status(200).send('Logout exitoso');
 });
 
 // REGISTER
@@ -356,12 +357,7 @@ app.post('/api/register', async (req, res) => {
 
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
-    res.cookie('holypotToken', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
+res.cookie('holypotToken', token, getCookieOptions());;
 
     res.json({ success: true });
   } catch (error) {
@@ -390,12 +386,7 @@ app.post('/api/login', async (req, res) => {
 
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
-    res.cookie('holypotToken', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
+ res.cookie('holypotToken', token, getCookieOptions());
 
     res.json({ success: true });
   } catch (error) {
@@ -421,12 +412,7 @@ app.post('/api/admin-login', async (req, res) => {
 
   const token = jwt.sign({ email: ADMIN_EMAIL, role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
 
-  res.cookie('holypotToken', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000
-  });
+ res.cookie('holypotToken', token, getCookieOptions());
 
   res.json({ success: true });
 });
