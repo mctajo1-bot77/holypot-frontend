@@ -313,11 +313,14 @@ async function emitLiveData() {
 setInterval(emitLiveData, 1000);
 
 // LOGOUT
-res.clearCookie('holypotToken', {
+app.post('/api/logout', (req, res) => {
+  res.clearCookie('holypotToken', {
     httpOnly: true,
     secure: true,
     sameSite: 'none'
   });
+  res.json({ success: true });
+});
 
 // REGISTER
 app.post('/api/register', async (req, res) => {
