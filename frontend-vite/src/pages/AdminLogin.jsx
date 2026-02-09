@@ -1,16 +1,10 @@
 import React, { useState } from 'react';
 import apiClient from '@/services/apiClient';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import background from "@/assets/background.jpg";
-
-// ✅ API_BASE DINÁMICA – funciona local y producción
-const API_BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : 'http://localhost:5000/api';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('admin@holypot.com');
@@ -21,17 +15,9 @@ const AdminLogin = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      // ✅ CORREGIDO: paréntesis en lugar de backticks
-      const res = await apiClient.post(`${API_BASE}/admin-login`, { email, password }, { withCredentials: true });
-      
-      // Guardar indicador de sesión admin
-      localStorage.setItem('holypotAdminToken', 'true');
-      
-      // Redirigir al admin dashboard
+      await apiClient.post('/admin-login', { email, password });
       navigate('/admin', { replace: true });
-      
     } catch (err) {
       alert('Error login admin: ' + (err.response?.data?.error || err.message || 'Network Error'));
     } finally {
@@ -60,7 +46,6 @@ const AdminLogin = () => {
               Login Admin – Holypot Trading
             </CardTitle>
           </CardHeader>
-
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-8">
               <Input
@@ -69,7 +54,6 @@ const AdminLogin = () => {
                 disabled
                 className="bg-black/40 border-borderSubtle text-gray-200 text-center text-lg"
               />
-
               <Input
                 type="password"
                 placeholder="Password admin"
@@ -78,7 +62,6 @@ const AdminLogin = () => {
                 onChange={e => setPassword(e.target.value)}
                 className="bg-black/40 border-borderSubtle text-white text-lg"
               />
-
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-holy to-purple-600 text-black text-2xl py-7 font-bold rounded-full shadow-lg hover:shadow-holy/50 hover:scale-105 transition duration-300"
