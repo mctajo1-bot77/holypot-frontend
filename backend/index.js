@@ -33,8 +33,7 @@ const API_KEY = process.env.NOWPAYMENTS_API_KEY;
 const ADMIN_EMAIL = 'admin@holypot.com';
 const ADMIN_PASSWORD = 'holypotadmin2026';
 // ========== COOKIE CONFIG PARA CROSS-SITE (Render) ==========
-const isProduction = process.env.NODE_ENV === 'production';
-
+const isProduction = !!(process.env.NODE_ENV === 'production' || process.env.FRONTEND_URL?.includes('onrender.com'));
 function getCookieOptions() {
   return {
     httpOnly: true,
