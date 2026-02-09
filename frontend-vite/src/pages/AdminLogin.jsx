@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
-import apiClient from '@/api'; // Nuevo path
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import background from "@/assets/background.jpg";
+
+// ✅ API_BASE DINÁMICA
+const API_BASE = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api` 
+  : 'http://localhost:5000/api';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('admin@holypot.com');
@@ -15,10 +20,24 @@ const AdminLogin = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
+
     try {
-      await apiClient.post('/admin-login', { email, password });
-      navigate('/admin', { replace: true });
+      // ✅ CORREGIDO: paréntesis + withCredentials
+      const res = await axios.post(
+        `${API_BASE}/admin-login`, 
+        { email, password }, 
+        { withCredentials: true }
+      );
+      
+      if (res.data.success) {
+        // ✅ Guardar token JWT real
+        localStorage.setItem('holypotAdminToken', res.data.token);
+        console.log('✅ Login exitoso, token guardado');
+        navigate('/admin', { replace: true });
+      }
+      
     } catch (err) {
+      console.error('❌ Error login:', err);
       alert('Error login admin: ' + (err.response?.data?.error || err.message || 'Network Error'));
     } finally {
       setLoading(false);
@@ -27,7 +46,6 @@ const AdminLogin = () => {
 
   return (
     <div className="min-h-screen text-white relative overflow-hidden flex items-center justify-center">
-      {/* FONDO */}
       <div className="fixed inset-0 -z-10">
         <img
           src={background}
@@ -37,7 +55,6 @@ const AdminLogin = () => {
         <div className="absolute inset-0 bg-black/60" />
       </div>
 
-      {/* CARD CENTRAL */}
       <div className="relative group">
         <div className="absolute inset-0 bg-gradient-to-br from-holy/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition duration-700" />
         <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-10 max-w-md w-full hover:scale-105 transition-all duration-500">
@@ -46,6 +63,7 @@ const AdminLogin = () => {
               Login Admin – Holypot Trading
             </CardTitle>
           </CardHeader>
+
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-8">
               <Input
@@ -54,6 +72,7 @@ const AdminLogin = () => {
                 disabled
                 className="bg-black/40 border-borderSubtle text-gray-200 text-center text-lg"
               />
+
               <Input
                 type="password"
                 placeholder="Password admin"
@@ -62,6 +81,7 @@ const AdminLogin = () => {
                 onChange={e => setPassword(e.target.value)}
                 className="bg-black/40 border-borderSubtle text-white text-lg"
               />
+
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-holy to-purple-600 text-black text-2xl py-7 font-bold rounded-full shadow-lg hover:shadow-holy/50 hover:scale-105 transition duration-300"
