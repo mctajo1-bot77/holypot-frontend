@@ -965,7 +965,6 @@ app.get('/api/ranking', async (req, res) => {
   }
 });
 
-// ADMIN DATA – OPTIMIZADO Y SEGURO (guards null + defaults)
 // ADMIN DATA – SEGURA CON GUARDS + DEFAULTS (carga siempre, incluso vacío)
 app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
   try {
@@ -990,12 +989,7 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
       prizePoolTotal: 0 
     };
 
-    const competencias = {
-      basic: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' },
-      medium: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' },
-      premium: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' }
-    };
-
+    const competencias = {};
     const levelsConfigAdmin = { 
       basic: { entryPrice: 12, comision: 2, initialCapital: 10000 }, 
       medium: { entryPrice: 54, comision: 4, initialCapital: 50000 }, 
@@ -1015,7 +1009,7 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
       const ranking = entriesLevel.map(e => {
         let liveCapital = e.virtualCapital ?? config.initialCapital;
         (e.positions || []).filter(p => !p.closedAt).forEach(p => {
-          if (!p.symbol || !p.entryPrice || !p.direction) return;
+          if (!p.symbol || !p.entryPrice || p.entryPrice === 0) return;
           const currentPrice = getCurrentPrice(p.symbol) ?? p.entryPrice;
           const sign = p.direction === 'long' ? 1 : -1;
           const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
@@ -1040,7 +1034,7 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
     const usuarios = entries.map(e => {
       let liveCapital = e.virtualCapital ?? levelsConfigAdmin[e.level]?.initialCapital ?? 10000;
       (e.positions || []).filter(p => !p.closedAt).forEach(p => {
-        if (!p.symbol || !p.entryPrice || !p.direction) return;
+        if (!p.symbol || !p.entryPrice || p.entryPrice === 0) return;
         const currentPrice = getCurrentPrice(p.symbol) ?? p.entryPrice;
         const sign = p.direction === 'long' ? 1 : -1;
         const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
@@ -1061,7 +1055,6 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
     res.json({ overview, competencias, usuarios });
   } catch (error) {
     console.error('Error crítico en /api/admin/data:', error);
-    // Default safe data si crashea
     res.json({
       overview: { inscripcionesTotal: 0, participantesActivos: 0, revenuePlataforma: 0, prizePoolTotal: 0 },
       competencias: {
@@ -1073,7 +1066,6 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
     });
   }
 });
-
 // Admin viejo
 app.get('/admin', async (req, res) => {
   if (req.query.pass !== ADMIN_PASSWORD) return res.status(401).json({ error: "Password incorrecto" });
