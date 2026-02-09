@@ -360,7 +360,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Login admin exclusivo
-// ADMIN DATA – SEGURA CON DEFAULTS + LOGGING (evita 500 y crash frontend)
+// ADMIN DATA – SEGURA CON GUARDS + LOGGING (evita 500 y crash frontend)
 app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
   try {
     console.log('Solicitud /api/admin/data – token admin OK');
@@ -379,17 +379,12 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
 
     const overview = { inscripcionesTotal: entries.length, participantesActivos: entries.filter(e => e.status === 'confirmed').length, revenuePlataforma: 0, prizePoolTotal: 0 };
 
-    const competencias = {
-      basic: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' },
-      medium: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' },
-      premium: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' }
-    };
-
+    const competencias = {};
     const levelsConfigAdmin = { basic: { entryPrice: 12, comision: 2, initialCapital: 10000 }, medium: { entryPrice: 54, comision: 4, initialCapital: 50000 }, premium: { entryPrice: 107, comision: 7, initialCapital: 100000 } };
 
     await Promise.all(Object.keys(levelsConfigAdmin).map(async (level) => {
       const config = levelsConfigAdmin[level];
-      const entriesLevel = entries.filter(e => e.level === level) || [];
+      const entriesLevel = entries.filter(e => e.level === level);
       const ingresos = entriesLevel.length * config.entryPrice;
       const revenue = entriesLevel.length * config.comision;
       const prizePool = ingresos - revenue;
@@ -400,6 +395,7 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
       const ranking = entriesLevel.map(e => {
         let liveCapital = e.virtualCapital || config.initialCapital;
         (e.positions || []).filter(p => !p.closedAt).forEach(p => {
+          if (!p.symbol || !p.entryPrice) return; // Guard null
           const currentPrice = getCurrentPrice(p.symbol);
           if (currentPrice) {
             const sign = p.direction === 'long' ? 1 : -1;
@@ -425,6 +421,7 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
     const usuarios = entries.map(e => {
       let liveCapital = e.virtualCapital || levelsConfigAdmin[e.level]?.initialCapital || 10000;
       (e.positions || []).filter(p => !p.closedAt).forEach(p => {
+        if (!p.symbol || !p.entryPrice) return; // Guard null
         const currentPrice = getCurrentPrice(p.symbol);
         if (currentPrice) {
           const sign = p.direction === 'long' ? 1 : -1;
@@ -447,7 +444,6 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
     res.json({ overview, competencias, usuarios });
   } catch (error) {
     console.error('Error crítico en /api/admin/data:', error);
-    // Default safe data si crashea
     res.json({
       overview: { inscripcionesTotal: 0, participantesActivos: 0, revenuePlataforma: 0, prizePoolTotal: 0 },
       competencias: {
