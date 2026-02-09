@@ -32,6 +32,18 @@ const API_KEY = process.env.NOWPAYMENTS_API_KEY;
 // ADMIN CREDENTIALS
 const ADMIN_EMAIL = 'admin@holypot.com';
 const ADMIN_PASSWORD = 'holypotadmin2026';
+// ========== COOKIE CONFIG PARA CROSS-SITE (Render) ==========
+const isProduction = process.env.NODE_ENV === 'production';
+
+function getCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: isProduction,               // true en producción (HTTPS)
+    sameSite: isProduction ? 'none' : 'strict',  // 'none' permite cross-site en producción
+    maxAge: 7 * 24 * 60 * 60 * 1000     // 7 días
+  };
+}
+// =============================================================
 
 // Configuración única de niveles
 const levelsConfig = {
