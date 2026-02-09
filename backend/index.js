@@ -180,34 +180,33 @@ function authenticateToken(req, res, next) {
 
 // JWT middleware ADMIN - LEE HEADER O COOKIE
 function authenticateAdmin(req, res, next) {
-  // ✅ Leer de Authorization header O cookie
+  // ✅ Lee de header Authorization O cookie
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') 
     ? authHeader.substring(7) 
     : req.cookies.holypotToken;
   
   if (!token) {
-    console.log('❌ Token admin no encontrado');
+    console.log('❌ No token');
     return res.status(401).json({ error: "Token required" });
   }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      console.log('❌ Token admin inválido:', err.message);
+      console.log('❌ Token inválido:', err.message);
       return res.status(403).json({ error: "Token invalid" });
     }
     
     if (user.role !== 'admin' && user.email !== ADMIN_EMAIL) {
-      console.log('❌ No es admin:', user.email);
-      return res.status(403).json({ error: "Acceso admin denegado" });
+      console.log('❌ No es admin');
+      return res.status(403).json({ error: "Acceso denegado" });
     }
     
-    console.log('✅ Token admin válido:', user.email);
+    console.log('✅ Admin autenticado');
     req.user = user;
     next();
   });
 }
-
 // NUEVO ENDPOINT /api/me – VALIDA COOKIE Y DEVUELVE INFO USER
 app.get('/api/me', authenticateToken, async (req, res) => {
   try {
