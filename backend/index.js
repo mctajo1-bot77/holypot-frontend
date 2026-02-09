@@ -360,7 +360,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Login admin exclusivo
-// ADMIN DATA – SEGURA CON GUARDS + LOGGING (evita 500 y crash frontend)
+// ADMIN DATA – SEGURA CON PLACEHOLDER + GUARDS + LOGGING (evita 500 y crash frontend)
 app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
   try {
     console.log('Solicitud /api/admin/data – token admin OK');
@@ -396,13 +396,11 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
         let liveCapital = e.virtualCapital || config.initialCapital;
         (e.positions || []).filter(p => !p.closedAt).forEach(p => {
           if (!p.symbol || !p.entryPrice) return; // Guard null
-          const currentPrice = getCurrentPrice(p.symbol);
-          if (currentPrice) {
-            const sign = p.direction === 'long' ? 1 : -1;
-            const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
-            const pnlAmount = (e.virtualCapital || config.initialCapital) * (p.lotSize || 0) * (pnlPercent / 100);
-            liveCapital += pnlAmount;
-          }
+          const currentPrice = getCurrentPrice(p.symbol) || p.entryPrice; // Placeholder si no hay precio live
+          const sign = p.direction === 'long' ? 1 : -1;
+          const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
+          const pnlAmount = (e.virtualCapital || config.initialCapital) * (p.lotSize || 0) * (pnlPercent / 100);
+          liveCapital += pnlAmount;
         });
         const initial = config.initialCapital;
         const retorno = ((liveCapital - initial) / initial) * 100;
@@ -422,13 +420,11 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
       let liveCapital = e.virtualCapital || levelsConfigAdmin[e.level]?.initialCapital || 10000;
       (e.positions || []).filter(p => !p.closedAt).forEach(p => {
         if (!p.symbol || !p.entryPrice) return; // Guard null
-        const currentPrice = getCurrentPrice(p.symbol);
-        if (currentPrice) {
-          const sign = p.direction === 'long' ? 1 : -1;
-          const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
-          const pnlAmount = (e.virtualCapital || levelsConfigAdmin[e.level]?.initialCapital || 10000) * (p.lotSize || 0) * (pnlPercent / 100);
-          liveCapital += pnlAmount;
-        }
+        const currentPrice = getCurrentPrice(p.symbol) || p.entryPrice; // Placeholder si no hay precio live
+        const sign = p.direction === 'long' ? 1 : -1;
+        const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
+        const pnlAmount = (e.virtualCapital || levelsConfigAdmin[e.level]?.initialCapital || 10000) * (p.lotSize || 0) * (pnlPercent / 100);
+        liveCapital += pnlAmount;
       });
       return {
         id: e.id,
@@ -444,15 +440,7 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
     res.json({ overview, competencias, usuarios });
   } catch (error) {
     console.error('Error crítico en /api/admin/data:', error);
-    res.json({
-      overview: { inscripcionesTotal: 0, participantesActivos: 0, revenuePlataforma: 0, prizePoolTotal: 0 },
-      competencias: {
-        basic: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' },
-        medium: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' },
-        premium: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' }
-      },
-      usuarios: []
-    });
+    res.status(500).json({ error: "Error interno del servidor al cargar datos." });
   }
 });
 // Webhook NowPayments
