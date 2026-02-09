@@ -12,12 +12,12 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const z = require('zod');
 const cookieParser = require('cookie-parser');
-app.use(cookieParser());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'holypotsecret2026';
 
 const app = express();
-app.set('trust proxy', 1); // Confía en proxies de Render (soluciona X-Forwarded-For)
+app.set('trust proxy', 1);
+app.use(cookieParser());
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
@@ -35,8 +35,8 @@ const ADMIN_PASSWORD = 'holypotadmin2026';
 
 // Configuración única de niveles
 const levelsConfig = {
-  basic:   { name: "Basic",   entryPrice: 12,  comision: 2,  initialCapital: 10000 },
-  medium:  { name: "Medium",  entryPrice: 54,  comision: 4,  initialCapital: 50000 },
+  basic: { name: "Basic", entryPrice: 12, comision: 2, initialCapital: 10000 },
+  medium: { name: "Medium", entryPrice: 54, comision: 4, initialCapital: 50000 },
   premium: { name: "Premium", entryPrice: 107, comision: 7, initialCapital: 100000 }
 };
 
@@ -74,12 +74,11 @@ socketFinnhub.on('message', async (data) => {
       const price = t.p;
       livePrices[symbol] = price;
 
-      // VELA 1MIN CORRECTA (acumula high/low, preserva open, close = último)
       const nowSec = Math.floor(Date.now() / 1000);
       const currentMinute = Math.floor(nowSec / 60) * 60;
 
       const candleDate = new Date(currentMinute * 1000);
-      candleDate.setUTCHours(0, 0, 0, 0); // día UTC
+      candleDate.setUTCHours(0, 0, 0, 0);
 
       try {
         const existing = await prisma.dailyCandle.findUnique({
@@ -120,12 +119,10 @@ socketFinnhub.on('message', async (data) => {
             }
           });
         }
-        console.log(`Vela 1min actualizada para ${symbol} time=${currentMinute} price=${price}`);
       } catch (err) {
         console.error('Error vela 1min:', err);
       }
     }
-    console.log('Precios live + velas 1min actualizadas:', livePrices);
     emitLiveData();
   }
 });
@@ -150,9 +147,9 @@ const io = new Server(server, {
   }
 });
 
-// RATE LIMITING (protección brute force + spam trades)
+// RATE LIMITING
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min
+  windowMs: 15 * 60 * 1000,
   max: 5,
   message: 'Demasiados intentos – espera 15 min'
 });
@@ -160,13 +157,13 @@ app.use('/api/login', loginLimiter);
 app.use('/api/admin-login', loginLimiter);
 
 const tradeLimiter = rateLimit({
-  windowMs: 1000, // 1 segundo
+  windowMs: 1000,
   max: 3,
   message: 'Demasiados trades rápidos – espera'
 });
 app.use('/api/open-trade', tradeLimiter);
 
-// JWT middleware general (lee cookie)
+// JWT middleware general
 function authenticateToken(req, res, next) {
   const token = req.cookies.holypotToken;
   if (!token) return res.status(401).json({ error: "Token required" });
@@ -178,36 +175,19 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// JWT middleware ADMIN - LEE HEADER O COOKIE
+// JWT middleware ADMIN
 function authenticateAdmin(req, res, next) {
-  // ✅ Lee de header Authorization O cookie
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') 
-    ? authHeader.substring(7) 
-    : req.cookies.holypotToken;
-  
-  if (!token) {
-    console.log('❌ No token');
-    return res.status(401).json({ error: "Token required" });
-  }
+  const token = req.cookies.holypotToken;
+  if (!token) return res.status(401).json({ error: "Token required" });
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      console.log('❌ Token inválido:', err.message);
-      return res.status(403).json({ error: "Token invalid" });
-    }
-    
-    if (user.role !== 'admin' && user.email !== ADMIN_EMAIL) {
-      console.log('❌ No es admin');
-      return res.status(403).json({ error: "Acceso denegado" });
-    }
-    
-    console.log('✅ Admin autenticado');
+    if (err || user.email !== ADMIN_EMAIL) return res.status(403).json({ error: "Acceso admin denegado" });
     req.user = user;
     next();
   });
 }
-// NUEVO ENDPOINT /api/me – VALIDA COOKIE Y DEVUELVE INFO USER
+
+// /api/me
 app.get('/api/me', authenticateToken, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
@@ -236,7 +216,7 @@ async function emitLiveData() {
 
       openPositions.forEach(p => {
         const currentPrice = getCurrentPrice(p.symbol);
-        if (currentPrice) {
+        if (currentPrice && p.entryPrice) {
           const sign = p.direction === 'long' ? 1 : -1;
           const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
           const pnlAmount = entry.virtualCapital * (p.lotSize || 0) * (pnlPercent / 100);
@@ -294,7 +274,7 @@ async function emitLiveData() {
         liveCapital: liveCapitalInt,
         positions: entry.positions.map(p => {
           const currentPrice = getCurrentPrice(p.symbol);
-          const livePnl = !p.closedAt && currentPrice
+          const livePnl = !p.closedAt && currentPrice && p.entryPrice
             ? (p.direction === 'long' ? 1 : -1) * ((currentPrice - p.entryPrice) / p.entryPrice) * 100
             : (p.currentPnl || 0);
 
@@ -322,7 +302,7 @@ async function emitLiveData() {
 // Emit live data cada segundo
 setInterval(emitLiveData, 1000);
 
-// LOGOUT (clear cookie)
+// LOGOUT
 app.post('/api/logout', (req, res) => {
   res.clearCookie('holypotToken', {
     httpOnly: true,
@@ -332,7 +312,7 @@ app.post('/api/logout', (req, res) => {
   res.json({ success: true });
 });
 
-// REGISTER + COOKIE SEGURA + ZOD VALIDATION
+// REGISTER
 app.post('/api/register', async (req, res) => {
   const schema = z.object({
     email: z.string().email(),
@@ -353,10 +333,10 @@ app.post('/api/register', async (req, res) => {
     if (existingNick) return res.status(400).json({ error: "Nickname ya usado – elige otro" });
 
     const user = await prisma.user.create({
-      data: { 
-        email, 
-        password: hashedPassword, 
-        walletAddress, 
+      data: {
+        email,
+        password: hashedPassword,
+        walletAddress,
         nickname,
         emailVerified: false
       }
@@ -377,7 +357,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// Login normal + COOKIE SEGURA + ZOD
+// Login normal
 app.post('/api/login', async (req, res) => {
   const schema = z.object({
     email: z.string().email(),
@@ -411,34 +391,32 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Login admin exclusivo + COOKIE SEGURA + DEVUELVE TOKEN
+// Login admin exclusivo
 app.post('/api/admin-login', async (req, res) => {
   const schema = z.object({
     email: z.string().email(),
     password: z.string()
   });
-  
+
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
-  
+
   const { email, password } = parsed.data;
-  
+
   if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
-    console.log('❌ Credenciales admin incorrectas');
     return res.status(401).json({ error: "Credenciales admin inválidas" });
   }
-  
+
   const token = jwt.sign({ email: ADMIN_EMAIL, role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
-  
+
   res.cookie('holypotToken', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'none',
+    sameSite: 'strict',
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
-  
-  console.log('✅ Admin login exitoso - token creado');
-  res.json({ success: true, token });
+
+  res.json({ success: true });
 });
 
 // GET para /api/admin-login (evita "Cannot GET")
@@ -446,11 +424,9 @@ app.get('/api/admin-login', (req, res) => {
   res.status(405).json({ error: "Método GET no permitido – usa POST para login admin" });
 });
 
-// Webhook NowPayments + HMAC VERIFICATION
+// Webhook NowPayments
 app.post('/api/webhook-nowpayments', express.raw({type: 'application/json'}), async (req, res) => {
   const body = req.body.toString();
-
-  // HMAC VERIFICATION
   const signature = req.headers['x-nowpayments-sig'];
   const secret = process.env.NOWPAYMENTS_SECRET;
   if (secret) {
@@ -519,17 +495,16 @@ app.get('/api/competitions/active', async (req, res) => {
 
 // Create payment CON BLOQUEO 18:00 UTC
 app.post('/api/create-payment', async (req, res) => {
-  const { 
-    email, password, walletAddress, 
-    fullName, country, birthDate, 
-    level, acceptTerms 
+  const {
+    email, password, walletAddress,
+    fullName, country, birthDate,
+    level, acceptTerms
   } = req.body;
 
   if (!acceptTerms) return res.status(400).json({ error: 'Debes aceptar términos y condiciones' });
 
   if (!levelsConfig[level]) return res.status(400).json({ error: 'Nivel inválido' });
 
-  // BLOQUEO INSCRIPCIÓN DESPUÉS 18:00 UTC
   const now = new Date();
   const utcHour = now.getUTCHours();
   if (utcHour >= 18) {
@@ -545,13 +520,13 @@ app.post('/api/create-payment', async (req, res) => {
       const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
       user = await prisma.user.upsert({
         where: { email },
-        update: { 
-          walletAddress, 
+        update: {
+          walletAddress,
           password: hashedPassword
         },
-        create: { 
-          email, 
-          walletAddress, 
+        create: {
+          email,
+          walletAddress,
           password: hashedPassword
         }
       });
@@ -563,10 +538,10 @@ app.post('/api/create-payment', async (req, res) => {
       price_amount: total,
       price_currency: "usd",
       pay_currency: "usdttrc20",
-      ipn_callback_url: "https://tu-dominio.com/api/webhook-nowpayments",
+      ipn_callback_url: `${process.env.BACKEND_URL || 'https://holypot-backend.onrender.com'}/api/webhook-nowpayments`,
       order_description: `Inscripción Holypot ${level.toUpperCase()} - ${email}`,
-      success_url: "http://localhost:5173/dashboard",
-      cancel_url: "http://localhost:5173/"
+      success_url: `${process.env.FRONTEND_URL || 'https://holypot-landing.onrender.com'}/dashboard`,
+      cancel_url: `${process.env.FRONTEND_URL || 'https://holypot-landing.onrender.com'}/`
     }, {
       headers: { 'x-api-key': API_KEY, 'Content-Type': 'application/json' }
     });
@@ -635,7 +610,7 @@ app.post('/api/manual-confirm', async (req, res) => {
   }
 });
 
-// OPEN TRADE (AHORA CON TP/SL + VALIDACIÓN LÓGICA)
+// OPEN TRADE
 app.post('/api/open-trade', authenticateToken, async (req, res) => {
   const { entryId, symbol, direction, lotSize, takeProfit, stopLoss } = req.body;
   const dir = direction.toLowerCase();
@@ -661,7 +636,6 @@ app.post('/api/open-trade', authenticateToken, async (req, res) => {
     const openLot = entry.positions.reduce((sum, p) => sum + (p.lotSize || 0), 0);
     if (openLot + lotSize > 1.0) return res.status(400).json({ error: "Máximo 1.0 lot total abierto" });
 
-    // Validación lógica TP/SL (opcional, pero evita valores absurdos)
     if (takeProfit !== undefined && takeProfit !== null) {
       const tp = parseFloat(takeProfit);
       if (dir === 'long' && tp <= currentPrice) return res.status(400).json({ error: "TP debe ser mayor al precio actual en LONG" });
@@ -783,7 +757,7 @@ app.get('/api/my-positions', authenticateToken, async (req, res) => {
     const positionsWithLivePnl = entry.positions.map(p => {
       const currentPrice = getCurrentPrice(p.symbol);
       let livePnl = p.currentPnl || 0;
-      if (!p.closedAt && currentPrice) {
+      if (!p.closedAt && currentPrice && p.entryPrice) {
         const sign = p.direction === 'long' ? 1 : -1;
         livePnl = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
         const pnlAmount = entry.virtualCapital * (p.lotSize || 0) * (livePnl / 100);
@@ -801,8 +775,8 @@ app.get('/api/my-positions', authenticateToken, async (req, res) => {
 
     const totalRiskPercent = entry.positions.filter(p => !p.closedAt).reduce((sum, p) => sum + (p.lotSize || 0) * 10, 0);
 
-    res.json({ 
-      positions: positionsWithLivePnl, 
+    res.json({
+      positions: positionsWithLivePnl,
       totalRiskPercent,
       virtualCapital: liveCapital.toString(),
       livePrices: livePrices
@@ -847,7 +821,7 @@ app.get('/api/my-profile', authenticateToken, async (req, res) => {
     let liveCapital = entry.virtualCapital;
     entry.positions.filter(p => !p.closedAt).forEach(p => {
       const currentPrice = getCurrentPrice(p.symbol);
-      if (currentPrice) {
+      if (currentPrice && p.entryPrice) {
         const sign = p.direction === 'long' ? 1 : -1;
         const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
         const pnlAmount = entry.virtualCapital * (p.lotSize || 0) * (pnlPercent / 100);
@@ -858,16 +832,15 @@ app.get('/api/my-profile', authenticateToken, async (req, res) => {
     const initial = levelsConfig[entry.level].initialCapital;
     const dailyReturn = ((liveCapital - initial) / initial) * 100;
 
-    // STATS REALES DE POSITIONS
     const buys = entry.positions.filter(p => p.direction === 'long').length;
     const sells = entry.positions.filter(p => p.direction === 'short').length;
     const totalTrades = buys + sells;
 
-    // Top assets (symbol + count total trades)
     const assetCount = {};
     entry.positions.forEach(p => {
       assetCount[p.symbol] = (assetCount[p.symbol] || 0) + 1;
     });
+
     const topAssets = Object.entries(assetCount)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
@@ -918,7 +891,7 @@ app.get('/api/last-winners', async (req, res) => {
         let liveCapital = e.virtualCapital;
         e.positions.filter(p => !p.closedAt).forEach(p => {
           const currentPrice = getCurrentPrice(p.symbol);
-          if (currentPrice) {
+          if (currentPrice && p.entryPrice) {
             const sign = p.direction === 'long' ? 1 : -1;
             const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
             const pnlAmount = e.virtualCapital * (p.lotSize || 0) * (pnlPercent / 100);
@@ -968,7 +941,7 @@ app.get('/api/ranking', async (req, res) => {
       let liveCapital = e.virtualCapital;
       e.positions.filter(p => !p.closedAt).forEach(p => {
         const currentPrice = getCurrentPrice(p.symbol);
-        if (currentPrice) {
+        if (currentPrice && p.entryPrice) {
           const sign = p.direction === 'long' ? 1 : -1;
           const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
           const pnlAmount = e.virtualCapital * (p.lotSize || 0) * (pnlPercent / 100);
@@ -992,10 +965,11 @@ app.get('/api/ranking', async (req, res) => {
   }
 });
 
-// ADMIN DATA – OPTIMIZADO PARA BASIC-256mb (mismo resultado, más rápido)
+// ADMIN DATA – OPTIMIZADO Y SEGURO (guards null + defaults)
 app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
   try {
-    // Query eficiente: solo campos necesarios
+    console.log('Solicitud /api/admin/data – token admin OK');
+
     const entries = await prisma.entry.findMany({
       select: {
         id: true,
@@ -1006,34 +980,39 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
         positions: { select: { id: true, symbol: true, direction: true, lotSize: true, entryPrice: true, closedAt: true } }
       }
     });
+    console.log(`Entries cargadas: ${entries.length}`);
+
     const overview = { inscripcionesTotal: entries.length, participantesActivos: entries.filter(e => e.status === 'confirmed').length, revenuePlataforma: 0, prizePoolTotal: 0 };
+
     const competencias = {};
     const levelsConfigAdmin = { basic: { entryPrice: 12, comision: 2, initialCapital: 10000 }, medium: { entryPrice: 54, comision: 4, initialCapital: 50000 }, premium: { entryPrice: 107, comision: 7, initialCapital: 100000 } };
-    // Cálculos paralelos – más rápido
+
     await Promise.all(Object.keys(levelsConfigAdmin).map(async (level) => {
       const config = levelsConfigAdmin[level];
       const entriesLevel = entries.filter(e => e.level === level);
       const ingresos = entriesLevel.length * config.entryPrice;
       const revenue = entriesLevel.length * config.comision;
       const prizePool = ingresos - revenue;
+
       overview.revenuePlataforma += revenue;
       overview.prizePoolTotal += prizePool;
+
       const ranking = entriesLevel.map(e => {
-        let liveCapital = e.virtualCapital;
-        e.positions.filter(p => !p.closedAt).forEach(p => {
-          const currentPrice = getCurrentPrice(p.symbol);
-          if (currentPrice !== null && p.entryPrice && p.entryPrice !== 0) { // check null + division 0
-            const sign = p.direction === 'long' ? 1 : -1;
-            const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
-            const pnlAmount = e.virtualCapital * (p.lotSize || 0) * (pnlPercent / 100);
-            liveCapital += pnlAmount;
-          }
+        let liveCapital = e.virtualCapital || config.initialCapital;
+        (e.positions || []).filter(p => !p.closedAt).forEach(p => {
+          if (!p.symbol || !p.entryPrice) return;
+          const currentPrice = getCurrentPrice(p.symbol) || p.entryPrice;
+          const sign = p.direction === 'long' ? 1 : -1;
+          const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
+          const pnlAmount = (e.virtualCapital || config.initialCapital) * (p.lotSize || 0) * (pnlPercent / 100);
+          liveCapital += pnlAmount;
         });
         const initial = config.initialCapital;
         const retorno = ((liveCapital - initial) / initial) * 100;
-        const displayName = e.user.nickname || 'Anónimo';
-        return { displayName, wallet: e.user.walletAddress, retorno: retorno.toFixed(2) + "%", liveCapital: liveCapital.toString() };
+        const displayName = e.user?.nickname || 'Anónimo';
+        return { displayName, wallet: e.user?.walletAddress || '', retorno: retorno.toFixed(2) + "%", liveCapital: liveCapital.toString() };
       }).sort((a, b) => parseFloat(b.retorno) - parseFloat(a.retorno));
+
       competencias[level] = {
         participantes: entriesLevel.length,
         prizePool,
@@ -1041,30 +1020,41 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
         top3CSV: ranking.slice(0, 3).map((r, i) => `${r.wallet},${(prizePool * [0.5, 0.3, 0.2][i]).toFixed(2)}`).join('\n')
       };
     }));
+
     const usuarios = entries.map(e => {
-      let liveCapital = e.virtualCapital;
-      e.positions.filter(p => !p.closedAt).forEach(p => {
-        const currentPrice = getCurrentPrice(p.symbol);
-        if (currentPrice !== null && p.entryPrice && p.entryPrice !== 0) {
-          const sign = p.direction === 'long' ? 1 : -1;
-          const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
-          const pnlAmount = e.virtualCapital * (p.lotSize || 0) * (pnlPercent / 100);
-          liveCapital += pnlAmount;
-        }
+      let liveCapital = e.virtualCapital || levelsConfigAdmin[e.level]?.initialCapital || 10000;
+      (e.positions || []).filter(p => !p.closedAt).forEach(p => {
+        if (!p.symbol || !p.entryPrice) return;
+        const currentPrice = getCurrentPrice(p.symbol) || p.entryPrice;
+        const sign = p.direction === 'long' ? 1 : -1;
+        const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
+        const pnlAmount = (e.virtualCapital || levelsConfigAdmin[e.level]?.initialCapital || 10000) * (p.lotSize || 0) * (pnlPercent / 100);
+        liveCapital += pnlAmount;
       });
       return {
         id: e.id,
-        displayName: e.user.nickname || 'Anónimo',
-        wallet: e.user.walletAddress,
+        displayName: e.user?.nickname || 'Anónimo',
+        wallet: e.user?.walletAddress || '',
         level: e.level,
         status: e.status,
         virtualCapital: liveCapital.toString()
       };
     });
+
+    console.log('Datos admin enviados correctamente');
     res.json({ overview, competencias, usuarios });
   } catch (error) {
-    console.error('Error admin data:', error);
-    res.status(500).json({ error: "Error cargando datos admin" });
+    console.error('Error crítico en /api/admin/data:', error);
+    // Default safe data si crashea
+    res.json({
+      overview: { inscripcionesTotal: 0, participantesActivos: 0, revenuePlataforma: 0, prizePoolTotal: 0 },
+      competencias: {
+        basic: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' },
+        medium: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' },
+        premium: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' }
+      },
+      usuarios: []
+    });
   }
 });
 
@@ -1102,7 +1092,7 @@ app.get('/admin', async (req, res) => {
 
         for (const p of e.positions.filter(pos => !pos.closedAt)) {
           const currentPrice = getCurrentPrice(p.symbol);
-          if (currentPrice) {
+          if (currentPrice && p.entryPrice) {
             const sign = p.direction === 'long' ? 1 : -1;
             const pnlPercent = sign * ((currentPrice - p.entryPrice) / p.entryPrice) * 100;
             const pnlAmount = e.virtualCapital * (p.lotSize || 0) * (pnlPercent / 100);
@@ -1217,31 +1207,18 @@ app.post('/api/manual-create-confirm', async (req, res) => {
   }
 });
 
-// NUEVO ENDPOINT TOTAL PREMIOS PAGADOS HISTÓRICOS (público) – CORREGIDO Prisma aggregate
-// NUEVO ENDPOINT TOTAL PREMIOS PAGADOS HISTÓRICOS (público)
+// NUEVO ENDPOINT TOTAL PREMIOS PAGADOS HISTÓRICOS (público) – CORREGIDO
 app.get('/api/total-prizes-paid', async (req, res) => {
   try {
-    // Usamos aggregate con _sum porque Prisma no tiene un método .sum() directo
     const result = await prisma.payout.aggregate({
-      _sum: {
-        amount: true // Asegúrate de que 'amount' es el nombre exacto del campo en tu esquema
-      }
+      _sum: { amount: true }
     });
-
-    // Si no hay registros, result._sum.amount será null, por eso usamos || 0
-    res.json({ 
-      totalPaid: result._sum.amount || 0 
-    });
-
+    res.json({ totalPaid: result._sum.amount || 0 });
   } catch (error) {
     console.error('Error total prizes:', error);
-    res.status(500).json({ 
-      error: 'Error calculando total premios',
-      details: error.message 
-    });
+    res.status(500).json({ error: 'Error calculando total premios' });
   }
 });
-
 
 // MY-PAYOUTS (historial premios usuario – evita 404 y carga modal ganador)
 app.get('/api/my-payouts', authenticateToken, async (req, res) => {
