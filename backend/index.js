@@ -23,7 +23,13 @@ app.use(cors({
 }));
 app.use(express.json());
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL + '?sslmode=require'
+    }
+  }
+});
 
 const NOWPAYMENTS_API = 'https://api.nowpayments.io/v1';
 const API_KEY = process.env.NOWPAYMENTS_API_KEY;
