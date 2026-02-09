@@ -24,9 +24,12 @@ app.use(cors({
 app.use(express.json());
 
 const prisma = new PrismaClient({
+  log: ['query', 'info', 'warn', 'error'],
   datasources: {
     db: {
-      url: process.env.DATABASE_URL + '?sslmode=require'
+      url: process.env.DATABASE_URL.includes('?') 
+        ? `${process.env.DATABASE_URL}&sslmode=no-verify&connect_timeout=30`
+        : `${process.env.DATABASE_URL}?sslmode=no-verify&connect_timeout=30`
     }
   }
 });
