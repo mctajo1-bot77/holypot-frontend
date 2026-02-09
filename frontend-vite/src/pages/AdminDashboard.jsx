@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import apiClient from '@/api'; // Nuevo path
+import apiClient from '@/api';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -31,7 +31,7 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     try {
       const res = await apiClient.get('/admin/data');
-      setData(res.data);
+      setData(res.data || { overview: { inscripcionesTotal: 0, participantesActivos: 0, revenuePlataforma: 0, prizePoolTotal: 0 }, competencias: {}, usuarios: [] });
 
       try {
         const payoutsRes = await apiClient.get('/admin/payouts');
@@ -61,7 +61,7 @@ const AdminDashboard = () => {
   };
 
   const exportCSV = (level) => {
-    const csv = data.competencias[level].top3CSV;
+    const csv = data?.competencias?.[level]?.top3CSV || '';
     const blob = new Blob([`Wallet,Amount USDT\n${csv}`], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -71,6 +71,8 @@ const AdminDashboard = () => {
   };
 
   if (loading) return <p className="text-center text-3xl mt-40 text-gray-200">Cargando panel admin...</p>;
+
+  if (!data) return <p className="text-center text-3xl mt-40 text-gray-200">Sin datos disponibles – sesión expirada o error de conexión</p>;
 
   return (
     <div className="min-h-screen text-white relative overflow-hidden">
@@ -100,21 +102,21 @@ const AdminDashboard = () => {
             <div className="absolute inset-0 bg-gradient-to-br from-holy/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
             <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-8 text-center hover:scale-105 transition-all duration-500">
               <CardTitle className="text-2xl mb-4 text-gray-200">Inscripciones totales</CardTitle>
-              <p className="text-5xl font-bold text-holy">{data.overview.inscripcionesTotal}</p>
+              <p className="text-5xl font-bold text-holy">{data.overview?.inscripcionesTotal ?? 0}</p>
             </Card>
           </div>
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-profit/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
             <Card className="relative bg-black/30 backdrop-blur-xl border border-profit/40 rounded-3xl shadow-2xl p-8 text-center hover:scale-105 transition-all duration-500">
               <CardTitle className="text-2xl mb-4 text-gray-200">Revenue plataforma</CardTitle>
-              <p className="text-5xl font-bold text-profit">{formatNumber(data.overview.revenuePlataforma)} USDT</p>
+              <p className="text-5xl font-bold text-profit">{formatNumber(data.overview?.revenuePlataforma ?? 0)} USDT</p>
             </Card>
           </div>
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
             <Card className="relative bg-black/30 backdrop-blur-xl border border-blue-500/40 rounded-3xl shadow-2xl p-8 text-center hover:scale-105 transition-all duration-500">
               <CardTitle className="text-2xl mb-4 text-gray-200">Prize pool total</CardTitle>
-              <p className="text-5xl font-bold text-holy">{formatNumber(data.overview.prizePoolTotal)} USDT</p>
+              <p className="text-5xl font-bold text-holy">{formatNumber(data.overview?.prizePoolTotal ?? 0)} USDT</p>
             </Card>
           </div>
         </div>
@@ -128,13 +130,13 @@ const AdminDashboard = () => {
           </TabsList>
 
           <TabsContent value="competencias">
-            {Object.keys(data.competencias).map(level => (
+            {Object.keys(data.competencias || {}).map(level => (
               <div key={level} className="relative group mb-16">
                 <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
                 <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-10 hover:scale-103 transition-all duration-500">
                   <CardHeader>
                     <CardTitle className="text-3xl text-holy">
-                      {level.toUpperCase()} – {data.competencias[level].participantes} participantes – Prize pool: {formatNumber(data.competencias[level].prizePool)} USDT
+                      {level.toUpperCase()} – {data.competencias[level]?.participantes ?? 0} participantes – Prize pool: {formatNumber(data.competencias[level]?.prizePool ?? 0)} USDT
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -150,13 +152,13 @@ const AdminDashboard = () => {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {data.competencias[level].ranking.map((r, i) => (
+                          {(data.competencias[level]?.ranking || []).map((r, i) => (
                             <TableRow key={i} className="hover:bg-white/10 transition">
                               <TableCell className="font-bold text-gray-200">#{i + 1}</TableCell>
                               <TableCell className="text-gray-200">{r.displayName || 'Anónimo'}</TableCell>
-                              <TableCell className="font-mono text-sm text-gray-300">{r.wallet}</TableCell>
-                              <TableCell className="text-gray-200">{r.retorno}</TableCell>
-                              <TableCell className="text-gray-200">{formatNumber(r.liveCapital)} USDT</TableCell>
+                              <TableCell className="font-mono text-sm text-gray-300">{r.wallet || ''}</TableCell>
+                              <TableCell className="text-gray-200">{r.retorno || '0%'}</TableCell>
+                              <TableCell className="text-gray-200">{formatNumber(r.liveCapital || 0)} USDT</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -195,13 +197,13 @@ const AdminDashboard = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {data.usuarios.map(u => (
+                        {(data.usuarios || []).map(u => (
                           <TableRow key={u.id} className="hover:bg-white/10 transition">
-                            <TableCell className="text-gray-200">{u.displayName}</TableCell>
-                            <TableCell className="font-mono text-sm text-gray-300">{u.wallet}</TableCell>
-                            <TableCell className="text-gray-200">{u.level.toUpperCase()}</TableCell>
-                            <TableCell className="text-gray-200">{u.status}</TableCell>
-                            <TableCell className="text-gray-200">{formatNumber(u.virtualCapital)} USDT</TableCell>
+                            <TableCell className="text-gray-200">{u.displayName || 'Anónimo'}</TableCell>
+                            <TableCell className="font-mono text-sm text-gray-300">{u.wallet || ''}</TableCell>
+                            <TableCell className="text-gray-200">{u.level?.toUpperCase() || ''}</TableCell>
+                            <TableCell className="text-gray-200">{u.status || ''}</TableCell>
+                            <TableCell className="text-gray-200">{formatNumber(u.virtualCapital || 0)} USDT</TableCell>
                             <TableCell>
                               <Button
                                 onClick={() => viewAsUser(u.id)}
@@ -253,9 +255,9 @@ const AdminDashboard = () => {
                             <TableRow key={p.id} className="hover:bg-white/10 transition">
                               <TableCell className="text-gray-200">{new Date(p.date).toLocaleDateString('es-ES')}</TableCell>
                               <TableCell className="text-gray-200">{p.user?.nickname || 'Anónimo'}</TableCell>
-                              <TableCell className="text-gray-200">{p.level.toUpperCase()}</TableCell>
-                              <TableCell className="text-gray-200">#{p.position}</TableCell>
-                              <TableCell className="text-profit font-bold">{formatNumber(p.amount)} USDT</TableCell>
+                              <TableCell className="text-gray-200">{p.level?.toUpperCase() || ''}</TableCell>
+                              <TableCell className="text-gray-200">#{p.position || 0}</TableCell>
+                              <TableCell className="text-profit font-bold">{formatNumber(p.amount || 0)} USDT</TableCell>
                               <TableCell>
                                 <Badge variant={p.status === 'confirmed' ? "default" : "secondary"} className={p.status === 'confirmed' ? "bg-profit text-black" : "bg-gray-600 text-white"}>
                                   {p.status === 'confirmed' ? 'Confirmado' : 'Pending'}
