@@ -166,7 +166,6 @@ app.use('/api/open-trade', tradeLimiter);
 function authenticateToken(req, res, next) {
   const token = req.cookies.holypotToken;
   if (!token) return res.status(401).json({ error: "Token required" });
-
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ error: "Token invalid" });
     req.user = user;
@@ -178,7 +177,6 @@ function authenticateToken(req, res, next) {
 function authenticateAdmin(req, res, next) {
   const token = req.cookies.holypotToken;
   if (!token) return res.status(401).json({ error: "Token required" });
-
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err || user.email !== ADMIN_EMAIL) return res.status(403).json({ error: "Acceso admin denegado" });
     req.user = user;
@@ -1080,13 +1078,13 @@ app.post('/api/manual-create-confirm', async (req, res) => {
   }
 });
 
-// NUEVO ENDPOINT TOTAL PREMIOS PAGADOS HISTÓRICOS (público)
+// NUEVO ENDPOINT TOTAL PREMIOS PAGADOS HISTÓRICOS (público) – CORREGIDO
 app.get('/api/total-prizes-paid', async (req, res) => {
   try {
-    const total = await prisma.payout.aggregate({
+    const result = await prisma.payout.aggregate({
       _sum: { amount: true }
     });
-    res.json({ totalPaid: total._sum.amount || 0 });
+    res.json({ totalPaid: result._sum.amount || 0 });
   } catch (error) {
     console.error('Error total prizes:', error);
     res.status(500).json({ error: 'Error calculando total premios' });
