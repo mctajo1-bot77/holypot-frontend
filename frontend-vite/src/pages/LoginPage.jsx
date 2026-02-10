@@ -21,16 +21,16 @@ const LoginPage = () => {
 
   // Chequeo automático: si ya tiene cookie → directo dashboard
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        await axios.get(`${API_BASE}/me`);
-        navigate('/dashboard');
-      } catch (err) {
-        // no autenticado → queda en login
-      }
-    };
-    checkAuth();
-  }, [navigate]);
+  const checkAuth = async () => {
+    try {
+      await axios.get(`${API_BASE}/me`);
+      navigate('/dashboard');
+    } catch (err) {
+      // no autenticado → queda en login
+    }
+  };
+  checkAuth();
+}, []); // ← Array vacío para que solo se ejecute UNA vez
 
   const handleLogin = async (e) => {
     e.preventDefault();
