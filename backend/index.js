@@ -32,6 +32,7 @@ const API_KEY = process.env.NOWPAYMENTS_API_KEY;
 // ADMIN CREDENTIALS
 const ADMIN_EMAIL = 'admin@holypot.com';
 const ADMIN_PASSWORD = 'holypotadmin2026';
+
 // ========== COOKIE CONFIG PARA CROSS-SITE (Render) ==========
 function getCookieOptions() {
   return {
@@ -173,7 +174,7 @@ const tradeLimiter = rateLimit({
 });
 app.use('/api/open-trade', tradeLimiter);
 
-// JWT middleware general
+// JWT middleware general – SEGURO contra cookies undefined
 function authenticateToken(req, res, next) {
   const token = (req.cookies && req.cookies.holypotToken) || null;
   if (!token) return res.status(401).json({ error: "Token required" });
@@ -185,13 +186,18 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// JWT middleware ADMIN
+// JWT middleware ADMIN – SEGURO contra cookies undefined
 function authenticateAdmin(req, res, next) {
   const token = (req.cookies && req.cookies.holypotToken) || null;
+  console.log('🔐 authenticateAdmin – token presente:', !!token);
   if (!token) return res.status(401).json({ error: "Token required" });
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err || !user || user.email !== ADMIN_EMAIL) return res.status(403).json({ error: "Acceso admin denegado" });
+    if (err || !user || user.email !== ADMIN_EMAIL) {
+      console.log('❌ authenticateAdmin – rechazado:', err ? err.message : 'email no coincide');
+      return res.status(403).json({ error: "Acceso admin denegado" });
+    }
+    console.log('✅ authenticateAdmin – admin verificado');
     req.user = user;
     next();
   });
@@ -354,7 +360,7 @@ app.post('/api/register', async (req, res) => {
 
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
-res.cookie('holypotToken', token, getCookieOptions());;
+    res.cookie('holypotToken', token, getCookieOptions());
 
     res.json({ success: true });
   } catch (error) {
@@ -383,7 +389,7 @@ app.post('/api/login', async (req, res) => {
 
     const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
- res.cookie('holypotToken', token, getCookieOptions());
+    res.cookie('holypotToken', token, getCookieOptions());
 
     res.json({ success: true });
   } catch (error) {
@@ -409,7 +415,7 @@ app.post('/api/admin-login', async (req, res) => {
 
   const token = jwt.sign({ email: ADMIN_EMAIL, role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
 
- res.cookie('holypotToken', token, getCookieOptions());
+  res.cookie('holypotToken', token, getCookieOptions());
 
   res.json({ success: true });
 });
@@ -897,7 +903,8 @@ app.get('/api/last-winners', async (req, res) => {
         return {
           position: 0,
           nickname: e.user.nickname || 'Anónimo',
-          prize: 0
+          prize: 0,
+          retorno
         };
       });
 
@@ -963,7 +970,7 @@ app.get('/api/ranking', async (req, res) => {
 // ADMIN DATA – SEGURA CON GUARDS + DEFAULTS (carga siempre, incluso vacío)
 app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
   try {
-    console.log('Solicitud /api/admin/data – token admin OK');
+    console.log('🟢 /api/admin/data – ENTRÓ al handler');
 
     const entries = await prisma.entry.findMany({
       select: {
@@ -1046,11 +1053,12 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
       };
     });
 
-    console.log('Datos admin enviados correctamente');
+    console.log('✅ Datos admin enviados correctamente');
     res.json({ overview, competencias, usuarios });
   } catch (error) {
-    console.error('Error crítico en /api/admin/data:', error);
-    res.json({
+    console.error('💥 Error crítico en /api/admin/data:', error.message);
+    console.error('💥 Stack:', error.stack);
+    return res.status(200).json({
       overview: { inscripcionesTotal: 0, participantesActivos: 0, revenuePlataforma: 0, prizePoolTotal: 0 },
       competencias: {
         basic: { participantes: 0, prizePool: 0, ranking: [], top3CSV: '' },
@@ -1061,6 +1069,7 @@ app.get('/api/admin/data', authenticateAdmin, async (req, res) => {
     });
   }
 });
+
 // Admin viejo
 app.get('/admin', async (req, res) => {
   if (req.query.pass !== ADMIN_PASSWORD) return res.status(401).json({ error: "Password incorrecto" });
