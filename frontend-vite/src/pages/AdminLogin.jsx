@@ -16,7 +16,11 @@ const AdminLogin = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await apiClient.post('/admin-login', { email, password }); // apiClient envía cookie automáticamente
+      const res = await apiClient.post('/admin-login', { email, password });
+      // Guardar token en localStorage para enviarlo como Authorization header
+      if (res.data.token) {
+        localStorage.setItem('holypotToken', res.data.token);
+      }
       navigate('/admin', { replace: true });
     } catch (err) {
       alert('Error login admin: ' + (err.response?.data?.error || err.message || 'Network Error'));
