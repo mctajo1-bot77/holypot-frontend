@@ -81,7 +81,20 @@ function Dashboard() {
   const [showWinModal, setShowWinModal] = useState(false);
   const [latestWin, setLatestWin] = useState(null);
 
-  const isAdminSession = !!localStorage.getItem('holypotAdminToken');
+ // Verificar si el usuario es admin desde el token JWT
+const isAdmin = () => {
+  const token = localStorage.getItem('holypotToken');
+  if (!token) return false;
+  
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.role === 'admin' || payload.email === 'admin@holypot.com';
+  } catch (err) {
+    return false;
+  }
+};
+
+const isAdminSession = isAdmin();
 
   const formatNumber = (num) => {
     return new Intl.NumberFormat('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num || 0);
