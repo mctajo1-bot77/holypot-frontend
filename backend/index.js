@@ -174,9 +174,23 @@ const tradeLimiter = rateLimit({
 });
 app.use('/api/open-trade', tradeLimiter);
 
-// JWT middleware general – SEGURO contra cookies undefined
+// Helper: Extraer token de Authorization header O cookie
+function getToken(req) {
+  // 1. Authorization: Bearer <token> (PRIORIDAD)
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7);
+  }
+  // 2. Cookie fallback
+  if (req.cookies && req.cookies.holypotToken) {
+    return req.cookies.holypotToken;
+  }
+  return null;
+}
+
+// JWT middleware general – Soporta Authorization header + cookie
 function authenticateToken(req, res, next) {
-  const token = (req.cookies && req.cookies.holypotToken) || null;
+  const token = getToken(req);
   if (!token) return res.status(401).json({ error: "Token required" });
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
@@ -186,10 +200,10 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// JWT middleware ADMIN – SEGURO contra cookies undefined
+// JWT middleware ADMIN – Soporta Authorization header + cookie
 function authenticateAdmin(req, res, next) {
-  const token = (req.cookies && req.cookies.holypotToken) || null;
-  console.log('🔐 authenticateAdmin – token presente:', !!token);
+  const token = getToken(req);
+  console.log('🔐 authenticateAdmin – token presente:', !!token, '– fuente:', req.headers.authorization ? 'header' : 'cookie');
   if (!token) return res.status(401).json({ error: "Token required" });
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
@@ -197,7 +211,7 @@ function authenticateAdmin(req, res, next) {
       console.log('❌ authenticateAdmin – rechazado:', err ? err.message : 'email no coincide');
       return res.status(403).json({ error: "Acceso admin denegado" });
     }
-    console.log('✅ authenticateAdmin – admin verificado');
+    console.log('✅ authenticateAdmin – admin verificado via', req.headers.authorization ? 'header' : 'cookie');
     req.user = user;
     next();
   });
@@ -362,7 +376,7 @@ app.post('/api/register', async (req, res) => {
 
     res.cookie('holypotToken', token, getCookieOptions());
 
-    res.json({ success: true });
+    res.json({ success: true, token });
   } catch (error) {
     res.status(500).json({ error: "Error register", details: error.message });
   }
@@ -391,7 +405,7 @@ app.post('/api/login', async (req, res) => {
 
     res.cookie('holypotToken', token, getCookieOptions());
 
-    res.json({ success: true });
+    res.json({ success: true, token });
   } catch (error) {
     res.status(500).json({ error: "Error login", details: error.message });
   }
@@ -417,7 +431,7 @@ app.post('/api/admin-login', async (req, res) => {
 
   res.cookie('holypotToken', token, getCookieOptions());
 
-  res.json({ success: true });
+  res.json({ success: true, token });
 });
 
 // GET para /api/admin-login (evita "Cannot GET")
