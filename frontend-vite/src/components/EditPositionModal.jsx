@@ -14,7 +14,9 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api` 
+  : 'http://localhost:5000/api';
 
 const soundDragStart = new Audio('https://freesound.org/data/previews/341/341695_581577-lq.mp3');
 const soundDragEnd = new Audio('https://freesound.org/data/previews/245/245645_4041066-lq.mp3');
