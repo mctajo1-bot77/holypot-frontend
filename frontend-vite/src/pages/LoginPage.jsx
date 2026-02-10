@@ -20,26 +20,27 @@ const LoginPage = () => {
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  try {
-    const res = await axios.post(`${API_BASE}/login`, { email, password }, { withCredentials: true });
-    
-    // Guardar token y entryId si vienen en la respuesta
-    if (res.data.token) {
-      localStorage.setItem('holypotToken', res.data.token);
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await axios.post(`${API_BASE}/login`, { email, password }, { withCredentials: true });
+      
+      // Guardar token y entryId en localStorage
+      if (res.data.token) {
+        localStorage.setItem('holypotToken', res.data.token);
+      }
+      if (res.data.entryId) {
+        localStorage.setItem('holypotEntryId', res.data.entryId);
+      }
+      
+      // Navegar al dashboard
+      navigate('/dashboard');
+    } catch (err) {
+      alert('Error al iniciar sesión: ' + (err.response?.data?.error || 'Credenciales incorrectas'));
+    } finally {
+      setLoading(false);
     }
-    if (res.data.entryId) {
-      localStorage.setItem('holypotEntryId', res.data.entryId);
-    }
-    
-    navigate('/dashboard');
-  } catch (err) {
-    alert('Error al iniciar sesión: ' + (err.response?.data?.error || 'Credenciales incorrectas'));
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen text-white relative overflow-hidden">
