@@ -6,7 +6,9 @@ import { Trophy, Crown, PartyPopper } from "lucide-react";
 import Confetti from 'react-confetti';
 import axios from "axios";
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api` 
+  : 'http://localhost:5000/api';
 
 // Sonidos
 const soundClose = new Audio('https://freesound.org/data/previews/276/276950_5123856-lq.mp3'); // fanfare cierre
