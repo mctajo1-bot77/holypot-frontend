@@ -1,73 +1,100 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import.meta.env.VITE_API_URL
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
-function VerifyEmailPage() {
-  const { token } = useParams();
+export default function VerifyEmail() {
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [message, setMessage] = useState('Verificando tu email...');
-  const [isError, setIsError] = useState(false);
+  const [status, setStatus] = useState('verifying'); // verifying, success, error
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
-    const verifyEmail = async () => {
-      try {
-        const response = await axios.get(`${BACKEND_URL}/api/auth/verify-email/${token}`);
-        setMessage(response.data.message || '¡Email verificado exitosamente!');
-        setIsError(false);
-        
-        // Redirigir al login después de 3 segundos
-        setTimeout(() => {
-          navigate('/login');
-        }, 3000);
-      } catch (error) {
-        setMessage(
-          error.response?.data?.message || 
-          'Error al verificar el email. El enlace puede haber expirado.'
-        );
-        setIsError(true);
-      }
-    };
-
-    if (token) {
-      verifyEmail();
+    const token = searchParams.get('token');
+    
+    if (!token) {
+      setStatus('error');
+      setMessage('Token no encontrado');
+      return;
     }
-  }, [token, navigate]);
+
+    verifyEmail(token);
+  }, [searchParams]);
+
+  const verifyEmail = async (token) => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/verify-email?token=${token}`
+      );
+      
+      setStatus('success');
+      setMessage(response.data.message);
+      
+      // Redirigir al login después de 3 segundos
+      setTimeout(() => {
+        navigate('/login');
+      }, 3000);
+      
+    } catch (error) {
+      setStatus('error');
+      setMessage(error.response?.data?.error || 'Error al verificar email');
+    }
+  };
 
   return (
     <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
       minHeight: '100vh',
-      backgroundColor: '#0a0a0a',
-      color: '#ffffff',
-      fontFamily: 'Arial, sans-serif'
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
     }}>
       <div style={{
+        background: 'white',
+        padding: '40px',
+        borderRadius: '10px',
         textAlign: 'center',
-        padding: '2rem',
-        backgroundColor: '#1a1a1a',
-        borderRadius: '8px',
         maxWidth: '500px'
       }}>
-        <h1 style={{ 
-          color: isError ? '#ff4444' : '#4CAF50',
-          marginBottom: '1rem'
-        }}>
-          {isError ? '❌ Error' : '✅ Verificación'}
-        </h1>
-        <p style={{ fontSize: '1.1rem' }}>{message}</p>
-        {!isError && (
-          <p style={{ marginTop: '1rem', color: '#888' }}>
-            Redirigiendo al login...
-          </p>
+        {status === 'verifying' && (
+          <>
+            <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏳</div>
+            <h2>Verificando tu email...</h2>
+          </>
+        )}
+        
+        {status === 'success' && (
+          <>
+            <div style={{ fontSize: '48px', marginBottom: '20px' }}>✅</div>
+            <h2 style={{ color: '#10b981' }}>¡Email Verificado!</h2>
+            <p>{message}</p>
+            <p style={{ color: '#666', marginTop: '20px' }}>
+              Redirigiendo al login...
+            </p>
+          </>
+        )}
+        
+        {status === 'error' && (
+          <>
+            <div style={{ fontSize: '48px', marginBottom: '20px' }}>❌</div>
+            <h2 style={{ color: '#ef4444' }}>Error</h2>
+            <p>{message}</p>
+            <button 
+              onClick={() => navigate('/register')}
+              style={{
+                marginTop: '20px',
+                padding: '10px 20px',
+                background: '#667eea',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer'
+              }}
+            >
+              Volver a registrarse
+            </button>
+          </>
         )}
       </div>
     </div>
   );
 }
-
-export default VerifyEmailPage;
