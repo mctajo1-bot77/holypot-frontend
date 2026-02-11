@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { io } from "socket.io-client";
+import VerifyEmail from './pages/VeryfiEmailPage';
 import { 
   Rocket, 
   Coins, 
