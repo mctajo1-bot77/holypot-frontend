@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from "axios";
 import apiClient from '@/api'; // Nuevo path
+import { useRiskCalculator } from '@/hooks/useRiskCalculator'; // ✅ Actualizado: import desde hooks
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,7 +18,10 @@ import {
   Rocket, 
   Coins, 
   Crown, 
-  Power 
+  Power,
+  AlertTriangle,
+  TrendingUp,
+  TrendingDown
 } from "lucide-react";
 import {
   Tooltip,
@@ -81,20 +85,31 @@ function Dashboard() {
   const [showWinModal, setShowWinModal] = useState(false);
   const [latestWin, setLatestWin] = useState(null);
 
- // Verificar si el usuario es admin desde el token JWT
-const isAdmin = () => {
-  const token = localStorage.getItem('holypotToken');
-  if (!token) return false;
-  
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.role === 'admin' || payload.email === 'admin@holypot.com';
-  } catch (err) {
-    return false;
-  }
-};
+  // ✅ HOOK DE CÁLCULO DE RIESGO REAL
+  const { calculateRealRisk, calculateOptimalLotSize, instrumentInfo } = useRiskCalculator(
+    symbol, 
+    currentPrice, 
+    stopLoss ? parseFloat(stopLoss) : null, 
+    virtualCapital
+  );
 
-const isAdminSession = isAdmin();
+  // ✅ Calcular riesgo real para el lotSize actual
+  const riskInfo = calculateRealRisk(lotSize);
+
+  // Verificar si el usuario es admin desde el token JWT
+  const isAdmin = () => {
+    const token = localStorage.getItem('holypotToken');
+    if (!token) return false;
+    
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.role === 'admin' || payload.email === 'admin@holypot.com';
+    } catch (err) {
+      return false;
+    }
+  };
+
+  const isAdminSession = isAdmin();
 
   const formatNumber = (num) => {
     return new Intl.NumberFormat('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num || 0);
@@ -230,6 +245,12 @@ const isAdminSession = isAdmin();
       return;
     }
 
+    // ✅ Validación de riesgo máximo antes de enviar
+    if (riskInfo.riskPercent > 10) {
+      alert(`⚠️ Riesgo demasiado alto: ${riskInfo.riskPercent.toFixed(1)}%\nMáximo permitido: 10%\n\nSugerencia: Usa ${calculateOptimalLotSize(2).toFixed(2)} lot para 2% de riesgo`);
+      return;
+    }
+
     if (orderType !== 'market') {
       if (!targetPrice) {
         alert('Precio objetivo obligatorio para orden Limit/Stop');
@@ -295,6 +316,24 @@ const isAdminSession = isAdmin();
 
   const userComp = competitions[userLevel] || { prizePool: 0, participants: 0, timeLeft: '00h 00m' };
   const activeLevels = Object.keys(competitions).filter(level => (competitions[level]?.participants || 0) > 0);
+
+  // ✅ Función helper para calcular riesgo de una posición existente
+  const calculatePositionRisk = (position) => {
+    const entryPrice = position.entryPrice;
+    const sl = position.stopLoss;
+    const lot = position.lotSize || 0.01;
+    
+    if (!sl || !entryPrice) {
+      return { riskPercent: lot * 10, riskUSD: 0, distancePips: 0 };
+    }
+    
+    const config = instrumentConfig[position.symbol] || instrumentConfig['EURUSD'];
+    const distancePips = Math.abs(entryPrice - sl) * config.pipMultiplier;
+    const riskUSD = distancePips * config.pipValue * lot;
+    const riskPercent = (riskUSD / virtualCapital) * 100;
+    
+    return { riskPercent, riskUSD, distancePips };
+  };
 
   return (
     <TooltipProvider>
@@ -532,10 +571,12 @@ const isAdminSession = isAdmin();
                     </div>
                   )}
 
-                  <div>
-                    <label className="text-xl font-bold mb-2 block text-gray-200">
-                      LotSize (risk ~{(lotSize * 10).toFixed(1)}%)
+                  {/* ✅ SECCIÓN LOTSIZE CON RIESGO REAL MEJORADA */}
+                  <div className="space-y-3">
+                    <label className="text-xl font-bold block text-gray-200">
+                      LotSize
                     </label>
+                    
                     <div className="flex items-center gap-4">
                       <Slider 
                         min={0.01} 
@@ -560,9 +601,45 @@ const isAdminSession = isAdmin();
                         className="w-32 bg-black/40 border-borderSubtle text-white text-center"
                       />
                     </div>
-                    <p className="text-center text-2xl mt-3 font-bold text-white">
-                      {lotSize.toFixed(2)} lot (risk ~{(lotSize * 10).toFixed(1)}%)
-                    </p>
+                    
+                    {/* ✅ DISPLAY DEL RIESGO REAL */}
+                    <div className="bg-black/40 rounded-lg p-4 space-y-2 border border-white/10">
+                      <p className="text-center text-2xl font-bold text-white">
+                        {lotSize.toFixed(2)} lot
+                      </p>
+                      
+                      {stopLoss && riskInfo.isValid ? (
+                        <>
+                          <p className={`text-center text-lg font-semibold ${riskInfo.riskPercent > 5 ? 'text-yellow-400' : 'text-profit'}`}>
+                            <TrendingUp className="inline w-4 h-4 mr-1" />
+                            Riesgo REAL: {riskInfo.riskPercent.toFixed(2)}% (${riskInfo.riskUSD.toFixed(0)})
+                          </p>
+                          <p className="text-center text-sm text-gray-400">
+                            📏 Distancia SL: {riskInfo.distancePips.toFixed(0)} {instrumentInfo.pipMultiplier === 1 ? 'puntos' : 'pips'}
+                          </p>
+                          
+                          {/* ✅ ALERTA DE ALTO RIESGO */}
+                          {riskInfo.riskPercent > 5 && (
+                            <div className="mt-3 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
+                              <p className="text-red-400 font-bold text-center flex items-center justify-center gap-2">
+                                <AlertTriangle className="w-5 h-5" />
+                                ¡Alto riesgo!
+                              </p>
+                              <p className="text-sm text-gray-300 text-center mt-1">
+                                Sugerido: <span className="text-profit font-bold">{calculateOptimalLotSize(2).toFixed(2)} lot</span> para 2%
+                              </p>
+                              <p className="text-xs text-gray-400 text-center">
+                                o <span className="text-blue-400">{calculateOptimalLotSize(5).toFixed(2)} lot</span> para 5%
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-center text-sm text-gray-400">
+                          {stopLoss ? 'Calculando riesgo...' : '⚠️ Añade Stop Loss para ver el riesgo real'}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div>
@@ -572,11 +649,26 @@ const isAdminSession = isAdmin();
 
                   <div>
                     <label className="text-xl font-bold mb-2 block text-gray-200">Stop Loss (opcional)</label>
-                    <Input type="number" step="0.00001" placeholder="ej: 1.09000" value={stopLoss} onChange={e => setStopLoss(e.target.value)} className="bg-black/40 border-borderSubtle text-white" />
+                    <Input 
+                      type="number" 
+                      step="0.00001" 
+                      placeholder="ej: 1.09000" 
+                      value={stopLoss} 
+                      onChange={e => setStopLoss(e.target.value)} 
+                      className="bg-black/40 border-borderSubtle text-white"
+                    />
                   </div>
 
-                  <Button onClick={openTrade} className="w-full bg-gradient-to-r from-holy to-purple-600 text-black text-3xl py-8 font-bold rounded-full shadow-lg hover:shadow-holy/50 hover:scale-105 transition duration-300">
-                    ABRIR TRADE
+                  <Button 
+                    onClick={openTrade} 
+                    disabled={riskInfo.riskPercent > 10}
+                    className={`w-full text-3xl py-8 font-bold rounded-full shadow-lg transition duration-300
+                      ${riskInfo.riskPercent > 10 
+                        ? 'bg-gray-600 cursor-not-allowed' 
+                        : 'bg-gradient-to-r from-holy to-purple-600 text-black hover:shadow-holy/50 hover:scale-105'
+                      }`}
+                  >
+                    {riskInfo.riskPercent > 10 ? 'RIESGO DEMASIADO ALTO' : 'ABRIR TRADE'}
                   </Button>
                 </CardContent>
               </Card>
@@ -610,14 +702,18 @@ const isAdminSession = isAdmin();
                     </TableRow>
                   ) : (
                     positions.map((pos) => {
-                      const riskPercent = ((pos.lotSize || 0.01) * 10).toFixed(1);
+                      // ✅ Calcular riesgo real de la posición
+                      const positionRisk = calculatePositionRisk(pos);
                       const livePnl = parseFloat(pos.livePnl || 0).toFixed(2);
+                      
+                      // Calcular pips a TP/SL según el instrumento
+                      const config = instrumentConfig[pos.symbol] || instrumentConfig['EURUSD'];
                       const pipsToTP = pos.takeProfit && currentPrice ? (pos.direction === 'long' 
-                        ? ((pos.takeProfit - currentPrice) * 10000).toFixed(0) 
-                        : ((currentPrice - pos.takeProfit) * 10000).toFixed(0)) : '-';
+                        ? ((pos.takeProfit - currentPrice) * config.pipMultiplier).toFixed(0) 
+                        : ((currentPrice - pos.takeProfit) * config.pipMultiplier).toFixed(0)) : '-';
                       const pipsToSL = pos.stopLoss && currentPrice ? (pos.direction === 'long' 
-                        ? ((currentPrice - pos.stopLoss) * 10000).toFixed(0) 
-                        : ((pos.stopLoss - currentPrice) * 10000).toFixed(0)) : '-';
+                        ? ((currentPrice - pos.stopLoss) * config.pipMultiplier).toFixed(0) 
+                        : ((pos.stopLoss - currentPrice) * config.pipMultiplier).toFixed(0)) : '-';
 
                       return (
                         <TableRow key={pos.id} className="hover:bg-white/10 transition">
@@ -627,18 +723,25 @@ const isAdminSession = isAdmin();
                               {pos.direction.toUpperCase()}
                             </Badge>
                           </TableCell>
-                          <TableCell className={riskPercent > 5 ? "text-red-500" : "text-profit"}>
-                            {pos.lotSize || 0.01} ({riskPercent}%)
+                          {/* ✅ Mostrar riesgo real calculado */}
+                          <TableCell className={positionRisk.riskPercent > 5 ? "text-red-500 font-semibold" : "text-profit"}>
+                            {pos.lotSize || 0.01} 
+                            <span className="text-sm ml-1">
+                              ({pos.stopLoss ? positionRisk.riskPercent.toFixed(1) : (pos.lotSize * 10).toFixed(1)}%)
+                            </span>
+                            {positionRisk.riskPercent > 5 && (
+                              <AlertTriangle className="inline w-4 h-4 ml-1" />
+                            )}
                           </TableCell>
                           <TableCell className="text-gray-200">{pos.entryPrice.toFixed(5)}</TableCell>
                           <TableCell className={parseFloat(livePnl) > 0 ? "text-profit" : "text-red-500"}>
                             {livePnl}%
                           </TableCell>
                           <TableCell className={pipsToTP !== '-' && pipsToTP > 0 ? "text-profit" : "text-red-500"}>
-                            {pos.takeProfit || '-'} ({pipsToTP} pips)
+                            {pos.takeProfit || '-'} ({pipsToTP} {config.pipMultiplier === 1 ? 'pts' : 'p'})
                           </TableCell>
                           <TableCell className={pipsToSL !== '-' && pipsToSL > 0 ? "text-red-500" : "text-profit"}>
-                            {pos.stopLoss || '-'} ({pipsToSL} pips)
+                            {pos.stopLoss || '-'} ({pipsToSL} {config.pipMultiplier === 1 ? 'pts' : 'p'})
                           </TableCell>
                           <TableCell className="flex gap-2">
                             <Button 
