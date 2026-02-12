@@ -4,6 +4,7 @@ import './index.css';  // Tailwind + estilos
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import App from './App';                    // dashboard usuario
 import Profile from './pages/Profile';       // página de perfil
 import PrivateRoute from './components/PrivateRoute';  // wrapper rutas protegidas (soporta admin impersonando)
