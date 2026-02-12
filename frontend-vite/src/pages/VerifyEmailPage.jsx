@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import background from '@/assets/background.jpg';
 
-export default function VerifyEmail() {
+const API_BASE = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api` 
+  : 'http://localhost:5000/api';
+
+export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState('verifying'); // verifying, success, error
@@ -13,7 +18,7 @@ export default function VerifyEmail() {
     
     if (!token) {
       setStatus('error');
-      setMessage('Token no encontrado');
+      setMessage('Token no encontrado en la URL');
       return;
     }
 
@@ -22,12 +27,10 @@ export default function VerifyEmail() {
 
   const verifyEmail = async (token) => {
     try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/api/verify-email?token=${token}`
-      );
+      const response = await axios.get(`${API_BASE}/verify-email?token=${token}`);
       
       setStatus('success');
-      setMessage(response.data.message);
+      setMessage(response.data.message || '¡Email verificado correctamente!');
       
       // Redirigir al login después de 3 segundos
       setTimeout(() => {
@@ -36,65 +39,78 @@ export default function VerifyEmail() {
       
     } catch (error) {
       setStatus('error');
-      setMessage(error.response?.data?.error || 'Error al verificar email');
+      setMessage(error.response?.data?.error || 'Error al verificar el email');
     }
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-    }}>
-      <div style={{
-        background: 'white',
-        padding: '40px',
-        borderRadius: '10px',
-        textAlign: 'center',
-        maxWidth: '500px'
-      }}>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+      {/* FONDO */}
+      <div className="fixed inset-0 -z-10">
+        <img src={background} alt="Fondo" className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-black/70" />
+      </div>
+
+      {/* CONTENIDO */}
+      <div className="relative bg-black/40 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-16 text-center max-w-2xl mx-4">
         {status === 'verifying' && (
           <>
-            <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏳</div>
-            <h2>Verificando tu email...</h2>
+            <div className="text-8xl mb-8 animate-spin">⏳</div>
+            <h2 className="text-4xl font-bold text-white mb-4">
+              Verificando tu email...
+            </h2>
+            <p className="text-xl text-gray-300">
+              Por favor espera un momento
+            </p>
           </>
         )}
         
         {status === 'success' && (
           <>
-            <div style={{ fontSize: '48px', marginBottom: '20px' }}>✅</div>
-            <h2 style={{ color: '#10b981' }}>¡Email Verificado!</h2>
-            <p>{message}</p>
-            <p style={{ color: '#666', marginTop: '20px' }}>
-              Redirigiendo al login...
+            <div className="text-8xl mb-8">✅</div>
+            <h2 className="text-4xl font-bold text-profit mb-4">
+              ¡Email Verificado!
+            </h2>
+            <p className="text-2xl text-white mb-6">{message}</p>
+            <p className="text-xl text-gray-400">
+              Redirigiendo al login en 3 segundos...
             </p>
+            <div className="mt-8 w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+              <div className="bg-profit h-full animate-progress" style={{ width: '100%' }}></div>
+            </div>
           </>
         )}
         
         {status === 'error' && (
           <>
-            <div style={{ fontSize: '48px', marginBottom: '20px' }}>❌</div>
-            <h2 style={{ color: '#ef4444' }}>Error</h2>
-            <p>{message}</p>
+            <div className="text-8xl mb-8">❌</div>
+            <h2 className="text-4xl font-bold text-red-500 mb-4">
+              Error en la Verificación
+            </h2>
+            <p className="text-xl text-gray-300 mb-8">{message}</p>
             <button 
-              onClick={() => navigate('/register')}
-              style={{
-                marginTop: '20px',
-                padding: '10px 20px',
-                background: '#667eea',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: 'pointer'
-              }}
+              onClick={() => navigate('/login')}
+              className="px-8 py-4 bg-gradient-to-r from-holy to-purple-600 text-black text-xl font-bold rounded-full hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-holy/50"
             >
-              Volver a registrarse
+              Ir al Login
             </button>
           </>
         )}
       </div>
+
+      <style jsx>{`
+        @keyframes progress {
+          from {
+            width: 0%;
+          }
+          to {
+            width: 100%;
+          }
+        }
+        .animate-progress {
+          animation: progress 3s linear;
+        }
+      `}</style>
     </div>
   );
 }
