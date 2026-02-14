@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from "axios";
-import apiClient from '@/api'; // Nuevo path
+import apiClient from '@/api';
 import { instrumentConfig } from '@/components/pipConfig';
 import { useRiskCalculator } from '@/components/useRiskCalculator';
 import { useNavigate } from "react-router-dom";
@@ -35,21 +35,18 @@ import logo from "@/assets/Holypot-logo.webp";
 import background from "@/assets/background.jpg";
 import EditPositionModal from "@/components/EditPositionModal";
 
-// ✅ CONFIGURACIÓN DINÁMICA: Detecta automáticamente si estás en desarrollo o producción
 const API_BASE = import.meta.env.VITE_API_URL 
   ? `${import.meta.env.VITE_API_URL}/api` 
   : 'http://localhost:5000/api';
 
-// ✅ SOCKET.IO OPTIMIZADO: Reconexión automática y transporte eficiente
 const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
-  transports: ['websocket', 'polling'], // Intenta WebSocket primero, luego polling
-  reconnection: true,                    // Reconexión automática si se cae
-  reconnectionAttempts: 5,              // Máximo 5 intentos
-  reconnectionDelay: 1000,              // Espera 1 segundo entre intentos
-  timeout: 10000                        // Timeout de 10 segundos
+  transports: ['websocket', 'polling'],
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  timeout: 10000
 });
 
-// ✅ INTERCEPTOR AXIOS: Agrega token automáticamente a todas las peticiones
 axios.interceptors.request.use(config => {
   const userToken = localStorage.getItem('holypotToken');
   const adminToken = localStorage.getItem('holypotAdminToken');
@@ -86,7 +83,6 @@ function Dashboard() {
   const [showWinModal, setShowWinModal] = useState(false);
   const [latestWin, setLatestWin] = useState(null);
 
-  // ✅ HOOK DE CÁLCULO DE RIESGO REAL
   const { calculateRealRisk, calculateOptimalLotSize, instrumentInfo } = useRiskCalculator(
     symbol, 
     currentPrice, 
@@ -94,10 +90,9 @@ function Dashboard() {
     virtualCapital
   );
 
-  // ✅ Calcular riesgo real para el lotSize actual
   const riskInfo = calculateRealRisk(lotSize);
 
-  // Verificar si el usuario es admin desde el token JWT
+  // ✅ FUNCIÓN PARA VERIFICAR SI ES ADMIN
   const isAdmin = () => {
     const token = localStorage.getItem('holypotToken');
     if (!token) return false;
@@ -128,14 +123,36 @@ function Dashboard() {
     navigate('/login');
   };
 
+  // ✅ CORRECCIÓN: Permitir admins sin entryId
   useEffect(() => {
     const stored = localStorage.getItem('holypotEntryId');
-    if (!stored) window.location.href = '/';
-    else setEntryId(stored);
+    const isUserAdmin = isAdmin();
+    
+    // Si NO hay entryId Y NO es admin → redirigir
+    if (!stored && !isUserAdmin) {
+      console.log('❌ No entryId y no es admin - redirigiendo a /');
+      window.location.href = '/';
+      return;
+    }
+    
+    // Si es admin SIN entryId → mostrar mensaje pero permitir acceso
+    if (!stored && isUserAdmin) {
+      console.log('✅ Admin sin entryId - acceso permitido (modo vista)');
+      setEntryId(''); // Dejar vacío
+      return;
+    }
+    
+    // Usuario normal con entryId
+    console.log('✅ Usuario con entryId:', stored);
+    setEntryId(stored);
   }, []);
 
   useEffect(() => {
-    if (!entryId) return;
+    // ✅ CORRECCIÓN: Solo ejecutar si hay entryId O si es admin
+    if (!entryId && !isAdminSession) {
+      console.log('⏭️ Skipping fetchData - no entryId y no es admin');
+      return;
+    }
 
     const fetchData = async () => {
       try {
@@ -150,14 +167,20 @@ function Dashboard() {
         });
         setCompetitions(comps);
 
-        const posRes = await axios.get(`${API_BASE}/my-positions?entryId=${entryId}`);
-        setPositions(posRes.data.positions || []);
-        setTotalRisk(posRes.data.totalRiskPercent || 0);
-        setVirtualCapital(parseFloat(posRes.data.virtualCapital) || 10000);
-        setLivePrices(posRes.data.livePrices || {});
+        // ✅ CORRECCIÓN: Solo obtener posiciones si hay entryId
+        if (entryId) {
+          const posRes = await axios.get(`${API_BASE}/my-positions?entryId=${entryId}`);
+          setPositions(posRes.data.positions || []);
+          setTotalRisk(posRes.data.totalRiskPercent || 0);
+          setVirtualCapital(parseFloat(posRes.data.virtualCapital) || 10000);
+          setLivePrices(posRes.data.livePrices || {});
 
-        const adviceRes = await axios.get(`${API_BASE}/my-advice`);
-        setAdvice(adviceRes.data.advice);
+          const adviceRes = await axios.get(`${API_BASE}/my-advice`);
+          setAdvice(adviceRes.data.advice);
+        } else {
+          // Admin sin entryId - cargar solo precios live del socket
+          console.log('👑 Admin mode - no personal positions');
+        }
       } catch (err) {
         console.error('Error fetching data:', err);
       }
@@ -166,7 +189,7 @@ function Dashboard() {
     fetchData();
     const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
-  }, [entryId]);
+  }, [entryId, isAdminSession]);
 
   useEffect(() => {
     setCurrentPrice(livePrices[symbol] || null);
@@ -195,7 +218,11 @@ function Dashboard() {
   }, [userLevel, competitions]);
 
   useEffect(() => {
-    if (!entryId) return;
+    // ✅ CORRECCIÓN: Solo suscribirse a socket si hay entryId
+    if (!entryId) {
+      console.log('⏭️ Skipping socket subscription - no entryId');
+      return;
+    }
 
     socket.on('liveUpdate', (data) => {
       const myEntry = data.find(d => d.entryId === entryId);
@@ -219,6 +246,12 @@ function Dashboard() {
   }, [entryId]);
 
   useEffect(() => {
+    // ✅ CORRECCIÓN: Solo obtener payouts si NO es admin
+    if (isAdminSession) {
+      console.log('⏭️ Skipping payouts - admin mode');
+      return;
+    }
+
     const fetchMyPayouts = async () => {
       try {
         const res = await axios.get(`${API_BASE}/my-payouts`);
@@ -238,15 +271,20 @@ function Dashboard() {
     };
 
     fetchMyPayouts();
-  }, []);
+  }, [isAdminSession]);
 
   const openTrade = async () => {
+    // ✅ CORRECCIÓN: Bloquear si es admin o no hay entryId
+    if (!entryId) {
+      alert('⚠️ No puedes abrir trades en modo admin. Inicia sesión como usuario normal.');
+      return;
+    }
+
     if (lotSize < 0.01 || lotSize > 1.0) {
       alert('LotSize debe estar entre 0.01 y 1.0');
       return;
     }
 
-    // ✅ Validación de riesgo máximo antes de enviar
     if (riskInfo.riskPercent > 10) {
       alert(`⚠️ Riesgo demasiado alto: ${riskInfo.riskPercent.toFixed(1)}%\nMáximo permitido: 10%\n\nSugerencia: Usa ${calculateOptimalLotSize(2).toFixed(2)} lot para 2% de riesgo`);
       return;
@@ -318,7 +356,6 @@ function Dashboard() {
   const userComp = competitions[userLevel] || { prizePool: 0, participants: 0, timeLeft: '00h 00m' };
   const activeLevels = Object.keys(competitions).filter(level => (competitions[level]?.participants || 0) > 0);
 
-  // ✅ Función helper para calcular riesgo de una posición existente
   const calculatePositionRisk = (position) => {
     const entryPrice = position.entryPrice;
     const sl = position.stopLoss;
@@ -339,13 +376,20 @@ function Dashboard() {
   return (
     <TooltipProvider>
       <div className="min-h-screen text-white relative overflow-hidden">
-        {/* FONDO ESPACIO + OVERLAY */}
         <div className="fixed inset-0 -z-10">
           <img src={background} alt="Fondo" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/60" />
         </div>
 
-        {/* HEADER GLASS AZUL SUTIL */}
+        {/* ✅ ALERTA DE MODO ADMIN */}
+        {isAdminSession && !entryId && (
+          <div className="fixed top-32 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-500/90 backdrop-blur-md border border-yellow-600 px-8 py-4 rounded-lg shadow-2xl">
+            <p className="text-black font-bold text-xl">
+              👑 MODO ADMIN - Solo visualización. Inicia sesión como usuario para operar.
+            </p>
+          </div>
+        )}
+
         <header className="fixed top-0 left-0 right-0 z-50 bg-primary/65 backdrop-blur-md border-b border-holy/20 shadow-md py-6">
           <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
             <div className="relative">
@@ -360,7 +404,11 @@ function Dashboard() {
             <div className="text-center">
               <h1 className="text-4xl font-bold text-holy">Holypot Trading 🚀</h1>
               <p className="text-lg text-gray-300 mt-1">
-                Nivel: {userLevel.toUpperCase()} | Participantes: {userComp.participants} | Tiempo restante: <span className="text-red-500 font-bold animate-pulse">{userComp.timeLeft}</span>
+                {entryId ? (
+                  <>Nivel: {userLevel.toUpperCase()} | Participantes: {userComp.participants} | Tiempo restante: <span className="text-red-500 font-bold animate-pulse">{userComp.timeLeft}</span></>
+                ) : (
+                  <span className="text-yellow-400">Modo visualización - Sin competencia activa</span>
+                )}
               </p>
             </div>
 
@@ -368,14 +416,15 @@ function Dashboard() {
               <p className="text-2xl font-bold text-holy animate-pulse">
                 Prize pool: {formatNumber(userComp.prizePool)} USDT
               </p>
-              <p className="text-xl mt-1">
-                Saldo live: <span className={percentChange >= 0 ? "text-profit" : "text-red-500"}>{formatNumber(Math.floor(virtualCapital))} USDT</span> ({formatPercent(percentChange)})
-              </p>
+              {entryId && (
+                <p className="text-xl mt-1">
+                  Saldo live: <span className={percentChange >= 0 ? "text-profit" : "text-red-500"}>{formatNumber(Math.floor(virtualCapital))} USDT</span> ({formatPercent(percentChange)})
+                </p>
+              )}
             </div>
           </div>
         </header>
 
-        {/* SIDEBAR */}
         <aside className="fixed left-0 top-24 bottom-0 w-20 bg-primary/90 backdrop-blur border-r border-borderSubtle shadow-card flex flex-col items-center py-8 space-y-8">
           <nav className="flex-1 flex flex-col items-center space-y-10">
             <Tooltip>
@@ -420,9 +469,8 @@ function Dashboard() {
           </nav>
         </aside>
 
-        {/* CONTENIDO PRINCIPAL */}
         <main className="ml-20 pt-32 px-8 pb-20">
-          {/* CONSEJO IA GLASS */}
+          {/* CONSEJO IA */}
           <div className="relative group mb-12">
             <div className="absolute inset-0 bg-gradient-to-br from-holy/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
             <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-8 text-center hover:scale-105 transition-all duration-500">
@@ -433,9 +481,8 @@ function Dashboard() {
             </Card>
           </div>
 
-          {/* CARDS MULTI-NIVEL GLASS */}
+          {/* CARDS MULTI-NIVEL */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
-            {/* BASIC */}
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-br from-profit/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
               <Card className="relative bg-black/30 backdrop-blur-xl border border-profit/40 rounded-3xl shadow-2xl p-10 text-center hover:scale-105 transition-all duration-500">
@@ -450,7 +497,6 @@ function Dashboard() {
               </Card>
             </div>
 
-            {/* MEDIUM */}
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
               <Card className="relative bg-black/30 backdrop-blur-xl border border-blue-500/40 rounded-3xl shadow-2xl p-10 text-center hover:scale-105 transition-all duration-500">
@@ -465,7 +511,6 @@ function Dashboard() {
               </Card>
             </div>
 
-            {/* PREMIUM */}
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-br from-holy/40 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
               <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/50 rounded-3xl shadow-2xl p-10 text-center hover:scale-105 transition-all duration-500">
@@ -481,9 +526,8 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* GRÁFICO + NEW TRADE GLASS */}
+          {/* GRÁFICO + NEW TRADE */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 mb-12">
-            {/* GRÁFICO */}
             <div className="lg:col-span-2 relative group">
               <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
               <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl hover:scale-103 transition-all duration-300 h-[830px]">
@@ -543,13 +587,15 @@ function Dashboard() {
                     <div className="grid grid-cols-2 gap-4">
                       <Button 
                         onClick={() => setDirection('long')} 
+                        disabled={!entryId}
                         className={`text-xl h-16 font-bold rounded-lg shadow-lg transition-all
                           ${direction === 'long' ? 'bg-profit hover:bg-profit/80 border-4 border-profit text-black' : 'bg-profit/70 hover:bg-profit/90 text-white'}`}
                       >
                         {orderType === 'market' ? 'LONG' : orderType === 'limit' ? 'Buy Limit' : 'Buy Stop'}
                       </Button>
                       <Button 
-                        onClick={() => setDirection('short')} 
+                        onClick={() => setDirection('short')}
+                        disabled={!entryId}
                         className={`text-xl h-16 font-bold rounded-lg shadow-lg transition-all
                           ${direction === 'short' ? 'bg-red-700 hover:bg-red-800 border-4 border-red-900' : 'bg-red-500 hover:bg-red-600 border-2 border-red-600'}`}
                       >
@@ -566,13 +612,13 @@ function Dashboard() {
                         step="0.00001" 
                         placeholder="ej: 1.10500" 
                         value={targetPrice} 
-                        onChange={e => setTargetPrice(e.target.value)} 
+                        onChange={e => setTargetPrice(e.target.value)}
+                        disabled={!entryId}
                         className="bg-black/40 border-borderSubtle text-white"
                       />
                     </div>
                   )}
 
-                  {/* ✅ SECCIÓN LOTSIZE CON RIESGO REAL MEJORADA */}
                   <div className="space-y-3">
                     <label className="text-xl font-bold block text-gray-200">
                       LotSize
@@ -585,6 +631,7 @@ function Dashboard() {
                         step={0.01} 
                         value={[lotSize]} 
                         onValueChange={(v) => setLotSize(v[0])}
+                        disabled={!entryId}
                         className="flex-1 bg-gray-700 [&_[role=slider]]:bg-holy [&_[role=slider]]:hover:bg-holyGlow [&_[role=slider]]:ring-holy"
                       />
                       <Input 
@@ -599,11 +646,11 @@ function Dashboard() {
                           val = Math.max(0.01, Math.min(1.0, val));
                           setLotSize(val);
                         }}
+                        disabled={!entryId}
                         className="w-32 bg-black/40 border-borderSubtle text-white text-center"
                       />
                     </div>
                     
-                    {/* ✅ DISPLAY DEL RIESGO REAL */}
                     <div className="bg-black/40 rounded-lg p-4 space-y-2 border border-white/10">
                       <p className="text-center text-2xl font-bold text-white">
                         {lotSize.toFixed(2)} lot
@@ -619,7 +666,6 @@ function Dashboard() {
                             📏 Distancia SL: {riskInfo.distancePips.toFixed(0)} {instrumentInfo.pipMultiplier === 1 ? 'puntos' : 'pips'}
                           </p>
                           
-                          {/* ✅ ALERTA DE ALTO RIESGO */}
                           {riskInfo.riskPercent > 5 && (
                             <div className="mt-3 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
                               <p className="text-red-400 font-bold text-center flex items-center justify-center gap-2">
@@ -645,7 +691,15 @@ function Dashboard() {
 
                   <div>
                     <label className="text-xl font-bold mb-2 block text-gray-200">Take Profit (opcional)</label>
-                    <Input type="number" step="0.00001" placeholder="ej: 1.10500" value={takeProfit} onChange={e => setTakeProfit(e.target.value)} className="bg-black/40 border-borderSubtle text-white" />
+                    <Input 
+                      type="number" 
+                      step="0.00001" 
+                      placeholder="ej: 1.10500" 
+                      value={takeProfit} 
+                      onChange={e => setTakeProfit(e.target.value)}
+                      disabled={!entryId}
+                      className="bg-black/40 border-borderSubtle text-white"
+                    />
                   </div>
 
                   <div>
@@ -655,28 +709,29 @@ function Dashboard() {
                       step="0.00001" 
                       placeholder="ej: 1.09000" 
                       value={stopLoss} 
-                      onChange={e => setStopLoss(e.target.value)} 
+                      onChange={e => setStopLoss(e.target.value)}
+                      disabled={!entryId}
                       className="bg-black/40 border-borderSubtle text-white"
                     />
                   </div>
 
                   <Button 
                     onClick={openTrade} 
-                    disabled={riskInfo.riskPercent > 10}
+                    disabled={!entryId || riskInfo.riskPercent > 10}
                     className={`w-full text-3xl py-8 font-bold rounded-full shadow-lg transition duration-300
-                      ${riskInfo.riskPercent > 10 
+                      ${!entryId || riskInfo.riskPercent > 10
                         ? 'bg-gray-600 cursor-not-allowed' 
                         : 'bg-gradient-to-r from-holy to-purple-600 text-black hover:shadow-holy/50 hover:scale-105'
                       }`}
                   >
-                    {riskInfo.riskPercent > 10 ? 'RIESGO DEMASIADO ALTO' : 'ABRIR TRADE'}
+                    {!entryId ? 'MODO SOLO VISTA' : riskInfo.riskPercent > 10 ? 'RIESGO DEMASIADO ALTO' : 'ABRIR TRADE'}
                   </Button>
                 </CardContent>
               </Card>
             </div>
           </div>
 
-          {/* POSITIONS + RISK GLASS */}
+          {/* POSITIONS */}
           <div className="relative group mb-12">
             <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
             <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-8 hover:scale-103 transition-all duration-400">
@@ -698,16 +753,14 @@ function Dashboard() {
                   {positions.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8 text-gray-400">
-                        No positions abiertas – abre tu primer trade 🚀
+                        {entryId ? 'No positions abiertas – abre tu primer trade 🚀' : '👑 Modo admin - Sin posiciones activas'}
                       </TableCell>
                     </TableRow>
                   ) : (
                     positions.map((pos) => {
-                      // ✅ Calcular riesgo real de la posición
                       const positionRisk = calculatePositionRisk(pos);
                       const livePnl = parseFloat(pos.livePnl || 0).toFixed(2);
                       
-                      // Calcular pips a TP/SL según el instrumento
                       const config = instrumentConfig[pos.symbol] || instrumentConfig['EURUSD'];
                       const pipsToTP = pos.takeProfit && currentPrice ? (pos.direction === 'long' 
                         ? ((pos.takeProfit - currentPrice) * config.pipMultiplier).toFixed(0) 
@@ -724,7 +777,6 @@ function Dashboard() {
                               {pos.direction.toUpperCase()}
                             </Badge>
                           </TableCell>
-                          {/* ✅ Mostrar riesgo real calculado */}
                           <TableCell className={positionRisk.riskPercent > 5 ? "text-red-500 font-semibold" : "text-profit"}>
                             {pos.lotSize || 0.01} 
                             <span className="text-sm ml-1">
@@ -749,10 +801,15 @@ function Dashboard() {
                               variant="outline" 
                               className="bg-holy/20 hover:bg-holy/40 text-white" 
                               onClick={() => setEditingPosition(pos)}
+                              disabled={!entryId}
                             >
                               Edit
                             </Button>
-                            <Button variant="destructive" onClick={() => closeTrade(pos.id)}>
+                            <Button 
+                              variant="destructive" 
+                              onClick={() => closeTrade(pos.id)}
+                              disabled={!entryId}
+                            >
                               CLOSE
                             </Button>
                           </TableCell>
@@ -763,22 +820,23 @@ function Dashboard() {
                 </TableBody>
               </Table>
 
-              <div className="mt-8">
-                <p className="text-xl text-center mb-2 text-gray-200">Risk total abierto: {totalRisk.toFixed(1)}% (max 10%)</p>
-                <Progress 
-                  value={totalRisk} 
-                  className={`h-12 rounded-full bg-gray-700 overflow-hidden shadow-card ${totalRisk > 8 ? 'shadow-[0_0_25px_red]' : totalRisk > 5 ? 'shadow-[0_0_20px_orange]' : 'shadow-[0_0_15px_#00C853]'}`}
-                >
-                  <div 
-                    className={`h-full transition-all duration-700 ${totalRisk > 8 ? 'bg-red-600' : totalRisk > 5 ? 'bg-orange-500' : 'bg-profit'} shadow-inner`} 
-                    style={{ width: `${totalRisk * 10}%` }} 
-                  />
-                </Progress>
-              </div>
+              {entryId && (
+                <div className="mt-8">
+                  <p className="text-xl text-center mb-2 text-gray-200">Risk total abierto: {totalRisk.toFixed(1)}% (max 10%)</p>
+                  <Progress 
+                    value={totalRisk} 
+                    className={`h-12 rounded-full bg-gray-700 overflow-hidden shadow-card ${totalRisk > 8 ? 'shadow-[0_0_25px_red]' : totalRisk > 5 ? 'shadow-[0_0_20px_orange]' : 'shadow-[0_0_15px_#00C853]'}`}
+                  >
+                    <div 
+                      className={`h-full transition-all duration-700 ${totalRisk > 8 ? 'bg-red-600' : totalRisk > 5 ? 'bg-orange-500' : 'bg-profit'} shadow-inner`} 
+                      style={{ width: `${totalRisk * 10}%` }} 
+                    />
+                  </Progress>
+                </div>
+              )}
             </Card>
           </div>
 
-          {/* MODAL DE EDICIÓN ÚNICO */}
           {editingPosition && (
             <EditPositionModal
               position={editingPosition}
@@ -801,7 +859,7 @@ function Dashboard() {
             />
           )}
 
-          {/* RANKING LIVE GLASS */}
+          {/* RANKING */}
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
             <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-8 hover:scale-105 transition-all duration-500">
@@ -868,44 +926,46 @@ function Dashboard() {
             </Card>
           </div>
 
-          {/* MODAL ¡GANASTE! */}
-          <Dialog open={showWinModal} onOpenChange={setShowWinModal}>
-            <DialogContent className="bg-black/80 backdrop-blur-xl border border-holy/40 text-white max-w-md">
-              <DialogHeader>
-                <DialogTitle className="text-4xl text-center text-holy animate-pulse">
-                  ¡FELICIDADES, GANASTE! 🚀🏆
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-6 text-center">
-                <p className="text-2xl text-profit font-bold">
-                  {latestWin ? formatNumber(latestWin.amount) : 0} USDT
-                </p>
-                <p className="text-xl text-gray-200">
-                  Posición #{latestWin?.position} en competencia {latestWin?.level.toUpperCase()}
-                </p>
-                <p className="text-lg text-gray-300">
-                  Fecha: {latestWin ? new Date(latestWin.date).toLocaleDateString('es-ES') : ''}
-                </p>
-                <p className="text-lg">
-                  <Badge className="bg-profit text-black text-lg px-6 py-2">
-                    Pago confirmado en blockchain ✅
-                  </Badge>
-                </p>
-                <p className="text-sm text-gray-400">
-                  Payment ID: {latestWin?.paymentId ? '...' + latestWin.paymentId.slice(-10) : '-'}
-                </p>
-                <p className="text-lg text-gray-200">
-                  ¡El USDT ya está en tu wallet TRC20! Revisa tu billetera.
-                </p>
-                <Button 
-                  onClick={() => setShowWinModal(false)}
-                  className="w-full bg-gradient-to-r from-holy to-purple-600 text-black text-xl py-6 font-bold rounded-full"
-                >
-                  ¡Genial, seguir compitiendo!
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          {/* MODAL GANASTE */}
+          {!isAdminSession && (
+            <Dialog open={showWinModal} onOpenChange={setShowWinModal}>
+              <DialogContent className="bg-black/80 backdrop-blur-xl border border-holy/40 text-white max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-4xl text-center text-holy animate-pulse">
+                    ¡FELICIDADES, GANASTE! 🚀🏆
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-6 text-center">
+                  <p className="text-2xl text-profit font-bold">
+                    {latestWin ? formatNumber(latestWin.amount) : 0} USDT
+                  </p>
+                  <p className="text-xl text-gray-200">
+                    Posición #{latestWin?.position} en competencia {latestWin?.level.toUpperCase()}
+                  </p>
+                  <p className="text-lg text-gray-300">
+                    Fecha: {latestWin ? new Date(latestWin.date).toLocaleDateString('es-ES') : ''}
+                  </p>
+                  <p className="text-lg">
+                    <Badge className="bg-profit text-black text-lg px-6 py-2">
+                      Pago confirmado en blockchain ✅
+                    </Badge>
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    Payment ID: {latestWin?.paymentId ? '...' + latestWin.paymentId.slice(-10) : '-'}
+                  </p>
+                  <p className="text-lg text-gray-200">
+                    ¡El USDT ya está en tu wallet TRC20! Revisa tu billetera.
+                  </p>
+                  <Button 
+                    onClick={() => setShowWinModal(false)}
+                    className="w-full bg-gradient-to-r from-holy to-purple-600 text-black text-xl py-6 font-bold rounded-full"
+                  >
+                    ¡Genial, seguir compitiendo!
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </main>
       </div>
     </TooltipProvider>
