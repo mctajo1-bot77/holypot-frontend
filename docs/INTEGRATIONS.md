@@ -1,241 +1,318 @@
-# Holypot Trading – Integraciones con APIs Externas
+# Holypot Trading – Esquema de Base de Datos
 
-> **Nota:** Las secciones marcadas con `[BACKEND]` deben completarse con información del chat de backend. El frontend solo conoce la existencia de estas integraciones a través de los datos que devuelve el backend.
-
----
-
-## 1. Finnhub – Precios en Tiempo Real
-
-**Rol:** Proveedor de precios de mercado para instrumentos FX e índices.
-
-**Usado por:** Backend (el frontend recibe precios ya procesados via WebSocket `liveUpdate`).
-
-| Dato | Valor |
-|------|-------|
-| Sitio | https://finnhub.io |
-| Autenticación | API Key en header `X-Finnhub-Token` `[BACKEND: insertar key]` |
-| Rate limit | 60 req/min (free tier) `[BACKEND: confirmar tier]` |
-| Protocolo | REST + WebSocket propio `[BACKEND: confirmar cuál usan]` |
-
-### Instrumentos Consultados (inferidos desde frontend)
-
-| Símbolo Frontend | Símbolo Finnhub (probable) | Tipo |
-|-----------------|---------------------------|------|
-| EURUSD | `OANDA:EUR_USD` o `FXCM:EURUSD` | FX |
-| GBPUSD | `OANDA:GBP_USD` | FX |
-| USDJPY | `OANDA:USD_JPY` | FX |
-| XAUUSD | `OANDA:XAU_USD` | Commodities |
-| SPX500 | `^GSPC` o `SPY` | Index |
-| NAS100 | `^IXIC` o `QQQ` | Index |
-
-> `[BACKEND]` Confirmar los símbolos exactos que usa el backend para cada instrumento.
-
-### Endpoints Relevantes `[BACKEND]`
-
-```
-GET https://finnhub.io/api/v1/quote?symbol={symbol}&token={API_KEY}
-  → { c: currentPrice, h: high, l: low, o: open, pc: prevClose }
-
-WebSocket: wss://ws.finnhub.io?token={API_KEY}
-  → Suscripción: { type: "subscribe", symbol: "OANDA:EUR_USD" }
-  → Mensaje: { type: "trade", data: [{ s, p, t, v }] }
-```
-
-### Flujo en el Sistema `[BACKEND]`
-
-```
-Finnhub → Backend (cache + procesamiento) → Socket.io liveUpdate → Frontend
-```
+> **ORM:** Prisma
+> **Base de datos:** PostgreSQL
+> **Archivo fuente:** `prisma/schema.prisma`
+> Última revisión contra el backend real: 2026-02-15
 
 ---
 
-## 2. OANDA – Simulación y Validación de Trades
+## Diagrama ER
 
-**Rol:** Validación de spreads y posiblemente datos de velas históricas para el chart.
+```mermaid
+erDiagram
+    User {
+        TEXT id PK
+        TEXT email UK
+        TEXT password
+        TEXT nickname UK
+        TEXT walletAddress
+        BOOLEAN emailVerified
+        TEXT verificationToken UK "en schema, pendiente de migrar"
+        TIMESTAMP tokenExpiry "en schema, pendiente de migrar"
+    }
+    Competition {
+        TEXT id PK
+        TEXT type
+        TEXT level "basic | medium | premium"
+        TIMESTAMP startAt
+        TIMESTAMP endAt
+        TEXT status "active | closed | settled"
+        DOUBLE_PRECISION prizePool
+        INT participants
+    }
+    Entry {
+        TEXT id PK "holypotEntryId en localStorage"
+        TEXT userId FK
+        TEXT competitionId FK "nullable"
+        TEXT level "basic | medium | premium"
+        TEXT paymentId "nullable – ID externo NOWPayments"
+        TEXT status "pending | confirmed | disqualified | winner"
+        DOUBLE_PRECISION virtualCapital "capital live, varía con P&L"
+        TIMESTAMP createdAt
+    }
+    Position {
+        TEXT id PK
+        TEXT entryId FK
+        TEXT symbol "EURUSD | GBPUSD | USDJPY | XAUUSD | SPX500 | NAS100"
+        TEXT direction "long | short"
+        DOUBLE_PRECISION lotSize "nullable"
+        DOUBLE_PRECISION entryPrice
+        DOUBLE_PRECISION takeProfit "nullable"
+        DOUBLE_PRECISION stopLoss "nullable"
+        DOUBLE_PRECISION currentPnl "nullable – P&L actualizado en vivo"
+        TEXT closeReason "nullable: manual | TP_hit | SL_hit"
+        TIMESTAMP openedAt
+        TIMESTAMP closedAt "nullable – null = posición abierta"
+    }
+    Payout {
+        SERIAL id PK
+        TEXT userId FK
+        TEXT level "basic | medium | premium"
+        INT position "1 (50%) | 2 (30%) | 3 (20%)"
+        DOUBLE_PRECISION amount "monto en USDT"
+        TIMESTAMP date
+        TEXT status "pending | sent | confirmed | failed"
+        TEXT paymentId "nullable – payout ID de NOWPayments"
+    }
+    Advice {
+        SERIAL id PK
+        TEXT userId FK
+        TIMESTAMP date
+        TEXT text
+    }
+    DailyCandle {
+        SERIAL id PK
+        TEXT symbol
+        TIMESTAMP date "UTC 00:00:00 del día"
+        INT time "Unix timestamp en segundos"
+        DOUBLE_PRECISION open
+        DOUBLE_PRECISION high
+        DOUBLE_PRECISION low
+        DOUBLE_PRECISION close
+    }
 
-**Usado por:** Backend principalmente; el frontend consume el resultado via `/api/candles/{symbol}`.
-
-| Dato | Valor |
-|------|-------|
-| Sitio | https://developer.oanda.com |
-| Entorno | Practice (fxTrade Practice) o Live `[BACKEND]` |
-| Autenticación | Bearer token en header `Authorization` `[BACKEND]` |
-| Rate limit | 120 req/2s por IP `[BACKEND: confirmar]` |
-
-### Endpoints Relevantes `[BACKEND]`
-
-```
-# Precios / spread actual
-GET /v3/accounts/{accountId}/pricing?instruments={instrument}
-  → { prices: [{ asks, bids, tradeable }] }
-
-# Velas históricas (usado por EditPositionModal via /api/candles)
-GET /v3/instruments/{instrument}/candles?count=500&granularity=S5
-  → { candles: [{ time, mid: { o, h, l, c } }] }
-```
-
-### Cómo llega al Frontend
-
-```
-EditPositionModal → GET /api/candles/{symbol}?from=...
-                 ← array de velas OHLC
-```
-
-El modal usa **TradingView Lightweight Charts** para renderizar las velas localmente.
-
-### Instrumentos (conversión de símbolo frontend → OANDA) `[BACKEND]`
-
-| Frontend | OANDA |
-|----------|-------|
-| EURUSD | EUR_USD |
-| GBPUSD | GBP_USD |
-| USDJPY | USD_JPY |
-| XAUUSD | XAU_USD |
-| SPX500 | SPX500_USD |
-| NAS100 | NAS100_USD |
-
----
-
-## 3. NOWPayments – Pagos USDT On-Chain
-
-**Rol:** Pasarela de pagos cripto para cobrar el fee de entrada a competencias.
-
-**Usado por:** Backend + webhook; el frontend solo recibe la `paymentUrl` y redirige al usuario.
-
-| Dato | Valor |
-|------|-------|
-| Sitio | https://nowpayments.io |
-| Autenticación | API Key en header `x-api-key` `[BACKEND]` |
-| Moneda | USDT (TRC-20 o ERC-20 configurable) `[BACKEND: confirmar red]` |
-| Webhook | POST `/webhook/nowpayments` (en backend) |
-
-### Flujo de Pago
-
-```
-1. Backend crea invoice → NOWPayments:
-   POST https://api.nowpayments.io/v1/payment
-   {
-     price_amount: 12 | 59 | 107,
-     price_currency: "usd",
-     pay_currency: "usdttrc20",
-     order_id: entryId,
-     order_description: "Holypot Basic Entry",
-     ipn_callback_url: "{BACKEND_URL}/webhook/nowpayments",
-     success_url: "{FRONTEND_URL}/dashboard",
-     cancel_url: "{FRONTEND_URL}/"
-   }
-
-2. NOWPayments responde → { payment_url, payment_id, pay_address }
-
-3. Frontend redirige usuario a payment_url
-
-4. Usuario paga USDT desde su wallet
-
-5. NOWPayments confirma → llama webhook:
-   POST /webhook/nowpayments
-   {
-     payment_status: "confirmed" | "partially_paid" | "failed",
-     order_id: entryId,
-     payment_id: "...",
-     actually_paid: "12.0"
-   }
-
-6. Backend actualiza competition_entry.status = 'active'
-```
-
-### Estados de Pago `[BACKEND]`
-
-| Estado NOWPayments | Acción en Backend |
-|-------------------|------------------|
-| `waiting` | No action |
-| `confirming` | No action |
-| `confirmed` | Activar entry |
-| `partially_paid` | `[BACKEND: manejo?]` |
-| `failed` | Marcar entry como failed |
-| `expired` | Marcar entry como expired |
-
-### Seguridad del Webhook `[BACKEND]`
-
-```
-Verificar IPN signature con NOWPAYMENTS_IPN_SECRET
-Header: x-nowpayments-sig
+    User ||--o{ Entry : "participa en"
+    Competition ||--o{ Entry : "contiene"
+    Entry ||--o{ Position : "tiene"
+    Entry ||--o{ Payout : "puede ganar"
+    User ||--o{ Payout : "recibe"
+    User ||--o{ Advice : "recibe"
 ```
 
 ---
 
-## 4. hCaptcha – Protección Anti-Bot en Registro
+## Descripción de Tablas
 
-**Rol:** Evitar registros automatizados y abuso de la plataforma.
+### `User`
 
-**Usado por:** Frontend (widget) + Backend (verificación).
+| Campo | Tipo Prisma | Tipo SQL | Notas |
+|-------|-------------|----------|-------|
+| `id` | `String @default(cuid())` | TEXT | PK, generado con cuid() |
+| `email` | `String @unique` | TEXT | Único, requerido |
+| `password` | `String?` | TEXT | bcrypt, **10 salt rounds** |
+| `nickname` | `String? @unique` | TEXT | Único, nullable |
+| `walletAddress` | `String?` | TEXT | Wallet USDT para premios, nullable |
+| `emailVerified` | `Boolean @default(false)` | BOOLEAN | False hasta verificar email |
+| `verificationToken` | `String? @unique` | TEXT | **En schema.prisma pero SIN migración aplicada** |
+| `tokenExpiry` | `DateTime?` | TIMESTAMP(3) | **En schema.prisma pero SIN migración aplicada** |
 
-| Dato | Valor |
-|------|-------|
-| Sitio | https://www.hcaptcha.com |
-| Sitekey (Frontend) | `a0b26f92-ba34-47aa-be42-c936e488a6f4` |
-| Secret Key (Backend) | `[BACKEND: en variable de entorno HCAPTCHA_SECRET]` |
+> **IMPORTANTE:** `verificationToken` y `tokenExpiry` están definidos en `schema.prisma` pero no existe migration para ellos aún. No están en la base de datos actualmente.
 
-### Flujo
-
-```
-1. LandingPage renderiza widget hCaptcha con sitekey
-2. Usuario completa el captcha → hCaptcha devuelve token
-3. Frontend envía token en POST /api/create-payment { captchaToken, ... }
-4. Backend verifica: POST https://hcaptcha.com/siteverify
-   { secret: HCAPTCHA_SECRET, response: captchaToken }
-5. Si valid: true → continúa el registro
-```
+> **NO existe** tabla separada `email_verifications` – el token se guarda directamente en `User`.
 
 ---
 
-## 5. TradingView Widget – Charts de Mercado
+### `Competition`
 
-**Rol:** Gráfico de mercado en tiempo real en el Dashboard principal.
-
-**Usado por:** Frontend directamente (CDN, no pasa por backend).
-
-| Dato | Valor |
-|------|-------|
-| Fuente | Script CDN de TradingView |
-| Autenticación | Ninguna (widget público) |
-| Datos | TradingView propios (no OANDA/Finnhub) |
-| Timeframe | 1H (configurado en componente) |
-
-### Mapeo de Símbolos (TradingViewChart.jsx) `[FRONTEND]`
-
-```javascript
-// Símbolos usados en el widget TradingView
-EURUSD  → "FX:EURUSD"  o "OANDA:EURUSD"
-GBPUSD  → "FX:GBPUSD"
-USDJPY  → "FX:USDJPY"
-XAUUSD  → "TVC:GOLD"  o "OANDA:XAUUSD"
-SPX500  → "SP:SPX"
-NAS100  → "NASDAQ:NDX"
-```
-
-> `[BACKEND]` Los símbolos exactos están en `TradingViewChart.jsx` — verificar que coincidan con los que usa el backend para cálculos de P&L.
+| Campo | Tipo SQL | Notas |
+|-------|----------|-------|
+| `id` | TEXT | PK |
+| `type` | TEXT | |
+| `level` | TEXT | `basic`, `medium`, `premium` |
+| `startAt` | TIMESTAMP(3) | |
+| `endAt` | TIMESTAMP(3) | 21:00 UTC diariamente |
+| `status` | TEXT DEFAULT `'active'` | `active` → `closed` → `settled` |
+| `prizePool` | DOUBLE PRECISION DEFAULT `0.0` | |
+| `participants` | INTEGER DEFAULT `0` | |
 
 ---
 
-## 6. Socket.io – Comunicación en Tiempo Real
+### `Entry`
 
-**Rol:** Actualizaciones en vivo de posiciones, precios y capital sin polling HTTP.
+Es el `holypotEntryId` usado en todo el frontend (guardado en `localStorage`).
 
-| Dato | Valor |
-|------|-------|
-| Librería cliente | `socket.io-client` |
-| URL | `VITE_API_URL` (mismo servidor backend) |
-| Transports | `['websocket', 'polling']` (fallback automático) |
-| Reconnection | 5 intentos, delay 1000ms |
-| Timeout | 10,000ms |
+| Campo | Tipo SQL | Notas |
+|-------|----------|-------|
+| `id` | TEXT | PK – es el `holypotEntryId` |
+| `userId` | TEXT | FK → `User.id` |
+| `competitionId` | TEXT nullable | FK → `Competition.id` (nullable) |
+| `level` | TEXT | `basic`, `medium`, `premium` |
+| `paymentId` | TEXT nullable | ID externo de NOWPayments |
+| `status` | TEXT DEFAULT `'pending'` | Ver estados abajo |
+| `virtualCapital` | DOUBLE PRECISION DEFAULT `0.0` | Capital live – se actualiza con P&L |
+| `createdAt` | TIMESTAMP(3) | |
 
-### Eventos
+**Estados de Entry:**
 
-| Evento | Emitido por | Recibido por | Payload |
-|--------|------------|-------------|---------|
-| `liveUpdate` | Backend (cada ~1s) | Dashboard, AdminDashboard | `{ positions, livePrices, liveCapital }` |
-| `tradeClosedAuto` | Backend (TP/SL hit) | Dashboard | `{ reason: 'TP_hit'\|'SL_hit', position: {...} }` |
+| Estado | Descripción |
+|--------|-------------|
+| `pending` | Creada, esperando pago |
+| `confirmed` | Pago confirmado, competencia activa |
+| `disqualified` | Descalificada |
+| `winner` | Ganador confirmado al settlement |
 
-### Autenticación WebSocket `[BACKEND]`
+> **Diferencia con docs de frontend:** Los estados reales son `pending / confirmed / disqualified / winner`, NO `pending_payment / active / closed`.
 
-> `[BACKEND]` Confirmar si el socket verifica el JWT al conectar (middleware handshake) o es sin auth.
+> **NO existe** campo `return_pct`, `virtual_capital_initial` ni `final_rank` en `Entry` – estos se calculan en el backend al vuelo.
+
+> **NO existe** tabla separada `payments` – el `paymentId` de NOWPayments se almacena directamente en `Entry`.
+
+---
+
+### `Position`
+
+| Campo | Tipo SQL | Notas |
+|-------|----------|-------|
+| `id` | TEXT | PK |
+| `entryId` | TEXT | FK → `Entry.id` |
+| `symbol` | TEXT | `EURUSD`, `GBPUSD`, `USDJPY`, `XAUUSD`, `SPX500`, `NAS100` |
+| `direction` | TEXT | **`long`** o **`short`** (NO `buy`/`sell`) |
+| `lotSize` | DOUBLE PRECISION nullable | Tamaño en lotes |
+| `entryPrice` | DOUBLE PRECISION | Precio de apertura |
+| `takeProfit` | DOUBLE PRECISION nullable | |
+| `stopLoss` | DOUBLE PRECISION nullable | |
+| `currentPnl` | DOUBLE PRECISION nullable | P&L calculado en vivo por el backend |
+| `closeReason` | TEXT nullable | `manual`, `TP_hit`, `SL_hit` |
+| `openedAt` | TIMESTAMP(3) | |
+| `closedAt` | TIMESTAMP(3) nullable | `null` = posición abierta |
+
+> **Diferencias con docs de frontend:**
+> - `direction`: `long`/`short` (no `buy`/`sell`)
+> - **No existe** campo `order_type` – no hay órdenes limit ni stop
+> - **No existe** campo `status` – estado inferido: `closedAt IS NULL` → abierta, si tiene valor → cerrada
+> - **No existe** `pnl_unrealized`/`pnl_realized` por separado – solo `currentPnl`
+> - **No existe** `current_price` almacenado en DB – viene del cache de precios en memoria
+
+---
+
+### `Payout`
+
+| Campo | Tipo SQL | Notas |
+|-------|----------|-------|
+| `id` | SERIAL | PK autoincremental |
+| `userId` | TEXT | FK → `User.id` |
+| `level` | TEXT | `basic`, `medium`, `premium` |
+| `position` | INTEGER | `1` (50%), `2` (30%), `3` (20%) |
+| `amount` | DOUBLE PRECISION | Monto en USDT |
+| `date` | TIMESTAMP(3) DEFAULT `now()` | |
+| `status` | TEXT DEFAULT `'pending'` | `pending`, `sent`, `confirmed`, `failed` |
+| `paymentId` | TEXT nullable | ID del payout en NOWPayments |
+
+> **Diferencia:** El payout status es `sent` (no `confirming`) antes de `confirmed`.
+
+---
+
+### `Advice`
+
+Tabla de consejos/notas por usuario. **No estaba en los docs del frontend.**
+
+| Campo | Tipo SQL | Notas |
+|-------|----------|-------|
+| `id` | SERIAL | PK autoincremental |
+| `userId` | TEXT | FK → `User.id` |
+| `date` | TIMESTAMP(3) DEFAULT `now()` | |
+| `text` | TEXT | Contenido del consejo |
+
+**Índice:** `Advice_userId_idx ON Advice(userId)`
+
+---
+
+### `DailyCandle`
+
+Velas OHLC diarias por símbolo, construidas desde los precios de Finnhub en tiempo real. **No estaba en los docs del frontend.**
+
+| Campo | Tipo SQL | Notas |
+|-------|----------|-------|
+| `id` | SERIAL | PK autoincremental |
+| `symbol` | TEXT | `EURUSD`, `GBPUSD`, etc. |
+| `date` | TIMESTAMP(3) | Fecha del día (UTC 00:00:00) |
+| `time` | INTEGER | Unix timestamp en segundos |
+| `open` | DOUBLE PRECISION | |
+| `high` | DOUBLE PRECISION | |
+| `low` | DOUBLE PRECISION | |
+| `close` | DOUBLE PRECISION | |
+
+**Índices:**
+```sql
+UNIQUE INDEX DailyCandle_symbol_date_time_key ON DailyCandle(symbol, date, time);
+INDEX DailyCandle_symbol_date_idx ON DailyCandle(symbol, date);
+```
+
+> Estas son las velas que sirve el endpoint `/api/candles/{symbol}` que consume `EditPositionModal`.
+> **OANDA no se usa como API** – los datos son 100% de Finnhub.
+
+---
+
+## Tablas que NO existen en el backend real
+
+Estas tablas estaban inferidas en los docs del frontend pero **no existen**:
+
+| Tabla inferida | Realidad |
+|---------------|---------|
+| `payments` | No existe. El `paymentId` y estado de pago van en `Entry.paymentId` y `Entry.status` |
+| `email_verifications` | No existe como tabla. Los campos `verificationToken`/`tokenExpiry` van en `User` (y aún sin migrar) |
+
+---
+
+## Índices existentes (reales)
+
+```sql
+-- User
+UNIQUE INDEX "User_email_key" ON "User"("email");
+UNIQUE INDEX "User_nickname_key" ON "User"("nickname");
+
+-- Advice
+INDEX "Advice_userId_idx" ON "Advice"("userId");
+
+-- Payout
+INDEX "Payout_userId_idx" ON "Payout"("userId");
+
+-- DailyCandle
+UNIQUE INDEX "DailyCandle_symbol_date_time_key" ON "DailyCandle"("symbol", "date", "time");
+INDEX "DailyCandle_symbol_date_idx" ON "DailyCandle"("symbol", "date");
+```
+
+> **Índices recomendados aún no creados** (sería útil añadirlos):
+> ```sql
+> -- Posiciones abiertas por entry (consulta frecuente)
+> CREATE INDEX "Position_entryId_idx" ON "Position"("entryId");
+> CREATE INDEX "Position_closedAt_idx" ON "Position"("closedAt") WHERE "closedAt" IS NULL;
+> -- Entries por usuario
+> CREATE INDEX "Entry_userId_idx" ON "Entry"("userId");
+> -- Entries activas por competencia y nivel
+> CREATE INDEX "Entry_competitionId_level_idx" ON "Entry"("competitionId", "level");
+> ```
+
+---
+
+## Datos Visibles en el Frontend (respuestas API reales)
+
+### GET /admin/data → `data.usuarios[]`
+```json
+{
+  "id": "uuid (entryId)",
+  "displayName": "nickname",
+  "wallet": "0x...",
+  "level": "basic",
+  "status": "confirmed",
+  "virtualCapital": 10250.50
+}
+```
+
+### GET /my-positions → posiciones activas
+```json
+{
+  "id": "uuid",
+  "symbol": "EURUSD",
+  "direction": "long",
+  "lotSize": 0.5,
+  "entryPrice": 1.0850,
+  "takeProfit": 1.0900,
+  "stopLoss": 1.0800,
+  "currentPnl": 100.00,
+  "openedAt": "2026-02-15T18:00:00.000Z"
+}
+```
+
+> Nota: `currentPrice` y `return_pct` se calculan en el backend al armar la respuesta; no se persisten en DB.
