@@ -25,6 +25,11 @@ const LoginPage = () => {
     try {
       const res = await axios.post(`${API_BASE}/login`, { email, password }, { withCredentials: true });
       
+      // Limpiar tokens de sesiones anteriores (admin u otras)
+      localStorage.removeItem('holypotAdminToken');
+      localStorage.removeItem('holypotToken');
+      localStorage.removeItem('holypotEntryId');
+
       // Guardar token y entryId en localStorage
       if (res.data.token) {
         localStorage.setItem('holypotToken', res.data.token);

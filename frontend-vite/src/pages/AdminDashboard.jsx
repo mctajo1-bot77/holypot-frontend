@@ -55,9 +55,17 @@ const AdminDashboard = () => {
     return () => socket.off('liveUpdate');
   }, [navigate]);
 
-  const viewAsUser = (entryId) => {
-    localStorage.setItem('holypotEntryId', entryId);
-    window.open('/dashboard', '_blank');
+  const viewAsUser = async (entryId) => {
+    try {
+      const res = await apiClient.post('/admin/generate-user-token', { entryId });
+      const adminToken = localStorage.getItem('holypotToken');
+      localStorage.setItem('holypotAdminToken', adminToken);
+      localStorage.setItem('holypotToken', res.data.token);
+      localStorage.setItem('holypotEntryId', entryId);
+      window.open('/dashboard', '_blank');
+    } catch (err) {
+      alert('Error generando token de usuario: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   const exportCSV = (level) => {
