@@ -1,7 +1,9 @@
 # Holypot Trading – Esquema de Base de Datos
 
-> **Nota:** Este esquema está inferido desde los datos que consume el frontend (campos visibles en respuestas API).
-> Las secciones marcadas con `[BACKEND]` deben completarse/corregirse con el esquema real del backend.
+> **ORM:** Prisma
+> **Base de datos:** PostgreSQL
+> **Archivo fuente:** `prisma/schema.prisma`
+> Última revisión contra el backend real: 2026-02-15
 
 ---
 
@@ -9,198 +11,282 @@
 
 ```mermaid
 erDiagram
-    USERS {
-        uuid id PK
-        string email UK
-        string password_hash
-        string nickname
-        string wallet_address
-        boolean email_verified
-        string role "user | admin"
-        timestamp created_at
-        timestamp updated_at
+    User {
+        TEXT id PK
+        TEXT email UK
+        TEXT password
+        TEXT nickname UK
+        TEXT walletAddress
+        BOOLEAN emailVerified
+        TEXT verificationToken UK "en schema, pendiente de migrar"
+        TIMESTAMP tokenExpiry "en schema, pendiente de migrar"
+    }
+    Competition {
+        TEXT id PK
+        TEXT type
+        TEXT level "basic | medium | premium"
+        TIMESTAMP startAt
+        TIMESTAMP endAt
+        TEXT status "active | closed | settled"
+        DOUBLE_PRECISION prizePool
+        INT participants
+    }
+    Entry {
+        TEXT id PK "holypotEntryId en localStorage"
+        TEXT userId FK
+        TEXT competitionId FK "nullable"
+        TEXT level "basic | medium | premium"
+        TEXT paymentId "nullable – ID externo NOWPayments"
+        TEXT status "pending | confirmed | disqualified | winner"
+        DOUBLE_PRECISION virtualCapital "capital live, varía con P&L"
+        TIMESTAMP createdAt
+    }
+    Position {
+        TEXT id PK
+        TEXT entryId FK
+        TEXT symbol "EURUSD | GBPUSD | USDJPY | XAUUSD | SPX500 | NAS100"
+        TEXT direction "long | short"
+        DOUBLE_PRECISION lotSize "nullable"
+        DOUBLE_PRECISION entryPrice
+        DOUBLE_PRECISION takeProfit "nullable"
+        DOUBLE_PRECISION stopLoss "nullable"
+        DOUBLE_PRECISION currentPnl "nullable – P&L actualizado en vivo"
+        TEXT closeReason "nullable: manual | TP_hit | SL_hit"
+        TIMESTAMP openedAt
+        TIMESTAMP closedAt "nullable – null = posición abierta"
+    }
+    Payout {
+        SERIAL id PK
+        TEXT userId FK
+        TEXT level "basic | medium | premium"
+        INT position "1 (50%) | 2 (30%) | 3 (20%)"
+        DOUBLE_PRECISION amount "monto en USDT"
+        TIMESTAMP date
+        TEXT status "pending | sent | confirmed | failed"
+        TEXT paymentId "nullable – payout ID de NOWPayments"
+    }
+    Advice {
+        SERIAL id PK
+        TEXT userId FK
+        TIMESTAMP date
+        TEXT text
+    }
+    DailyCandle {
+        SERIAL id PK
+        TEXT symbol
+        TIMESTAMP date "UTC 00:00:00 del día"
+        INT time "Unix timestamp en segundos"
+        DOUBLE_PRECISION open
+        DOUBLE_PRECISION high
+        DOUBLE_PRECISION low
+        DOUBLE_PRECISION close
     }
 
-    COMPETITIONS {
-        uuid id PK
-        string level "basic | medium | premium"
-        date competition_date
-        decimal entry_fee
-        decimal virtual_capital
-        decimal prize_pool
-        string status "active | closed | settled"
-        timestamp opens_at
-        timestamp closes_at "21:00 UTC daily"
-        timestamp created_at
-    }
-
-    COMPETITION_ENTRIES {
-        uuid id PK "entryId en frontend"
-        uuid user_id FK
-        uuid competition_id FK
-        string level "basic | medium | premium"
-        decimal virtual_capital_initial
-        decimal virtual_capital_current "capital live"
-        decimal return_pct "retorno %"
-        string status "pending_payment | active | closed"
-        string payment_id "NOWPayments payment_id"
-        string payment_status
-        int final_rank
-        timestamp created_at
-    }
-
-    POSITIONS {
-        uuid id PK "positionId"
-        uuid entry_id FK
-        string symbol "EURUSD | GBPUSD | USDJPY | XAUUSD | SPX500 | NAS100"
-        string direction "buy | sell"
-        string order_type "market | limit | stop"
-        decimal lots
-        decimal entry_price
-        decimal current_price
-        decimal take_profit
-        decimal stop_loss
-        decimal pnl_unrealized
-        decimal pnl_realized
-        string status "open | closed | cancelled"
-        string close_reason "manual | TP_hit | SL_hit | settlement"
-        timestamp opened_at
-        timestamp closed_at
-    }
-
-    PAYOUTS {
-        uuid id PK
-        uuid entry_id FK
-        uuid user_id FK
-        string level
-        date competition_date
-        int position "1 | 2 | 3"
-        decimal amount "USDT"
-        string wallet_address
-        string status "pending | confirmed | failed"
-        string payment_id "NOWPayments payout ID"
-        timestamp created_at
-        timestamp confirmed_at
-    }
-
-    PAYMENTS {
-        uuid id PK
-        uuid entry_id FK
-        string nowpayments_payment_id UK
-        decimal amount_expected
-        decimal amount_paid
-        string currency "usdttrc20"
-        string status "waiting | confirming | confirmed | failed | expired"
-        json raw_webhook
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    EMAIL_VERIFICATIONS {
-        uuid id PK
-        uuid user_id FK
-        string token UK
-        boolean used
-        timestamp expires_at
-        timestamp created_at
-    }
-
-    USERS ||--o{ COMPETITION_ENTRIES : "participa en"
-    COMPETITIONS ||--o{ COMPETITION_ENTRIES : "contiene"
-    COMPETITION_ENTRIES ||--o{ POSITIONS : "tiene"
-    COMPETITION_ENTRIES ||--o| PAYMENTS : "paga con"
-    COMPETITION_ENTRIES ||--o| PAYOUTS : "gana"
-    USERS ||--o{ PAYOUTS : "recibe"
-    USERS ||--o{ EMAIL_VERIFICATIONS : "verifica"
+    User ||--o{ Entry : "participa en"
+    Competition ||--o{ Entry : "contiene"
+    Entry ||--o{ Position : "tiene"
+    Entry ||--o{ Payout : "puede ganar"
+    User ||--o{ Payout : "recibe"
+    User ||--o{ Advice : "recibe"
 ```
 
 ---
 
 ## Descripción de Tablas
 
-### `users`
-Usuarios registrados en la plataforma.
+### `User`
 
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `id` | UUID | PK, generado automáticamente |
-| `email` | VARCHAR | Único, requerido para login |
-| `password_hash` | VARCHAR | bcrypt `[BACKEND]` |
-| `nickname` | VARCHAR | Nombre público en rankings |
-| `wallet_address` | VARCHAR | Wallet USDT para recibir premios |
-| `email_verified` | BOOLEAN | False hasta que clic en email |
-| `role` | ENUM | `user` o `admin` |
+| Campo | Tipo Prisma | Tipo SQL | Notas |
+|-------|-------------|----------|-------|
+| `id` | `String @default(cuid())` | TEXT | PK, generado con cuid() |
+| `email` | `String @unique` | TEXT | Único, requerido |
+| `password` | `String?` | TEXT | bcrypt, **10 salt rounds** |
+| `nickname` | `String? @unique` | TEXT | Único, nullable |
+| `walletAddress` | `String?` | TEXT | Wallet USDT para premios, nullable |
+| `emailVerified` | `Boolean @default(false)` | BOOLEAN | False hasta verificar email |
+| `verificationToken` | `String? @unique` | TEXT | **En schema.prisma pero SIN migración aplicada** |
+| `tokenExpiry` | `DateTime?` | TIMESTAMP(3) | **En schema.prisma pero SIN migración aplicada** |
 
----
+> **IMPORTANTE:** `verificationToken` y `tokenExpiry` están definidos en `schema.prisma` pero no existe migration para ellos aún. No están en la base de datos actualmente.
 
-### `competitions`
-Competencias diarias por nivel.
-
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `level` | ENUM | `basic`, `medium`, `premium` |
-| `prize_pool` | DECIMAL | Suma de fees - comisión plataforma |
-| `closes_at` | TIMESTAMP | 21:00 UTC cada día |
-| `status` | ENUM | `active` → `closed` → `settled` |
-
-> Cada día hay hasta 3 competencias activas (una por nivel).
+> **NO existe** tabla separada `email_verifications` – el token se guarda directamente en `User`.
 
 ---
 
-### `competition_entries`
-Inscripción de un usuario a una competencia. Es el `entryId` usado en todo el frontend.
+### `Competition`
 
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `id` | UUID | Es el `holypotEntryId` guardado en localStorage |
-| `virtual_capital_current` | DECIMAL | Capital "live" — varía con P&L de posiciones |
-| `return_pct` | DECIMAL | `(capital_current - capital_initial) / capital_initial * 100` |
-| `final_rank` | INT | Seteado al settlement (1, 2, 3...) |
-| `status` | ENUM | `pending_payment` → `active` → `closed` |
-
----
-
-### `positions`
-Trades abiertos y cerrados de cada entry.
-
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `symbol` | VARCHAR | Uno de los 6 instrumentos |
-| `direction` | ENUM | `buy` o `sell` |
-| `order_type` | ENUM | `market`, `limit`, `stop` |
-| `lots` | DECIMAL | Tamaño del contrato |
-| `close_reason` | ENUM | `manual`, `TP_hit`, `SL_hit`, `settlement` |
-
-> El P&L se calcula como: `(currentPrice - entryPrice) × direction × lots × pipValue / pipMultiplier`
+| Campo | Tipo SQL | Notas |
+|-------|----------|-------|
+| `id` | TEXT | PK |
+| `type` | TEXT | |
+| `level` | TEXT | `basic`, `medium`, `premium` |
+| `startAt` | TIMESTAMP(3) | |
+| `endAt` | TIMESTAMP(3) | 21:00 UTC diariamente |
+| `status` | TEXT DEFAULT `'active'` | `active` → `closed` → `settled` |
+| `prizePool` | DOUBLE PRECISION DEFAULT `0.0` | |
+| `participants` | INTEGER DEFAULT `0` | |
 
 ---
 
-### `payouts`
-Registro de premios pagados a los top 3 de cada competencia.
+### `Entry`
 
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `position` | INT | 1 (50%), 2 (30%), 3 (20%) |
-| `amount` | DECIMAL | Monto en USDT |
-| `wallet_address` | VARCHAR | Copiado de users.wallet_address |
-| `status` | ENUM | `pending` → `confirmed` |
-| `payment_id` | VARCHAR | ID de payout en NOWPayments `[BACKEND]` |
+Es el `holypotEntryId` usado en todo el frontend (guardado en `localStorage`).
+
+| Campo | Tipo SQL | Notas |
+|-------|----------|-------|
+| `id` | TEXT | PK – es el `holypotEntryId` |
+| `userId` | TEXT | FK → `User.id` |
+| `competitionId` | TEXT nullable | FK → `Competition.id` (nullable) |
+| `level` | TEXT | `basic`, `medium`, `premium` |
+| `paymentId` | TEXT nullable | ID externo de NOWPayments |
+| `status` | TEXT DEFAULT `'pending'` | Ver estados abajo |
+| `virtualCapital` | DOUBLE PRECISION DEFAULT `0.0` | Capital live – se actualiza con P&L |
+| `createdAt` | TIMESTAMP(3) | |
+
+**Estados de Entry:**
+
+| Estado | Descripción |
+|--------|-------------|
+| `pending` | Creada, esperando pago |
+| `confirmed` | Pago confirmado, competencia activa |
+| `disqualified` | Descalificada |
+| `winner` | Ganador confirmado al settlement |
+
+> **Diferencia con docs de frontend:** Los estados reales son `pending / confirmed / disqualified / winner`, NO `pending_payment / active / closed`.
+
+> **NO existe** campo `return_pct`, `virtual_capital_initial` ni `final_rank` en `Entry` – estos se calculan en el backend al vuelo.
+
+> **NO existe** tabla separada `payments` – el `paymentId` de NOWPayments se almacena directamente en `Entry`.
 
 ---
 
-### `payments`
-Registro del pago de fee de entrada via NOWPayments.
+### `Position`
 
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `nowpayments_payment_id` | VARCHAR | ID externo de NOWPayments |
-| `amount_expected` | DECIMAL | $12, $59 o $107 |
-| `amount_paid` | DECIMAL | Lo que realmente llegó |
-| `raw_webhook` | JSON | Payload completo del webhook guardado |
+| Campo | Tipo SQL | Notas |
+|-------|----------|-------|
+| `id` | TEXT | PK |
+| `entryId` | TEXT | FK → `Entry.id` |
+| `symbol` | TEXT | `EURUSD`, `GBPUSD`, `USDJPY`, `XAUUSD`, `SPX500`, `NAS100` |
+| `direction` | TEXT | **`long`** o **`short`** (NO `buy`/`sell`) |
+| `lotSize` | DOUBLE PRECISION nullable | Tamaño en lotes |
+| `entryPrice` | DOUBLE PRECISION | Precio de apertura |
+| `takeProfit` | DOUBLE PRECISION nullable | |
+| `stopLoss` | DOUBLE PRECISION nullable | |
+| `currentPnl` | DOUBLE PRECISION nullable | P&L calculado en vivo por el backend |
+| `closeReason` | TEXT nullable | `manual`, `TP_hit`, `SL_hit` |
+| `openedAt` | TIMESTAMP(3) | |
+| `closedAt` | TIMESTAMP(3) nullable | `null` = posición abierta |
+
+> **Diferencias con docs de frontend:**
+> - `direction`: `long`/`short` (no `buy`/`sell`)
+> - **No existe** campo `order_type` – no hay órdenes limit ni stop
+> - **No existe** campo `status` – estado inferido: `closedAt IS NULL` → abierta, si tiene valor → cerrada
+> - **No existe** `pnl_unrealized`/`pnl_realized` por separado – solo `currentPnl`
+> - **No existe** `current_price` almacenado en DB – viene del cache de precios en memoria
 
 ---
 
-## Datos Visibles en el Frontend (inferidos de respuestas API)
+### `Payout`
+
+| Campo | Tipo SQL | Notas |
+|-------|----------|-------|
+| `id` | SERIAL | PK autoincremental |
+| `userId` | TEXT | FK → `User.id` |
+| `level` | TEXT | `basic`, `medium`, `premium` |
+| `position` | INTEGER | `1` (50%), `2` (30%), `3` (20%) |
+| `amount` | DOUBLE PRECISION | Monto en USDT |
+| `date` | TIMESTAMP(3) DEFAULT `now()` | |
+| `status` | TEXT DEFAULT `'pending'` | `pending`, `sent`, `confirmed`, `failed` |
+| `paymentId` | TEXT nullable | ID del payout en NOWPayments |
+
+> **Diferencia:** El payout status es `sent` (no `confirming`) antes de `confirmed`.
+
+---
+
+### `Advice`
+
+Tabla de consejos/notas por usuario. **No estaba en los docs del frontend.**
+
+| Campo | Tipo SQL | Notas |
+|-------|----------|-------|
+| `id` | SERIAL | PK autoincremental |
+| `userId` | TEXT | FK → `User.id` |
+| `date` | TIMESTAMP(3) DEFAULT `now()` | |
+| `text` | TEXT | Contenido del consejo |
+
+**Índice:** `Advice_userId_idx ON Advice(userId)`
+
+---
+
+### `DailyCandle`
+
+Velas OHLC diarias por símbolo, construidas desde los precios de Finnhub en tiempo real. **No estaba en los docs del frontend.**
+
+| Campo | Tipo SQL | Notas |
+|-------|----------|-------|
+| `id` | SERIAL | PK autoincremental |
+| `symbol` | TEXT | `EURUSD`, `GBPUSD`, etc. |
+| `date` | TIMESTAMP(3) | Fecha del día (UTC 00:00:00) |
+| `time` | INTEGER | Unix timestamp en segundos |
+| `open` | DOUBLE PRECISION | |
+| `high` | DOUBLE PRECISION | |
+| `low` | DOUBLE PRECISION | |
+| `close` | DOUBLE PRECISION | |
+
+**Índices:**
+```sql
+UNIQUE INDEX DailyCandle_symbol_date_time_key ON DailyCandle(symbol, date, time);
+INDEX DailyCandle_symbol_date_idx ON DailyCandle(symbol, date);
+```
+
+> Estas son las velas que sirve el endpoint `/api/candles/{symbol}` que consume `EditPositionModal`.
+> **OANDA no se usa como API** – los datos son 100% de Finnhub.
+
+---
+
+## Tablas que NO existen en el backend real
+
+Estas tablas estaban inferidas en los docs del frontend pero **no existen**:
+
+| Tabla inferida | Realidad |
+|---------------|---------|
+| `payments` | No existe. El `paymentId` y estado de pago van en `Entry.paymentId` y `Entry.status` |
+| `email_verifications` | No existe como tabla. Los campos `verificationToken`/`tokenExpiry` van en `User` (y aún sin migrar) |
+
+---
+
+## Índices existentes (reales)
+
+```sql
+-- User
+UNIQUE INDEX "User_email_key" ON "User"("email");
+UNIQUE INDEX "User_nickname_key" ON "User"("nickname");
+
+-- Advice
+INDEX "Advice_userId_idx" ON "Advice"("userId");
+
+-- Payout
+INDEX "Payout_userId_idx" ON "Payout"("userId");
+
+-- DailyCandle
+UNIQUE INDEX "DailyCandle_symbol_date_time_key" ON "DailyCandle"("symbol", "date", "time");
+INDEX "DailyCandle_symbol_date_idx" ON "DailyCandle"("symbol", "date");
+```
+
+> **Índices recomendados aún no creados** (sería útil añadirlos):
+> ```sql
+> -- Posiciones abiertas por entry (consulta frecuente)
+> CREATE INDEX "Position_entryId_idx" ON "Position"("entryId");
+> CREATE INDEX "Position_closedAt_idx" ON "Position"("closedAt") WHERE "closedAt" IS NULL;
+> -- Entries por usuario
+> CREATE INDEX "Entry_userId_idx" ON "Entry"("userId");
+> -- Entries activas por competencia y nivel
+> CREATE INDEX "Entry_competitionId_level_idx" ON "Entry"("competitionId", "level");
+> ```
+
+---
+
+## Datos Visibles en el Frontend (respuestas API reales)
 
 ### GET /admin/data → `data.usuarios[]`
 ```json
@@ -209,18 +295,8 @@ Registro del pago de fee de entrada via NOWPayments.
   "displayName": "nickname",
   "wallet": "0x...",
   "level": "basic",
-  "status": "active",
+  "status": "confirmed",
   "virtualCapital": 10250.50
-}
-```
-
-### GET /admin/data → `data.competencias[level].ranking[]`
-```json
-{
-  "displayName": "trader123",
-  "wallet": "0x...",
-  "retorno": "+12.5%",
-  "liveCapital": 11250.00
 }
 ```
 
@@ -229,44 +305,14 @@ Registro del pago de fee de entrada via NOWPayments.
 {
   "id": "uuid",
   "symbol": "EURUSD",
-  "direction": "buy",
-  "lots": 0.5,
+  "direction": "long",
+  "lotSize": 0.5,
   "entryPrice": 1.0850,
-  "currentPrice": 1.0870,
-  "tp": 1.0900,
-  "sl": 1.0800,
-  "pnl": 100.00
+  "takeProfit": 1.0900,
+  "stopLoss": 1.0800,
+  "currentPnl": 100.00,
+  "openedAt": "2026-02-15T18:00:00.000Z"
 }
 ```
 
-### GET /admin/payouts → historial payouts
-```json
-{
-  "id": "uuid",
-  "date": "2026-02-15T21:00:00Z",
-  "user": { "nickname": "trader123" },
-  "level": "premium",
-  "position": 1,
-  "amount": 535.00,
-  "status": "confirmed",
-  "paymentId": "np_..."
-}
-```
-
----
-
-## Índices Recomendados `[BACKEND: verificar]`
-
-```sql
--- Acceso frecuente: posiciones por entry
-CREATE INDEX idx_positions_entry_id ON positions(entry_id);
-CREATE INDEX idx_positions_status ON positions(status);
-
--- Rankings por competencia y nivel
-CREATE INDEX idx_entries_competition_level ON competition_entries(competition_id, level);
-CREATE INDEX idx_entries_return_pct ON competition_entries(return_pct DESC);
-
--- Pagos pendientes
-CREATE INDEX idx_payouts_status ON payouts(status);
-CREATE INDEX idx_payments_nowpayments_id ON payments(nowpayments_payment_id);
-```
+> Nota: `currentPrice` y `return_pct` se calculan en el backend al armar la respuesta; no se persisten en DB.
