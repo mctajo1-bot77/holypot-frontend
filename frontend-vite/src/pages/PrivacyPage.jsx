@@ -2,9 +2,11 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
 import background from "@/assets/background.jpg";
+import { useI18n, LanguageToggle } from '@/i18n';
 
 const PrivacyPage = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   return (
     <div className="min-h-screen text-white relative overflow-hidden">
@@ -14,89 +16,84 @@ const PrivacyPage = () => {
         <div className="absolute inset-0 bg-black/60" />
       </div>
 
+      {/* Language Toggle */}
+      <div className="fixed top-4 right-4 z-50">
+        <LanguageToggle />
+      </div>
+
       {/* Contenido principal */}
       <div className="max-w-4xl mx-auto px-8 py-32">
         <h1 className="text-5xl font-bold text-holy text-center mb-8">
-          Política de Privacidad – Holypot Trading
+          {t('privacy.title')}
         </h1>
         <p className="text-xl text-center text-gray-300 mb-12">
-          Última actualización: 25 de enero de 2026
+          {t('privacy.lastUpdate')}
         </p>
 
         <div className="space-y-12 text-lg text-gray-200">
           <section>
-            <h2 className="text-3xl font-bold text-holy mb-6">1. Información que recolectamos</h2>
+            <h2 className="text-3xl font-bold text-holy mb-6">{t('privacy.sec1_title')}</h2>
             <ul className="list-disc pl-8 space-y-3">
-              <li>Datos de registro: email, contraseña, wallet TRC20, nickname, fecha nacimiento (verificación edad mayor 18).</li>
-              <li>Datos transacciones: historial inscripciones, trades, payouts.</li>
-              <li>Datos técnicos: IP, dispositivo, navegador (mejora servicio y seguridad).</li>
-              <li>Datos KYC opcional: documento identidad (solo retiros altos o requerimiento legal).</li>
+              <li>{t('privacy.sec1_li1')}</li>
+              <li>{t('privacy.sec1_li2')}</li>
+              <li>{t('privacy.sec1_li3')}</li>
+              <li>{t('privacy.sec1_li4')}</li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-3xl font-bold text-holy mb-6">2. Finalidad del tratamiento</h2>
+            <h2 className="text-3xl font-bold text-holy mb-6">{t('privacy.sec2_title')}</h2>
             <ul className="list-disc pl-8 space-y-3">
-              <li>Prestar servicio plataforma (inscripciones, trading simulado, payouts reales).</li>
-              <li>Cumplir obligaciones legales (AML, reporte tributario si aplica).</li>
-              <li>Mejorar experiencia y seguridad (análisis uso, prevención fraude).</li>
-              <li>Comunicaciones operativas (confirmación pago, resultados competencia).</li>
-              <li>No marketing sin consentimiento expreso.</li>
+              <li>{t('privacy.sec2_li1')}</li>
+              <li>{t('privacy.sec2_li2')}</li>
+              <li>{t('privacy.sec2_li3')}</li>
+              <li>{t('privacy.sec2_li4')}</li>
+              <li>{t('privacy.sec2_li5')}</li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-3xl font-bold text-holy mb-6">3. Base legal</h2>
-            <p>
-              Ejecución contrato (Términos Uso), cumplimiento legal y consentimiento usuario.
-            </p>
+            <h2 className="text-3xl font-bold text-holy mb-6">{t('privacy.sec3_title')}</h2>
+            <p>{t('privacy.sec3_content')}</p>
           </section>
 
           <section>
-            <h2 className="text-3xl font-bold text-holy mb-6">4. Compartición datos</h2>
-            <p className="mb-4">Solo compartimos con:</p>
+            <h2 className="text-3xl font-bold text-holy mb-6">{t('privacy.sec4_title')}</h2>
+            <p className="mb-4">{t('privacy.sec4_intro')}</p>
             <ul className="list-disc pl-8 space-y-3">
-              <li>Procesadores pago (NOWPayments) y proveedores técnicos.</li>
-              <li>Autoridades cuando ley lo exija.</li>
+              <li>{t('privacy.sec4_li1')}</li>
+              <li>{t('privacy.sec4_li2')}</li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-3xl font-bold text-holy mb-6">5. Seguridad</h2>
-            <p>
-              SSL, encriptación datos sensibles, acceso restringido, monitoreo constante.
-            </p>
+            <h2 className="text-3xl font-bold text-holy mb-6">{t('privacy.sec5_title')}</h2>
+            <p>{t('privacy.sec5_content')}</p>
           </section>
 
           <section>
-            <h2 className="text-3xl font-bold text-holy mb-6">6. Derechos titular</h2>
-            <p>
-              Acceso, rectificación, supresión, revocación consentimiento. Envía solicitud a soporte@holypottrading.com.
-            </p>
+            <h2 className="text-3xl font-bold text-holy mb-6">{t('privacy.sec6_title')}</h2>
+            <p>{t('privacy.sec6_content')}</p>
           </section>
 
           <section>
-            <h2 className="text-3xl font-bold text-holy mb-6">7. Transferencias internacionales</h2>
-            <p>
-              Proveedores (AWS, NOWPayments) fuera Colombia – estándares protección equivalentes GDPR-like.
-            </p>
+            <h2 className="text-3xl font-bold text-holy mb-6">{t('privacy.sec7_title')}</h2>
+            <p>{t('privacy.sec7_content')}</p>
           </section>
 
           <section>
-            <h2 className="text-3xl font-bold text-holy mb-6">8. Cambios política</h2>
-            <p>
-              Notificaremos modificaciones con antelación por email o plataforma.
-            </p>
+            <h2 className="text-3xl font-bold text-holy mb-6">{t('privacy.sec8_title')}</h2>
+            <p>{t('privacy.sec8_content')}</p>
           </section>
         </div>
 
-        {/* BOTÓN VOLVER AL INICIO – EL QUE TE ENCANTÓ */}
+        {/* BOTÓN VOLVER AL INICIO */}
         <div className="text-center mt-20">
-          <Button 
+          <Button
             onClick={() => navigate('/')}
             className="bg-gradient-to-r from-holy to-purple-600 text-black text-2xl px-12 py-6 font-bold rounded-full shadow-lg hover:shadow-holy/50 hover:scale-105 transition duration-300"
           >
-            ← Volver a Holypot Trading
+            {t('privacy.backBtn')}
           </Button>
         </div>
       </div>
