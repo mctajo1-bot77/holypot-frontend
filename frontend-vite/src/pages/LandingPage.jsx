@@ -9,6 +9,7 @@ import LandingHeaderWinners from '../components/LandingHeaderWinners';
 import background from "@/assets/background.jpg";
 import { useNavigate } from 'react-router-dom';
 import { X } from "lucide-react";
+import { useI18n, LanguageToggle } from '@/i18n';
 
 // ✅ API_BASE DINÁMICA – funciona local y producción
 const API_BASE = import.meta.env.VITE_API_URL 
@@ -19,6 +20,7 @@ const HCAPTCHA_SITEKEY = 'a0b26f92-ba34-47aa-be42-c936e488a6f4';
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [competitions, setCompetitions] = useState({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -124,101 +126,69 @@ const LandingPage = () => {
       </div>
 
       {/* HEADER */}
-      <header className="relative bg-primary/65 backdrop-blur-md border-b border-holy/20 shadow-md py-8">
-        <div className="max-w-7xl mx-auto px-6">
+      <header className="relative bg-primary/65 backdrop-blur-md border-b border-holy/20 shadow-md py-4 md:py-8">
+        <div className="max-w-7xl mx-auto px-3 md:px-6">
+          <div className="flex justify-end mb-2 md:mb-0 md:absolute md:top-4 md:right-6 z-20">
+            <LanguageToggle />
+          </div>
           <LandingHeaderWinners />
         </div>
       </header>
 
       {/* COMPETENCIAS ACTIVAS */}
-      <div className="max-w-7xl mx-auto px-8 py-16">
-        <h2 className="text-5xl font-bold text-center mb-4 text-holy">
-          Competencias Activas Hoy
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-16">
+        <h2 className="text-3xl md:text-5xl font-bold text-center mb-2 md:mb-4 text-holy">
+          {t('landing.title')}
         </h2>
-        <p className="text-2xl text-center mb-12 text-gray-300">
-          Cierre diario a las 21:00 UTC – ¡Tiempo restante: <span className="text-red-500 font-bold">{countdown}</span>!
+        <p className="text-lg md:text-2xl text-center mb-6 md:mb-12 text-gray-300">
+          {t('landing.subtitle')} – {t('landing.timeLeft')}: <span className="text-red-500 font-bold">{countdown}</span>!
         </p>
 
         {loading ? (
-          <p className="text-center text-2xl text-gray-400">Cargando competencias...</p>
+          <p className="text-center text-xl md:text-2xl text-gray-400">{t('landing.loading')}</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {/* BASIC */}
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-profit/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition duration-700" />
-              <div className="relative bg-black/30 backdrop-blur-xl border border-profit/40 rounded-3xl p-10 text-center shadow-2xl hover:shadow-profit/30 hover:scale-105 transition-all duration-500">
-                <h3 className="text-4xl font-bold text-profit mb-6">BASIC</h3>
-                <p className="text-xl text-gray-200 mb-4">Entrada: $12 USDT</p>
-                <p className="text-xl text-gray-200 mb-4">Capital virtual: 10.000 USDT</p>
-                <p className="text-xl text-gray-200 mb-4">Participantes: {competitions.basic?.participants || 0}</p>
-                <p className="text-3xl font-bold text-holy mb-8">
-                  Prize pool: {formatNumber(competitions.basic?.prizePool || 0)} USDT
-                </p>
-                <Button
-                  onClick={() => openForm('basic')}
-                  className="w-full bg-gradient-to-r from-profit to-green-600 text-black text-2xl py-6 font-bold rounded-full shadow-lg hover:shadow-profit/50 hover:scale-105 transition duration-300"
-                >
-                  INSCRIBIRSE BASIC
-                </Button>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-12">
+            {[
+              { key: 'basic', color: 'profit', border: 'profit/40', price: 12, capital: '10.000', btnClass: 'from-profit to-green-600 text-black', btnText: t('landing.signupBasic') },
+              { key: 'medium', color: 'blue-500', border: 'blue-500/40', price: 54, capital: '50.000', titleColor: 'text-blue-400', btnClass: 'from-blue-500 to-blue-700 text-white', btnText: t('landing.signupMedium') },
+              { key: 'premium', color: 'holy', border: 'holy/50', price: 107, capital: '100.000', btnClass: 'from-holy to-purple-600 text-black', btnText: t('landing.signupPremium') }
+            ].map(({ key, color, border, price, capital, titleColor, btnClass, btnText }) => (
+              <div key={key} className="relative group">
+                <div className={`absolute inset-0 bg-gradient-to-br from-${color}/30 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition duration-700`} />
+                <div className={`relative bg-black/30 backdrop-blur-xl border border-${border} rounded-2xl md:rounded-3xl p-6 md:p-10 text-center shadow-2xl hover:md:scale-105 transition-all duration-500`}>
+                  <h3 className={`text-2xl md:text-4xl font-bold ${titleColor || `text-${color}`} mb-4 md:mb-6`}>{key.toUpperCase()}</h3>
+                  <p className="text-base md:text-xl text-gray-200 mb-2 md:mb-4">{t('landing.entry')}: ${price} USDT</p>
+                  <p className="text-base md:text-xl text-gray-200 mb-2 md:mb-4">{t('landing.virtualCapital')}: {capital} USDT</p>
+                  <p className="text-base md:text-xl text-gray-200 mb-2 md:mb-4">{t('landing.participants')}: {competitions[key]?.participants || 0}</p>
+                  <p className="text-xl md:text-3xl font-bold text-holy mb-4 md:mb-8">
+                    {t('landing.prizePool')}: {formatNumber(competitions[key]?.prizePool || 0)} USDT
+                  </p>
+                  <Button
+                    onClick={() => openForm(key)}
+                    className={`w-full bg-gradient-to-r ${btnClass} text-lg md:text-2xl py-4 md:py-6 font-bold rounded-full shadow-lg hover:scale-105 transition duration-300`}
+                  >
+                    {btnText}
+                  </Button>
+                </div>
               </div>
-            </div>
-
-            {/* MEDIUM */}
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition duration-700" />
-              <div className="relative bg-black/30 backdrop-blur-xl border border-blue-500/40 rounded-3xl p-10 text-center shadow-2xl hover:shadow-blue-500/30 hover:scale-105 transition-all duration-500">
-                <h3 className="text-4xl font-bold text-blue-400 mb-6">MEDIUM</h3>
-                <p className="text-xl text-gray-200 mb-4">Entrada: $54 USDT</p>
-                <p className="text-xl text-gray-200 mb-4">Capital virtual: 50.000 USDT</p>
-                <p className="text-xl text-gray-200 mb-4">Participantes: {competitions.medium?.participants || 0}</p>
-                <p className="text-3xl font-bold text-holy mb-8">
-                  Prize pool: {formatNumber(competitions.medium?.prizePool || 0)} USDT
-                </p>
-                <Button
-                  onClick={() => openForm('medium')}
-                  className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white text-2xl py-6 font-bold rounded-full shadow-lg hover:shadow-blue-500/50 hover:scale-105 transition duration-300"
-                >
-                  INSCRIBIRSE MEDIUM
-                </Button>
-              </div>
-            </div>
-
-            {/* PREMIUM */}
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-holy/40 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition duration-700" />
-              <div className="relative bg-black/30 backdrop-blur-xl border border-holy/50 rounded-3xl p-10 text-center shadow-2xl hover:shadow-holy/40 hover:scale-105 transition-all duration-500">
-                <h3 className="text-4xl font-bold text-holy mb-6">PREMIUM</h3>
-                <p className="text-xl text-gray-200 mb-4">Entrada: $107 USDT</p>
-                <p className="text-xl text-gray-200 mb-4">Capital virtual: 100.000 USDT</p>
-                <p className="text-xl text-gray-200 mb-4">Participantes: {competitions.premium?.participants || 0}</p>
-                <p className="text-3xl font-bold text-holy mb-8">
-                  Prize pool: {formatNumber(competitions.premium?.prizePool || 0)} USDT
-                </p>
-                <Button
-                  onClick={() => openForm('premium')}
-                  className="w-full bg-gradient-to-r from-holy to-purple-600 text-black text-2xl py-6 font-bold rounded-full shadow-lg hover:shadow-holy/50 hover:scale-105 transition duration-300"
-                >
-                  INSCRIBIRSE PREMIUM
-                </Button>
-              </div>
-            </div>
+            ))}
           </div>
         )}
       </div>
 
-      {/* SECCIÓN REGLAS + DESEMPATE ACTUALIZADA */}
-      <div className="max-w-7xl mx-auto px-8 py-16">
+      {/* SECCIÓN REGLAS */}
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-16">
         <div className="relative group">
-          <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
-          <div className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-12 hover:scale-105 transition-all duration-500">
-            <h2 className="text-4xl font-bold text-center text-holy mb-12">
-              Reglas de las Competencias – Holypot Trading
+          <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition" />
+          <div className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-2xl md:rounded-3xl shadow-2xl p-6 md:p-12 hover:md:scale-105 transition-all duration-500">
+            <h2 className="text-2xl md:text-4xl font-bold text-center text-holy mb-6 md:mb-12">
+              {t('landing.rules')} – {t('landing.rulesSubtitle')}
             </h2>
-            <p className="text-xl text-center text-gray-300 mb-12">
-              Última actualización: 25 de enero de 2026
+            <p className="text-base md:text-xl text-center text-gray-300 mb-6 md:mb-12">
+              {t('rules.lastUpdate')}
             </p>
 
-            <p className="text-lg leading-relaxed mb-16 text-gray-200">
+            <p className="text-sm md:text-lg leading-relaxed mb-8 md:mb-16 text-gray-200">
               La Plataforma Holypot Trading actúa exclusivamente como proveedor neutral de infraestructura técnica, árbitro imparcial y facilitador de pagos en escrow. No organiza ni promueve competencias directamente; facilita competencias diarias abiertas por nivel que se generan y activan únicamente cuando los usuarios alcanzan el mínimo requerido de participantes pagados.
             </p>
 
@@ -323,12 +293,12 @@ const LandingPage = () => {
             </p>
 
             {/* BOTÓN VER REGLAS COMPLETAS */}
-            <div className="text-center mt-20">
+            <div className="text-center mt-10 md:mt-20">
               <Button
                 onClick={() => navigate('/rules')}
-                className="bg-gradient-to-r from-holy to-purple-600 text-black text-2xl px-12 py-6 font-bold rounded-full shadow-lg hover:shadow-holy/50 hover:scale-105 transition duration-300"
+                className="bg-gradient-to-r from-holy to-purple-600 text-black text-lg md:text-2xl px-8 md:px-12 py-4 md:py-6 font-bold rounded-full shadow-lg hover:shadow-holy/50 hover:scale-105 transition duration-300"
               >
-                Ver reglas completas →
+                {t('landing.viewRules')} →
               </Button>
             </div>
           </div>
@@ -336,69 +306,67 @@ const LandingPage = () => {
       </div>
 
       {/* FOOTER LINKS */}
-      <footer className="mt-32 pb-16 text-center text-gray-300 space-y-4">
-        <p className="text-lg">
-          <a href="/terms" target="_blank" className="text-holy underline hover:text-holyGlow mx-4">
-            Términos y Condiciones
+      <footer className="mt-16 md:mt-32 pb-8 md:pb-16 text-center text-gray-300 space-y-3 md:space-y-4 px-4">
+        <p className="text-sm md:text-lg flex flex-wrap justify-center gap-2 md:gap-4">
+          <a href="/terms" target="_blank" className="text-holy underline hover:text-holyGlow">
+            {t('landing.terms')}
           </a>
-          <a href="/privacy" target="_blank" className="text-holy underline hover:text-holyGlow mx-4">
-            Política de Privacidad
+          <a href="/privacy" target="_blank" className="text-holy underline hover:text-holyGlow">
+            {t('landing.privacy')}
           </a>
-          <a href="/rules" target="_blank" className="text-holy underline hover:text-holyGlow mx-4">
-            Reglas Competencias
+          <a href="/rules" target="_blank" className="text-holy underline hover:text-holyGlow">
+            {t('landing.rulesLink')}
           </a>
         </p>
-        <p className="text-sm">
-          Holypot Trading © 2026 – Competencias de habilidad, no gambling. Edad mínima 18 años.
+        <p className="text-xs md:text-sm">
+          Holypot Trading © 2026 – {t('landing.footer')}
         </p>
       </footer>
 
-      {/* MODAL FORMULARIO - MEJORADO: SCROLL + CIERRE X + CLICK FUERA */}
+      {/* MODAL FORMULARIO */}
       {showForm && (
         <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setShowForm(false)} // cierre clic fuera
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-2 md:p-4"
+          onClick={() => setShowForm(false)}
         >
           <div
-            className="bg-black/40 backdrop-blur-xl border border-borderSubtle rounded-3xl shadow-2xl p-10 max-w-lg w-full max-h-[90vh] overflow-y-auto relative"
-            onClick={(e) => e.stopPropagation()} // evita cierre al clickear dentro
+            className="bg-black/40 backdrop-blur-xl border border-borderSubtle rounded-2xl md:rounded-3xl shadow-2xl p-5 md:p-10 max-w-lg w-full max-h-[95vh] overflow-y-auto relative"
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Botón cerrar X */}
             <button
               onClick={() => setShowForm(false)}
-              className="absolute top-4 right-4 text-white hover:text-gray-300 transition z-10"
-              aria-label="Cerrar formulario"
+              className="absolute top-3 right-3 md:top-4 md:right-4 text-white hover:text-gray-300 transition z-10"
+              aria-label="Close"
             >
-              <X className="w-10 h-10" />
+              <X className="w-7 h-7 md:w-10 md:h-10" />
             </button>
 
-            <h2 className="text-4xl font-bold text-center mb-8 text-holy">
-              Inscribirse en {selectedLevel.toUpperCase()}
+            <h2 className="text-2xl md:text-4xl font-bold text-center mb-4 md:mb-8 text-holy">
+              {t('landing.signupTitle')} {selectedLevel.toUpperCase()}
             </h2>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <Input type="email" placeholder="Email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
-              <Input type="password" placeholder="Contraseña" required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
-              <Input type="password" placeholder="Confirmar contraseña" required value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
-              <Input type="text" placeholder="Wallet USDT TRC-20 (obligatorio)" required value={form.walletAddress} onChange={e => setForm({ ...form, walletAddress: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
+            <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
+              <Input type="email" placeholder={t('form.email')} required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
+              <Input type="password" placeholder={t('form.password')} required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
+              <Input type="password" placeholder={t('form.confirmPassword')} required value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
+              <Input type="text" placeholder={t('form.wallet')} required value={form.walletAddress} onChange={e => setForm({ ...form, walletAddress: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
 
               <div>
-                <Label htmlFor="nickname" className="text-white">Nickname (obligatorio – visible en ranking)</Label>
+                <Label htmlFor="nickname" className="text-white text-sm md:text-base">{t('form.nickname')}</Label>
                 <Input
                   id="nickname"
                   required
                   value={nickname}
                   onChange={e => setNickname(e.target.value)}
-                  placeholder="ej: PipKiller"
+                  placeholder={t('form.nicknamePlaceholder')}
                   className="bg-black/40 border-borderSubtle text-white mt-2"
                 />
               </div>
 
-              <Input type="text" placeholder="Nombre completo (opcional)" value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
-              <Input type="text" placeholder="País (opcional)" value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
+              <Input type="text" placeholder={t('form.fullName')} value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
+              <Input type="text" placeholder={t('form.country')} value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
               <Input type="date" value={form.birthDate} onChange={e => setForm({ ...form, birthDate: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
 
-              {/* HCAPTCHA */}
-              <div className="flex justify-center mt-8">
+              <div className="flex justify-center mt-4 md:mt-8">
                 <HCaptcha
                   sitekey={HCAPTCHA_SITEKEY}
                   onVerify={(token) => setCaptchaToken(token)}
@@ -408,21 +376,21 @@ const LandingPage = () => {
 
               <div className="flex items-center space-x-3">
                 <Checkbox id="terms" checked={form.acceptTerms} onCheckedChange={checked => setForm({ ...form, acceptTerms: checked })} />
-                <Label htmlFor="terms" className="text-white">
-                  Acepto los <a href="/terms" className="text-holy underline">términos y condiciones</a>
+                <Label htmlFor="terms" className="text-white text-sm md:text-base">
+                  {t('form.acceptTerms')} <a href="/terms" className="text-holy underline">{t('form.termsLink')}</a>
                 </Label>
               </div>
 
-              <div className="flex gap-6 pt-6">
-                <Button type="button" onClick={() => setShowForm(false)} className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-xl py-5 rounded-full">
-                  Cancelar
+              <div className="flex gap-3 md:gap-6 pt-4 md:pt-6">
+                <Button type="button" onClick={() => setShowForm(false)} className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-base md:text-xl py-4 md:py-5 rounded-full">
+                  {t('form.cancel')}
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-holy to-purple-600 text-black text-xl py-5 font-bold rounded-full hover:scale-105 transition"
+                  className="flex-1 bg-gradient-to-r from-holy to-purple-600 text-black text-base md:text-xl py-4 md:py-5 font-bold rounded-full hover:scale-105 transition"
                   disabled={!captchaToken}
                 >
-                  PAGAR Y COMPETIR
+                  {t('form.payAndCompete')}
                 </Button>
               </div>
             </form>

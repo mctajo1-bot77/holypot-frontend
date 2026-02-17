@@ -4,6 +4,7 @@ import apiClient from '@/api';
 import { instrumentConfig } from '@/components/pipConfig';
 import { useRiskCalculator } from '@/components/useRiskCalculator';
 import { useNavigate } from "react-router-dom";
+import { useI18n, LanguageToggle } from '@/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ axios.interceptors.request.use(config => {
 
 function Dashboard() {
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   const [entryId, setEntryId] = useState(localStorage.getItem('holypotEntryId') || '');
   const [symbol, setSymbol] = useState('EURUSD');
@@ -381,51 +383,53 @@ function Dashboard() {
           <div className="absolute inset-0 bg-black/60" />
         </div>
 
-        {/* ✅ ALERTA DE MODO ADMIN */}
+        {/* ALERTA DE MODO ADMIN */}
         {isAdminSession && !entryId && (
-          <div className="fixed top-32 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-500/90 backdrop-blur-md border border-yellow-600 px-8 py-4 rounded-lg shadow-2xl">
-            <p className="text-black font-bold text-xl">
-              👑 MODO ADMIN - Solo visualización. Inicia sesión como usuario para operar.
+          <div className="fixed top-20 md:top-32 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-500/90 backdrop-blur-md border border-yellow-600 px-4 md:px-8 py-3 md:py-4 rounded-lg shadow-2xl max-w-[95vw]">
+            <p className="text-black font-bold text-sm md:text-xl text-center">
+              {t('dash.adminMode')}
             </p>
           </div>
         )}
 
-        <header className="fixed top-0 left-0 right-0 z-50 bg-primary/65 backdrop-blur-md border-b border-holy/20 shadow-md py-6">
-          <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-            <div className="relative">
-              <img 
-                src={logo} 
-                alt="Holypot Logo" 
-                className="h-16 w-16 object-contain drop-shadow-2xl animate-float"
+        <header className="fixed top-0 left-0 right-0 z-50 bg-primary/65 backdrop-blur-md border-b border-holy/20 shadow-md py-3 md:py-6">
+          <div className="max-w-7xl mx-auto px-3 md:px-6 flex items-center justify-between gap-2">
+            <div className="relative shrink-0">
+              <img
+                src={logo}
+                alt="Holypot Logo"
+                className="h-10 w-10 md:h-16 md:w-16 object-contain drop-shadow-2xl animate-float"
               />
               <div className="absolute -inset-4 rounded-full bg-holy/20 blur-3xl animate-pulse-slow-halo" />
             </div>
 
-            <div className="text-center">
-              <h1 className="text-4xl font-bold text-holy">Holypot Trading 🚀</h1>
-              <p className="text-lg text-gray-300 mt-1">
+            <div className="text-center min-w-0 flex-1">
+              <h1 className="text-lg md:text-4xl font-bold text-holy truncate">Holypot Trading</h1>
+              <p className="text-xs md:text-lg text-gray-300 mt-0.5 md:mt-1 truncate">
                 {entryId ? (
-                  <>Nivel: {userLevel.toUpperCase()} | Participantes: {userComp.participants} | Tiempo restante: <span className="text-red-500 font-bold animate-pulse">{userComp.timeLeft}</span></>
+                  <><span className="hidden sm:inline">{t('dash.level')}: {userLevel.toUpperCase()} | {t('dash.participants')}: {userComp.participants} | </span>{t('dash.timeLeft')}: <span className="text-red-500 font-bold animate-pulse">{userComp.timeLeft}</span></>
                 ) : (
-                  <span className="text-yellow-400">Modo visualización - Sin competencia activa</span>
+                  <span className="text-yellow-400 text-xs md:text-base">{t('dash.viewMode')}</span>
                 )}
               </p>
             </div>
 
-            <div className="text-right">
-              <p className="text-2xl font-bold text-holy animate-pulse">
-                Prize pool: {formatNumber(userComp.prizePool)} USDT
+            <div className="text-right shrink-0 flex flex-col items-end gap-1">
+              <LanguageToggle className="mb-1" />
+              <p className="text-sm md:text-2xl font-bold text-holy animate-pulse whitespace-nowrap">
+                <span className="hidden sm:inline">{t('dash.prizePool')}: </span>{formatNumber(userComp.prizePool)} USDT
               </p>
               {entryId && (
-                <p className="text-xl mt-1">
-                  Saldo live: <span className={percentChange >= 0 ? "text-profit" : "text-red-500"}>{formatNumber(Math.floor(virtualCapital))} USDT</span> ({formatPercent(percentChange)})
+                <p className="text-xs md:text-xl mt-0.5 md:mt-1 whitespace-nowrap">
+                  <span className="hidden md:inline">{t('dash.balance')}: </span><span className={percentChange >= 0 ? "text-profit" : "text-red-500"}>{formatNumber(Math.floor(virtualCapital))}</span> <span className="hidden sm:inline">({formatPercent(percentChange)})</span>
                 </p>
               )}
             </div>
           </div>
         </header>
 
-        <aside className="fixed left-0 top-24 bottom-0 w-20 bg-primary/90 backdrop-blur border-r border-borderSubtle shadow-card flex flex-col items-center py-8 space-y-8">
+        {/* SIDEBAR - Desktop only */}
+        <aside className="hidden md:flex fixed left-0 top-24 bottom-0 w-20 bg-primary/90 backdrop-blur border-r border-borderSubtle shadow-card flex-col items-center py-8 space-y-8">
           <nav className="flex-1 flex flex-col items-center space-y-10">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -433,7 +437,7 @@ function Dashboard() {
                   <Rocket className="h-10 w-10" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right"><p>Dashboard</p></TooltipContent>
+              <TooltipContent side="right"><p>{t('nav.dashboard')}</p></TooltipContent>
             </Tooltip>
 
             <Tooltip>
@@ -442,7 +446,7 @@ function Dashboard() {
                   <Coins className="h-10 w-10" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right"><p>Mi Perfil</p></TooltipContent>
+              <TooltipContent side="right"><p>{t('nav.profile')}</p></TooltipContent>
             </Tooltip>
 
             {isAdminSession && (
@@ -452,7 +456,7 @@ function Dashboard() {
                     <Crown className="h-10 w-10" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="right"><p>Panel Admin</p></TooltipContent>
+                <TooltipContent side="right"><p>{t('nav.admin')}</p></TooltipContent>
               </Tooltip>
             )}
 
@@ -463,76 +467,72 @@ function Dashboard() {
                     <Power className="h-10 w-10" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="right"><p>Cerrar Sesión</p></TooltipContent>
+                <TooltipContent side="right"><p>{t('nav.logout')}</p></TooltipContent>
               </Tooltip>
             </div>
           </nav>
         </aside>
 
-        <main className="ml-20 pt-32 px-8 pb-20">
+        {/* BOTTOM NAV - Mobile only */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-primary/95 backdrop-blur-md border-t border-holy/20 flex justify-around items-center py-2 px-2">
+          <Button variant="ghost" size="icon" className="text-white hover:bg-holy/20 flex-1" onClick={() => navigate('/dashboard')}>
+            <Rocket className="h-6 w-6" />
+          </Button>
+          <Button variant="ghost" size="icon" className="text-white hover:bg-holy/20 flex-1" onClick={() => navigate('/profile')}>
+            <Coins className="h-6 w-6" />
+          </Button>
+          {isAdminSession && (
+            <Button variant="ghost" size="icon" className="text-white hover:bg-holy/20 flex-1" onClick={() => navigate('/admin')}>
+              <Crown className="h-6 w-6" />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" className="text-white hover:bg-red-700 flex-1" onClick={handleLogout}>
+            <Power className="h-6 w-6" />
+          </Button>
+        </nav>
+
+        <main className="md:ml-20 pt-20 md:pt-32 px-3 md:px-8 pb-24 md:pb-20">
           {/* CONSEJO IA */}
-          <div className="relative group mb-12">
-            <div className="absolute inset-0 bg-gradient-to-br from-holy/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
-            <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-8 text-center hover:scale-105 transition-all duration-500">
-              <p className="text-3xl font-bold text-holy mb-6">Consejo IA del día (by Grok)</p>
-              <p className="text-2xl text-gray-200">
-                {advice || 'Compite hoy para recibir tu consejo personalizado mañana 🚀'}
+          <div className="relative group mb-6 md:mb-12">
+            <div className="absolute inset-0 bg-gradient-to-br from-holy/30 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition" />
+            <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-2xl md:rounded-3xl shadow-2xl p-4 md:p-8 text-center hover:md:scale-105 transition-all duration-500">
+              <p className="text-xl md:text-3xl font-bold text-holy mb-3 md:mb-6">{t('dash.aiAdvice')}</p>
+              <p className="text-base md:text-2xl text-gray-200">
+                {advice || t('dash.aiAdvicePlaceholder')}
               </p>
             </Card>
           </div>
 
           {/* CARDS MULTI-NIVEL */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-profit/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
-              <Card className="relative bg-black/30 backdrop-blur-xl border border-profit/40 rounded-3xl shadow-2xl p-10 text-center hover:scale-105 transition-all duration-500">
-                <CardHeader>
-                  <CardTitle className="text-4xl text-profit">BASIC</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl text-holy mb-4">Prize pool: {formatNumber(competitions.basic?.prizePool || 0)} USDT</p>
-                  <p className="text-xl text-gray-200 mb-2">Participantes: {competitions.basic?.participants || 0}</p>
-                  <p className="text-lg text-gray-300">Tiempo restante: <span className="text-red-500 font-bold animate-pulse">{competitions.basic?.timeLeft || '00h 00m'}</span></p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
-              <Card className="relative bg-black/30 backdrop-blur-xl border border-blue-500/40 rounded-3xl shadow-2xl p-10 text-center hover:scale-105 transition-all duration-500">
-                <CardHeader>
-                  <CardTitle className="text-4xl text-blue-400">MEDIUM</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl text-holy mb-4">Prize pool: {formatNumber(competitions.medium?.prizePool || 0)} USDT</p>
-                  <p className="text-xl text-gray-200 mb-2">Participantes: {competitions.medium?.participants || 0}</p>
-                  <p className="text-lg text-gray-300">Tiempo restante: <span className="text-red-500 font-bold animate-pulse">{competitions.medium?.timeLeft || '00h 00m'}</span></p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-holy/40 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
-              <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/50 rounded-3xl shadow-2xl p-10 text-center hover:scale-105 transition-all duration-500">
-                <CardHeader>
-                  <CardTitle className="text-4xl text-holy">PREMIUM</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl text-holy mb-4">Prize pool: {formatNumber(competitions.premium?.prizePool || 0)} USDT</p>
-                  <p className="text-xl text-gray-200 mb-2">Participantes: {competitions.premium?.participants || 0}</p>
-                  <p className="text-lg text-gray-300">Tiempo restante: <span className="text-red-500 font-bold animate-pulse">{competitions.premium?.timeLeft || '00h 00m'}</span></p>
-                </CardContent>
-              </Card>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-12 mb-6 md:mb-12">
+            {[
+              { key: 'basic', color: 'profit', border: 'profit/40', title: 'BASIC' },
+              { key: 'medium', color: 'blue-500', border: 'blue-500/40', title: 'MEDIUM', titleColor: 'text-blue-400' },
+              { key: 'premium', color: 'holy', border: 'holy/50', title: 'PREMIUM' }
+            ].map(({ key, color, border, title, titleColor }) => (
+              <div key={key} className="relative group">
+                <div className={`absolute inset-0 bg-gradient-to-br from-${color}/30 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition`} />
+                <Card className={`relative bg-black/30 backdrop-blur-xl border border-${border} rounded-2xl md:rounded-3xl shadow-2xl p-4 md:p-10 text-center hover:md:scale-105 transition-all duration-500`}>
+                  <CardHeader className="p-2 md:p-6">
+                    <CardTitle className={`text-2xl md:text-4xl ${titleColor || `text-${color}`}`}>{title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-2 md:p-6">
+                    <p className="text-lg md:text-2xl text-holy mb-2 md:mb-4">{t('dash.prizePool')}: {formatNumber(competitions[key]?.prizePool || 0)} USDT</p>
+                    <p className="text-base md:text-xl text-gray-200 mb-1 md:mb-2">{t('dash.participants')}: {competitions[key]?.participants || 0}</p>
+                    <p className="text-sm md:text-lg text-gray-300">{t('dash.timeLeft')}: <span className="text-red-500 font-bold animate-pulse">{competitions[key]?.timeLeft || '00h 00m'}</span></p>
+                  </CardContent>
+                </Card>
+              </div>
+            ))}
           </div>
 
           {/* GRÁFICO + NEW TRADE */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 mb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-12 mb-6 md:mb-12">
             <div className="lg:col-span-2 relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
-              <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl hover:scale-103 transition-all duration-300 h-[830px]">
-                <CardHeader>
-                  <CardTitle className="text-3xl text-holy text-center">Gráfico {symbol} Live</CardTitle>
+              <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition" />
+              <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-2xl md:rounded-3xl shadow-2xl hover:md:scale-103 transition-all duration-300 h-[400px] md:h-[830px]">
+                <CardHeader className="p-3 md:p-6">
+                  <CardTitle className="text-xl md:text-3xl text-holy text-center">{t('dash.chart')} {symbol} {t('dash.live')}</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0 h-full">
                   <TradingViewChart 
@@ -547,14 +547,14 @@ function Dashboard() {
 
             {/* NEW TRADE CARD */}
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-holy/30 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
-              <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-8 hover:scale-103 transition-all duration-300">
-                <CardHeader>
-                  <CardTitle className="text-3xl text-holy text-center">New Trade</CardTitle>
+              <div className="absolute inset-0 bg-gradient-to-br from-holy/30 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition" />
+              <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-2xl md:rounded-3xl shadow-2xl p-4 md:p-8 hover:md:scale-103 transition-all duration-300">
+                <CardHeader className="p-3 md:p-6">
+                  <CardTitle className="text-xl md:text-3xl text-holy text-center">{t('dash.newTrade')}</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <p className="text-center text-2xl font-bold text-gray-200">
-                    Precio actual {symbol}: {currentPrice ? currentPrice.toFixed(5) : 'Cargando...'}
+                <CardContent className="space-y-4 md:space-y-6">
+                  <p className="text-center text-lg md:text-2xl font-bold text-gray-200">
+                    {t('dash.currentPrice')} {symbol}: {currentPrice ? currentPrice.toFixed(5) : t('dash.loading')}
                   </p>
 
                   <Tabs value={orderType} onValueChange={setOrderType} className="w-full">
@@ -566,7 +566,7 @@ function Dashboard() {
                   </Tabs>
 
                   <div>
-                    <label className="text-xl font-bold mb-2 block text-gray-200">Symbol</label>
+                    <label className="text-base md:text-xl font-bold mb-2 block text-gray-200">{t('dash.symbol')}</label>
                     <Select value={symbol} onValueChange={setSymbol}>
                       <SelectTrigger className="w-full bg-black/40 border-borderSubtle text-white">
                         <SelectValue />
@@ -583,20 +583,20 @@ function Dashboard() {
                   </div>
 
                   <div>
-                    <label className="text-xl font-bold mb-2 block text-gray-200">Direction</label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <Button 
-                        onClick={() => setDirection('long')} 
+                    <label className="text-base md:text-xl font-bold mb-2 block text-gray-200">{t('dash.direction')}</label>
+                    <div className="grid grid-cols-2 gap-3 md:gap-4">
+                      <Button
+                        onClick={() => setDirection('long')}
                         disabled={!entryId}
-                        className={`text-xl h-16 font-bold rounded-lg shadow-lg transition-all
+                        className={`text-base md:text-xl h-12 md:h-16 font-bold rounded-lg shadow-lg transition-all
                           ${direction === 'long' ? 'bg-profit hover:bg-profit/80 border-4 border-profit text-black' : 'bg-profit/70 hover:bg-profit/90 text-white'}`}
                       >
                         {orderType === 'market' ? 'LONG' : orderType === 'limit' ? 'Buy Limit' : 'Buy Stop'}
                       </Button>
-                      <Button 
+                      <Button
                         onClick={() => setDirection('short')}
                         disabled={!entryId}
-                        className={`text-xl h-16 font-bold rounded-lg shadow-lg transition-all
+                        className={`text-base md:text-xl h-12 md:h-16 font-bold rounded-lg shadow-lg transition-all
                           ${direction === 'short' ? 'bg-red-700 hover:bg-red-800 border-4 border-red-900' : 'bg-red-500 hover:bg-red-600 border-2 border-red-600'}`}
                       >
                         {orderType === 'market' ? 'SHORT' : orderType === 'limit' ? 'Sell Limit' : 'Sell Stop'}
@@ -620,8 +620,8 @@ function Dashboard() {
                   )}
 
                   <div className="space-y-3">
-                    <label className="text-xl font-bold block text-gray-200">
-                      LotSize
+                    <label className="text-base md:text-xl font-bold block text-gray-200">
+                      {t('dash.lotSize')}
                     </label>
                     
                     <div className="flex items-center gap-4">
@@ -658,39 +658,39 @@ function Dashboard() {
                       
                       {stopLoss && riskInfo.isValid ? (
                         <>
-                          <p className={`text-center text-lg font-semibold ${riskInfo.riskPercent > 5 ? 'text-yellow-400' : 'text-profit'}`}>
+                          <p className={`text-center text-sm md:text-lg font-semibold ${riskInfo.riskPercent > 5 ? 'text-yellow-400' : 'text-profit'}`}>
                             <TrendingUp className="inline w-4 h-4 mr-1" />
-                            Riesgo REAL: {riskInfo.riskPercent.toFixed(2)}% (${riskInfo.riskUSD.toFixed(0)})
+                            {t('dash.riskReal')}: {riskInfo.riskPercent.toFixed(2)}% (${riskInfo.riskUSD.toFixed(0)})
                           </p>
-                          <p className="text-center text-sm text-gray-400">
-                            📏 Distancia SL: {riskInfo.distancePips.toFixed(0)} {instrumentInfo.pipMultiplier === 1 ? 'puntos' : 'pips'}
+                          <p className="text-center text-xs md:text-sm text-gray-400">
+                            {t('dash.slDistance')}: {riskInfo.distancePips.toFixed(0)} {instrumentInfo.pipMultiplier === 1 ? 'pts' : 'pips'}
                           </p>
-                          
+
                           {riskInfo.riskPercent > 5 && (
                             <div className="mt-3 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
-                              <p className="text-red-400 font-bold text-center flex items-center justify-center gap-2">
+                              <p className="text-red-400 font-bold text-center flex items-center justify-center gap-2 text-sm md:text-base">
                                 <AlertTriangle className="w-5 h-5" />
-                                ¡Alto riesgo!
+                                {t('dash.highRisk')}
                               </p>
-                              <p className="text-sm text-gray-300 text-center mt-1">
-                                Sugerido: <span className="text-profit font-bold">{calculateOptimalLotSize(2).toFixed(2)} lot</span> para 2%
+                              <p className="text-xs md:text-sm text-gray-300 text-center mt-1">
+                                {t('dash.suggested')}: <span className="text-profit font-bold">{calculateOptimalLotSize(2).toFixed(2)} lot</span> {t('dash.forRisk')} 2%
                               </p>
                               <p className="text-xs text-gray-400 text-center">
-                                o <span className="text-blue-400">{calculateOptimalLotSize(5).toFixed(2)} lot</span> para 5%
+                                o <span className="text-blue-400">{calculateOptimalLotSize(5).toFixed(2)} lot</span> {t('dash.forRisk')} 5%
                               </p>
                             </div>
                           )}
                         </>
                       ) : (
-                        <p className="text-center text-sm text-gray-400">
-                          {stopLoss ? 'Calculando riesgo...' : '⚠️ Añade Stop Loss para ver el riesgo real'}
+                        <p className="text-center text-xs md:text-sm text-gray-400">
+                          {stopLoss ? t('dash.calculatingRisk') : t('dash.addSL')}
                         </p>
                       )}
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-xl font-bold mb-2 block text-gray-200">Take Profit (opcional)</label>
+                    <label className="text-base md:text-xl font-bold mb-2 block text-gray-200">{t('dash.takeProfit')}</label>
                     <Input 
                       type="number" 
                       step="0.00001" 
@@ -703,7 +703,7 @@ function Dashboard() {
                   </div>
 
                   <div>
-                    <label className="text-xl font-bold mb-2 block text-gray-200">Stop Loss (opcional)</label>
+                    <label className="text-base md:text-xl font-bold mb-2 block text-gray-200">{t('dash.stopLoss')}</label>
                     <Input 
                       type="number" 
                       step="0.00001" 
@@ -715,16 +715,16 @@ function Dashboard() {
                     />
                   </div>
 
-                  <Button 
-                    onClick={openTrade} 
+                  <Button
+                    onClick={openTrade}
                     disabled={!entryId || riskInfo.riskPercent > 10}
-                    className={`w-full text-3xl py-8 font-bold rounded-full shadow-lg transition duration-300
+                    className={`w-full text-xl md:text-3xl py-5 md:py-8 font-bold rounded-full shadow-lg transition duration-300
                       ${!entryId || riskInfo.riskPercent > 10
-                        ? 'bg-gray-600 cursor-not-allowed' 
+                        ? 'bg-gray-600 cursor-not-allowed'
                         : 'bg-gradient-to-r from-holy to-purple-600 text-black hover:shadow-holy/50 hover:scale-105'
                       }`}
                   >
-                    {!entryId ? 'MODO SOLO VISTA' : riskInfo.riskPercent > 10 ? 'RIESGO DEMASIADO ALTO' : 'ABRIR TRADE'}
+                    {!entryId ? t('dash.viewOnly') : riskInfo.riskPercent > 10 ? t('dash.riskTooHigh') : t('dash.openTrade')}
                   </Button>
                 </CardContent>
               </Card>
@@ -732,28 +732,29 @@ function Dashboard() {
           </div>
 
           {/* POSITIONS */}
-          <div className="relative group mb-12">
-            <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
-            <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-8 hover:scale-103 transition-all duration-400">
-              <h2 className="text-4xl mb-6 text-center text-holy font-bold">Positions Abiertas</h2>
+          <div className="relative group mb-6 md:mb-12">
+            <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition" />
+            <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-2xl md:rounded-3xl shadow-2xl p-3 md:p-8 hover:md:scale-103 transition-all duration-400">
+              <h2 className="text-2xl md:text-4xl mb-4 md:mb-6 text-center text-holy font-bold">{t('dash.positions')}</h2>
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader className="bg-black/40">
                   <TableRow>
-                    <TableHead className="text-holy">Symbol</TableHead>
-                    <TableHead className="text-holy">Direction</TableHead>
-                    <TableHead className="text-holy">LotSize (% risk)</TableHead>
-                    <TableHead className="text-holy">Entry Price</TableHead>
-                    <TableHead className="text-holy">P&L Live</TableHead>
-                    <TableHead className="text-holy">TP (pips)</TableHead>
-                    <TableHead className="text-holy">SL (pips)</TableHead>
-                    <TableHead className="text-holy">Action</TableHead>
+                    <TableHead className="text-holy">{t('pos.symbol')}</TableHead>
+                    <TableHead className="text-holy">{t('pos.direction')}</TableHead>
+                    <TableHead className="text-holy">{t('pos.lotSize')}</TableHead>
+                    <TableHead className="text-holy">{t('pos.entryPrice')}</TableHead>
+                    <TableHead className="text-holy">{t('pos.pnl')}</TableHead>
+                    <TableHead className="text-holy hidden md:table-cell">{t('pos.tp')}</TableHead>
+                    <TableHead className="text-holy hidden md:table-cell">{t('pos.sl')}</TableHead>
+                    <TableHead className="text-holy">{t('pos.action')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {positions.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8 text-gray-400">
-                        {entryId ? 'No positions abiertas – abre tu primer trade 🚀' : '👑 Modo admin - Sin posiciones activas'}
+                        {entryId ? t('dash.noPositions') : t('dash.adminNoPositions')}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -790,10 +791,10 @@ function Dashboard() {
                           <TableCell className={parseFloat(livePnl) > 0 ? "text-profit" : "text-red-500"}>
                             {livePnl}%
                           </TableCell>
-                          <TableCell className={pipsToTP !== '-' && pipsToTP > 0 ? "text-profit" : "text-red-500"}>
+                          <TableCell className={`hidden md:table-cell ${pipsToTP !== '-' && pipsToTP > 0 ? "text-profit" : "text-red-500"}`}>
                             {pos.takeProfit || '-'} ({pipsToTP} {config.pipMultiplier === 1 ? 'pts' : 'p'})
                           </TableCell>
-                          <TableCell className={pipsToSL !== '-' && pipsToSL > 0 ? "text-red-500" : "text-profit"}>
+                          <TableCell className={`hidden md:table-cell ${pipsToSL !== '-' && pipsToSL > 0 ? "text-red-500" : "text-profit"}`}>
                             {pos.stopLoss || '-'} ({pipsToSL} {config.pipMultiplier === 1 ? 'pts' : 'p'})
                           </TableCell>
                           <TableCell className="flex gap-2">
@@ -819,10 +820,11 @@ function Dashboard() {
                   )}
                 </TableBody>
               </Table>
+              </div>
 
               {entryId && (
-                <div className="mt-8">
-                  <p className="text-xl text-center mb-2 text-gray-200">Risk total abierto: {totalRisk.toFixed(1)}% (max 10%)</p>
+                <div className="mt-4 md:mt-8">
+                  <p className="text-sm md:text-xl text-center mb-2 text-gray-200">{t('dash.riskTotal')}: {totalRisk.toFixed(1)}% (max 10%)</p>
                   <Progress 
                     value={totalRisk} 
                     className={`h-12 rounded-full bg-gray-700 overflow-hidden shadow-card ${totalRisk > 8 ? 'shadow-[0_0_25px_red]' : totalRisk > 5 ? 'shadow-[0_0_20px_orange]' : 'shadow-[0_0_15px_#00C853]'}`}
@@ -861,12 +863,12 @@ function Dashboard() {
 
           {/* RANKING */}
           <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition" />
-            <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-3xl shadow-2xl p-8 hover:scale-105 transition-all duration-500">
-              <div className="flex justify-center mb-8">
-                <div className="w-96">
-                  <label className="text-xl font-bold block mb-2 text-center text-gray-200">
-                    Ver ranking de competencia activa:
+            <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition" />
+            <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-2xl md:rounded-3xl shadow-2xl p-3 md:p-8 hover:md:scale-105 transition-all duration-500">
+              <div className="flex justify-center mb-4 md:mb-8">
+                <div className="w-full max-w-96">
+                  <label className="text-sm md:text-xl font-bold block mb-2 text-center text-gray-200">
+                    {t('dash.selectRanking')}
                   </label>
                   <Select value={selectedLevel} onValueChange={setSelectedLevel}>
                     <SelectTrigger className="w-full bg-black/40 border-borderSubtle text-white">
@@ -883,19 +885,20 @@ function Dashboard() {
                 </div>
               </div>
 
-              <h2 className="text-4xl mb-6 text-center text-holy font-bold">
-                Ranking Live Top 10 – {selectedLevel.toUpperCase()}
+              <h2 className="text-xl md:text-4xl mb-4 md:mb-6 text-center text-holy font-bold">
+                {t('dash.ranking')} – {selectedLevel.toUpperCase()}
               </h2>
 
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader className="bg-black/40">
                   <TableRow>
-                    <TableHead className="text-holy">Spot #</TableHead>
-                    <TableHead className="text-holy">Trader</TableHead>
-                    <TableHead className="text-holy">Retorno %</TableHead>
-                    <TableHead className="text-holy">Capital Live</TableHead>
-                    <TableHead className="text-holy">Open Positions</TableHead>
-                    <TableHead className="text-holy">Premio Proyectado</TableHead>
+                    <TableHead className="text-holy">{t('rank.spot')}</TableHead>
+                    <TableHead className="text-holy">{t('rank.trader')}</TableHead>
+                    <TableHead className="text-holy">{t('rank.return')}</TableHead>
+                    <TableHead className="text-holy">{t('rank.capital')}</TableHead>
+                    <TableHead className="text-holy hidden md:table-cell">{t('rank.openPos')}</TableHead>
+                    <TableHead className="text-holy hidden md:table-cell">{t('rank.prize')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -909,58 +912,59 @@ function Dashboard() {
                         {r.retorno}
                       </TableCell>
                       <TableCell className="text-gray-200">{formatNumber(r.liveCapital)} USDT</TableCell>
-                      <TableCell className="text-gray-200">0</TableCell>
-                      <TableCell className="text-profit font-bold">
+                      <TableCell className="text-gray-200 hidden md:table-cell">0</TableCell>
+                      <TableCell className="text-profit font-bold hidden md:table-cell">
                         0 USDT
                       </TableCell>
                     </TableRow>
                   )) || (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-gray-400">
-                        Cargando ranking...
+                        {t('dash.loadingRanking')}
                       </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
               </Table>
+              </div>
             </Card>
           </div>
 
           {/* MODAL GANASTE */}
           {!isAdminSession && (
             <Dialog open={showWinModal} onOpenChange={setShowWinModal}>
-              <DialogContent className="bg-black/80 backdrop-blur-xl border border-holy/40 text-white max-w-md">
+              <DialogContent className="bg-black/80 backdrop-blur-xl border border-holy/40 text-white max-w-[95vw] md:max-w-md">
                 <DialogHeader>
-                  <DialogTitle className="text-4xl text-center text-holy animate-pulse">
-                    ¡FELICIDADES, GANASTE! 🚀🏆
+                  <DialogTitle className="text-2xl md:text-4xl text-center text-holy animate-pulse">
+                    {t('win.congrats')}
                   </DialogTitle>
                 </DialogHeader>
-                <div className="space-y-6 text-center">
-                  <p className="text-2xl text-profit font-bold">
+                <div className="space-y-4 md:space-y-6 text-center">
+                  <p className="text-xl md:text-2xl text-profit font-bold">
                     {latestWin ? formatNumber(latestWin.amount) : 0} USDT
                   </p>
-                  <p className="text-xl text-gray-200">
-                    Posición #{latestWin?.position} en competencia {latestWin?.level.toUpperCase()}
+                  <p className="text-base md:text-xl text-gray-200">
+                    {t('win.position')} #{latestWin?.position} {t('win.inCompetition')} {latestWin?.level.toUpperCase()}
                   </p>
-                  <p className="text-lg text-gray-300">
-                    Fecha: {latestWin ? new Date(latestWin.date).toLocaleDateString('es-ES') : ''}
+                  <p className="text-sm md:text-lg text-gray-300">
+                    {t('win.date')}: {latestWin ? new Date(latestWin.date).toLocaleDateString('es-ES') : ''}
                   </p>
-                  <p className="text-lg">
-                    <Badge className="bg-profit text-black text-lg px-6 py-2">
-                      Pago confirmado en blockchain ✅
+                  <p className="text-sm md:text-lg">
+                    <Badge className="bg-profit text-black text-sm md:text-lg px-4 md:px-6 py-2">
+                      {t('win.paymentConfirmed')}
                     </Badge>
                   </p>
-                  <p className="text-sm text-gray-400">
-                    Payment ID: {latestWin?.paymentId ? '...' + latestWin.paymentId.slice(-10) : '-'}
+                  <p className="text-xs md:text-sm text-gray-400">
+                    {t('win.paymentId')}: {latestWin?.paymentId ? '...' + latestWin.paymentId.slice(-10) : '-'}
                   </p>
-                  <p className="text-lg text-gray-200">
-                    ¡El USDT ya está en tu wallet TRC20! Revisa tu billetera.
+                  <p className="text-sm md:text-lg text-gray-200">
+                    {t('win.walletMsg')}
                   </p>
-                  <Button 
+                  <Button
                     onClick={() => setShowWinModal(false)}
-                    className="w-full bg-gradient-to-r from-holy to-purple-600 text-black text-xl py-6 font-bold rounded-full"
+                    className="w-full bg-gradient-to-r from-holy to-purple-600 text-black text-lg md:text-xl py-4 md:py-6 font-bold rounded-full"
                   >
-                    ¡Genial, seguir compitiendo!
+                    {t('win.continue')}
                   </Button>
                 </div>
               </DialogContent>
