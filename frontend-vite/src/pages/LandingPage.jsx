@@ -32,6 +32,13 @@ const LandingPage = () => {
   const [nickname, setNickname] = useState('');
   const [captchaToken, setCaptchaToken] = useState(null);
   const captchaRef = useRef(null);
+  const [selectedNetwork, setSelectedNetwork] = useState('polygon');
+
+  const NETWORKS = [
+    { id: 'polygon',  label: 'Polygon',  fee: '~$0.50', color: 'from-purple-500 to-violet-700', walletHint: '0x... (Polygon)' },
+    { id: 'trc20',    label: 'TRC-20',   fee: '~$4.50', color: 'from-red-500 to-red-700',       walletHint: 'T... (Tron)'    },
+    { id: 'ethereum', label: 'Ethereum', fee: '~$17.50', color: 'from-blue-500 to-blue-700',    walletHint: '0x... (Ethereum)' }
+  ];
 
   // COUNTDOWN LIVE TICKING (cierre 21:00 UTC)
   const [countdown, setCountdown] = useState('00h 00m 00s');
@@ -91,7 +98,7 @@ const LandingPage = () => {
     e.preventDefault();
     if (form.password !== form.confirmPassword) return alert('Las contraseñas no coinciden');
     if (!form.level) return alert('Elige un nivel');
-    if (!form.walletAddress) return alert('Wallet USDT TRC-20 obligatoria');
+    if (!form.walletAddress) return alert('Wallet obligatoria para la red seleccionada');
     if (!nickname) return alert('Nickname obligatorio – será tu nombre visible en el ranking');
     if (!captchaToken) return alert('Completa el CAPTCHA');
 
@@ -99,7 +106,8 @@ const LandingPage = () => {
       const res = await axios.post(`${API_BASE}/create-payment`, {
         ...form,
         nickname,
-        hCaptchaToken: captchaToken
+        hCaptchaToken: captchaToken,
+        paymentNetwork: selectedNetwork
       });
       localStorage.setItem('holypotToken', res.data.token);
       localStorage.setItem('holypotEntryId', res.data.entryId);
@@ -334,7 +342,37 @@ const LandingPage = () => {
               <Input type="email" placeholder={t('form.email')} required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
               <Input type="password" placeholder={t('form.password')} required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
               <Input type="password" placeholder={t('form.confirmPassword')} required value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
-              <Input type="text" placeholder={t('form.wallet')} required value={form.walletAddress} onChange={e => setForm({ ...form, walletAddress: e.target.value })} className="bg-black/40 border-borderSubtle text-white" />
+
+              {/* SELECTOR DE RED */}
+              <div>
+                <p className="text-white text-sm md:text-base mb-2 font-semibold">Red de pago USDT</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {NETWORKS.map(net => (
+                    <button
+                      key={net.id}
+                      type="button"
+                      onClick={() => setSelectedNetwork(net.id)}
+                      className={`rounded-xl py-2 px-1 text-center border-2 transition-all duration-200 ${
+                        selectedNetwork === net.id
+                          ? 'border-holy bg-holy/20 scale-105'
+                          : 'border-borderSubtle bg-black/30 hover:border-holy/50'
+                      }`}
+                    >
+                      <p className="text-white font-bold text-xs md:text-sm">{net.label}</p>
+                      <p className={`text-xs mt-0.5 ${selectedNetwork === net.id ? 'text-holy' : 'text-gray-400'}`}>fee {net.fee}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Input
+                type="text"
+                placeholder={NETWORKS.find(n => n.id === selectedNetwork)?.walletHint || t('form.wallet')}
+                required
+                value={form.walletAddress}
+                onChange={e => setForm({ ...form, walletAddress: e.target.value })}
+                className="bg-black/40 border-borderSubtle text-white"
+              />
 
               <div>
                 <Label htmlFor="nickname" className="text-white text-sm md:text-base">{t('form.nickname')}</Label>

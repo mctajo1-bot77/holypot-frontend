@@ -26,9 +26,25 @@ const formatNumber = (num) => {
 const AdminDashboard = () => {
   const [data, setData] = useState(null);
   const [payouts, setPayouts] = useState([]);
+  const [pendingPayouts, setPendingPayouts] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [settlementLoading, setSettlementLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { t } = useI18n();
+
+  const fetchSettlement = async () => {
+    try {
+      const [pendingRes, batchRes] = await Promise.all([
+        apiClient.get('/admin/pending-payouts'),
+        apiClient.get('/admin/batch-payouts')
+      ]);
+      setPendingPayouts(pendingRes.data || []);
+      setBatches(batchRes.data || []);
+    } catch (err) {
+      console.warn('Settlement endpoints no disponibles');
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -43,11 +59,25 @@ const AdminDashboard = () => {
         setPayouts([]);
       }
 
+      await fetchSettlement();
       setLoading(false);
     } catch (err) {
       setLoading(false);
       alert('Error cargando datos admin');
       navigate('/admin-login');
+    }
+  };
+
+  const triggerBatch = async (network = null) => {
+    setSettlementLoading(true);
+    try {
+      const res = await apiClient.post('/admin/trigger-batch-payout', network ? { network } : {});
+      alert(`✅ ${res.data.message}`);
+      await fetchSettlement();
+    } catch (err) {
+      alert('❌ Error: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setSettlementLoading(false);
     }
   };
 
@@ -136,10 +166,11 @@ const AdminDashboard = () => {
 
         {/* TABS */}
         <Tabs defaultValue="competencias" className="max-w-7xl mx-auto">
-          <TabsList className="grid w-full grid-cols-3 mb-4 md:mb-8 bg-black/40 backdrop-blur-md border border-holy/20 rounded-xl">
+          <TabsList className="grid w-full grid-cols-4 mb-4 md:mb-8 bg-black/40 backdrop-blur-md border border-holy/20 rounded-xl">
             <TabsTrigger value="competencias" className="text-sm md:text-xl py-2 md:py-4 text-white">{t('admin.competitions')}</TabsTrigger>
             <TabsTrigger value="usuarios" className="text-sm md:text-xl py-2 md:py-4 text-white">{t('admin.users')}</TabsTrigger>
             <TabsTrigger value="payouts" className="text-sm md:text-xl py-2 md:py-4 text-white">{t('admin.payouts')}</TabsTrigger>
+            <TabsTrigger value="settlement" className="text-sm md:text-xl py-2 md:py-4 text-white">Settlement</TabsTrigger>
           </TabsList>
 
           <TabsContent value="competencias">
@@ -277,6 +308,128 @@ const AdminDashboard = () => {
                                 </Badge>
                               </TableCell>
                               <TableCell className="font-mono text-sm text-gray-300 hidden md:table-cell">{p.paymentId || '-'}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+          <TabsContent value="settlement">
+            {/* LIQUIDAR AHORA – PAYOUTS PENDIENTES POR RED */}
+            <div className="relative group mb-8 md:mb-12">
+              <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition" />
+              <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-2xl md:rounded-3xl shadow-2xl p-4 md:p-10">
+                <CardHeader className="p-2 md:p-6 flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg md:text-3xl text-holy">Payout Settlement</CardTitle>
+                  <Button
+                    onClick={() => triggerBatch()}
+                    disabled={settlementLoading}
+                    className="bg-gradient-to-r from-holy to-green-500 text-black font-bold px-4 md:px-8 py-2 md:py-4 rounded-full hover:scale-105 transition text-sm md:text-lg"
+                  >
+                    {settlementLoading ? 'Procesando...' : '⚡ Liquidar Todo Ahora'}
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {pendingPayouts.length === 0 ? (
+                    <p className="text-center text-gray-400 py-8">No hay payouts pendientes</p>
+                  ) : (
+                    pendingPayouts.map(group => (
+                      <div key={group.network} className="mb-6 md:mb-10">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <span className="text-holy font-bold text-base md:text-xl">{group.label}</span>
+                            <span className="text-gray-400 text-sm md:text-base ml-3">{group.payouts.length} pagos · {formatNumber(group.totalAmount)} USDT total</span>
+                          </div>
+                          <Button
+                            onClick={() => triggerBatch(group.network)}
+                            disabled={settlementLoading}
+                            className="bg-gradient-to-r from-blue-500 to-blue-700 text-white font-bold px-3 md:px-6 py-2 md:py-3 rounded-full hover:scale-105 transition text-xs md:text-base"
+                          >
+                            Liquidar {group.label}
+                          </Button>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader className="bg-black/40">
+                              <TableRow>
+                                <TableHead className="text-holy">Trader</TableHead>
+                                <TableHead className="text-holy">Level</TableHead>
+                                <TableHead className="text-holy">Pos</TableHead>
+                                <TableHead className="text-holy">Monto</TableHead>
+                                <TableHead className="text-holy hidden md:table-cell">Wallet</TableHead>
+                                <TableHead className="text-holy hidden md:table-cell">Fecha</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {group.payouts.map(p => (
+                                <TableRow key={p.id} className="hover:bg-white/10 transition">
+                                  <TableCell className="text-gray-200">{p.user?.nickname || 'Anon'}</TableCell>
+                                  <TableCell className="text-gray-200">{p.level?.toUpperCase()}</TableCell>
+                                  <TableCell className="text-gray-200">#{p.position}</TableCell>
+                                  <TableCell className="text-profit font-bold">{formatNumber(p.amount)} USDT</TableCell>
+                                  <TableCell className="font-mono text-xs text-gray-300 hidden md:table-cell">{p.walletAddress || '-'}</TableCell>
+                                  <TableCell className="text-gray-300 hidden md:table-cell">{new Date(p.date).toLocaleDateString('es-ES')}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* HISTORIAL DE BATCHES */}
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition" />
+              <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-2xl md:rounded-3xl shadow-2xl p-4 md:p-10">
+                <CardHeader className="p-2 md:p-6">
+                  <CardTitle className="text-lg md:text-3xl text-holy">Historial de Batches</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-black/40">
+                        <TableRow>
+                          <TableHead className="text-holy">{t('profile.date')}</TableHead>
+                          <TableHead className="text-holy">Red</TableHead>
+                          <TableHead className="text-holy">Pagos</TableHead>
+                          <TableHead className="text-holy">Total</TableHead>
+                          <TableHead className="text-holy">Status</TableHead>
+                          <TableHead className="text-holy hidden md:table-cell">NOWPayments ID</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {batches.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-gray-400">Sin batches aún</TableCell>
+                          </TableRow>
+                        ) : (
+                          batches.map(b => (
+                            <TableRow key={b.id} className="hover:bg-white/10 transition">
+                              <TableCell className="text-gray-200">{new Date(b.createdAt).toLocaleDateString('es-ES')}</TableCell>
+                              <TableCell className="text-gray-200 font-semibold">{b.network?.toUpperCase()}</TableCell>
+                              <TableCell className="text-gray-200">{b.payoutCount}</TableCell>
+                              <TableCell className="text-profit font-bold">{formatNumber(b.totalAmount)} USDT</TableCell>
+                              <TableCell>
+                                <Badge
+                                  className={
+                                    b.status === 'confirmed' ? 'bg-profit text-black' :
+                                    b.status === 'sent'      ? 'bg-blue-500 text-white' :
+                                    b.status === 'failed'    ? 'bg-red-600 text-white'  :
+                                    'bg-gray-600 text-white'
+                                  }
+                                >
+                                  {b.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="font-mono text-xs text-gray-300 hidden md:table-cell">{b.nowpaymentsId || '-'}</TableCell>
                             </TableRow>
                           ))
                         )}
