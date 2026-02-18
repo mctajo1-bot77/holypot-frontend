@@ -35,9 +35,9 @@ const LandingPage = () => {
   const [selectedNetwork, setSelectedNetwork] = useState('polygon');
 
   const NETWORKS = [
-    { id: 'polygon',  label: 'Polygon',  fee: '~$0.50', color: 'from-purple-500 to-violet-700', walletHint: '0x... (Polygon)' },
-    { id: 'trc20',    label: 'TRC-20',   fee: '~$4.50', color: 'from-red-500 to-red-700',       walletHint: 'T... (Tron)'    },
-    { id: 'ethereum', label: 'Ethereum', fee: '~$17.50', color: 'from-blue-500 to-blue-700',    walletHint: '0x... (Ethereum)' }
+    { id: 'polygon',  label: 'Polygon',  fee: '~$0.50', walletHint: 'Wallet Polygon (0x...)' },
+    { id: 'trc20',    label: 'TRC-20',   fee: '~$4.50', walletHint: 'Wallet TRC-20 (T...)'   },
+    { id: 'ethereum', label: 'Ethereum', fee: '~$17.50', walletHint: 'Wallet Ethereum (0x...)' }
   ];
 
   // COUNTDOWN LIVE TICKING (cierre 21:00 UTC)
@@ -365,14 +365,19 @@ const LandingPage = () => {
                 </div>
               </div>
 
-              <Input
-                type="text"
-                placeholder={NETWORKS.find(n => n.id === selectedNetwork)?.walletHint || t('form.wallet')}
-                required
-                value={form.walletAddress}
-                onChange={e => setForm({ ...form, walletAddress: e.target.value })}
-                className="bg-black/40 border-borderSubtle text-white"
-              />
+              <div>
+                <Label className="text-white text-sm md:text-base">
+                  Wallet USDT – {NETWORKS.find(n => n.id === selectedNetwork)?.label}
+                </Label>
+                <Input
+                  type="text"
+                  placeholder={NETWORKS.find(n => n.id === selectedNetwork)?.walletHint || t('form.wallet')}
+                  required
+                  value={form.walletAddress}
+                  onChange={e => setForm({ ...form, walletAddress: e.target.value })}
+                  className="bg-black/40 border-borderSubtle text-white mt-2"
+                />
+              </div>
 
               <div>
                 <Label htmlFor="nickname" className="text-white text-sm md:text-base">{t('form.nickname')}</Label>
