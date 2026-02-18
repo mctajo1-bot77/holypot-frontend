@@ -221,7 +221,7 @@ const Profile = () => {
         </header>
 
         {/* SIDEBAR - Desktop only */}
-        <aside className="hidden md:flex fixed left-0 top-24 bottom-0 w-20 bg-primary/90 backdrop-blur border-r border-borderSubtle shadow-card flex-col items-center py-8 space-y-8">
+        <aside className="hidden md:flex fixed left-0 top-32 bottom-0 w-20 bg-primary/90 backdrop-blur border-r border-borderSubtle shadow-card flex-col items-center py-8 space-y-8">
           <nav className="flex-1 flex flex-col items-center space-y-10">
             <UITooltip>
               <TooltipTrigger asChild>
