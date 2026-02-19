@@ -394,7 +394,7 @@ const Profile = () => {
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* MAIN CONTENT                                                     */}
         {/* ══════════════════════════════════════════════════════════════════ */}
-        <main className="md:ml-20 pt-20 md:pt-[88px] px-3 md:px-6 pb-24 md:pb-12">
+        <main className="md:ml-20 pt-24 md:pt-28 px-3 md:px-6 pb-24 md:pb-12">
           <div className="max-w-7xl mx-auto space-y-5">
 
             {/* ── USER HERO ────────────────────────────────────────────────── */}
