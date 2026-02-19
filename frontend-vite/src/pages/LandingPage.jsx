@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import LandingHeaderWinners from '../components/LandingHeaderWinners';
+import HowItWorks from '../components/HowItWorks';
 import background from "@/assets/background.jpg";
 import { useNavigate } from 'react-router-dom';
 import { X } from "lucide-react";
@@ -144,7 +145,7 @@ const LandingPage = () => {
       </header>
 
       {/* COMPETENCIAS ACTIVAS */}
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-16">
+      <div id="competitions" className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-16">
         <h2 className="text-3xl md:text-5xl font-bold text-center mb-2 md:mb-4 text-holy">
           {t('landing.title')}
         </h2>
@@ -182,6 +183,11 @@ const LandingPage = () => {
             ))}
           </div>
         )}
+      </div>
+
+      {/* HOW IT WORKS */}
+      <div className="max-w-7xl mx-auto px-4 md:px-8">
+        <HowItWorks />
       </div>
 
       {/* SECCIÓN REGLAS */}

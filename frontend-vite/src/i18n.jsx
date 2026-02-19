@@ -36,6 +36,26 @@ const translations = {
     'landing.noWinners': 'Próximamente los primeros ganadores reales',
     'landing.beFirst': '¡Sé el primero en aparecer aquí!',
 
+    // How It Works
+    'howItWorks.mainTitle': '¿Cómo Funciona?',
+    'howItWorks.mainSubtitle': 'Compite por habilidad, gana premios reales en 4 sencillos pasos',
+    'howItWorks.step1Title': 'Inscríbete',
+    'howItWorks.step1Desc': 'Crea tu cuenta, verifica tu email y elige tu nivel de competencia',
+    'howItWorks.step2Title': 'Paga & Selecciona Red',
+    'howItWorks.step2Desc': 'Elige tu red USDT (Polygon, TRC-20 o Ethereum) y realiza el pago',
+    'howItWorks.step3Title': 'Compite',
+    'howItWorks.step3Desc': 'Abre trades en divisas, criptos y commodities en tiempo real',
+    'howItWorks.step4Title': 'Gana & Retira',
+    'howItWorks.step4Desc': 'Si eres de los 3 primeros, recibe tu premio en tu wallet',
+    'howItWorks.featuresTitle': '¿Por qué Holypot?',
+    'howItWorks.feature1Title': 'Basado en Habilidad',
+    'howItWorks.feature1Desc': 'No es gambling. Gana demostrando tu destreza en trading',
+    'howItWorks.feature2Title': 'Auditable',
+    'howItWorks.feature2Desc': 'Todos los trades y premios son transparentes y verificables',
+    'howItWorks.feature3Title': 'Premios Reales',
+    'howItWorks.feature3Desc': 'Gana USDT reales que se transfieren directamente a tu wallet',
+    'howItWorks.ctaButton': 'Ver Competencias Activas',
+
     // Forms
     'form.email': 'Email',
     'form.password': 'Contraseña',
@@ -320,6 +340,26 @@ const translations = {
     'landing.winnersRotate': '(rotates hourly)',
     'landing.noWinners': 'First real winners coming soon',
     'landing.beFirst': 'Be the first to appear here!',
+
+    // How It Works
+    'howItWorks.mainTitle': 'How It Works',
+    'howItWorks.mainSubtitle': 'Compete on skill, win real prizes in 4 simple steps',
+    'howItWorks.step1Title': 'Sign Up',
+    'howItWorks.step1Desc': 'Create your account, verify your email and choose your competition level',
+    'howItWorks.step2Title': 'Pay & Select Network',
+    'howItWorks.step2Desc': 'Choose your USDT network (Polygon, TRC-20 or Ethereum) and pay',
+    'howItWorks.step3Title': 'Compete',
+    'howItWorks.step3Desc': 'Open trades on currencies, cryptos and commodities in real-time',
+    'howItWorks.step4Title': 'Win & Withdraw',
+    'howItWorks.step4Desc': 'If you rank in top 3, receive your prize directly to your wallet',
+    'howItWorks.featuresTitle': 'Why Holypot?',
+    'howItWorks.feature1Title': 'Skill-Based',
+    'howItWorks.feature1Desc': 'Not gambling. Win by demonstrating your trading expertise',
+    'howItWorks.feature2Title': 'Auditable',
+    'howItWorks.feature2Desc': 'All trades and prizes are transparent and verifiable',
+    'howItWorks.feature3Title': 'Real Prizes',
+    'howItWorks.feature3Desc': 'Win real USDT that transfers directly to your wallet',
+    'howItWorks.ctaButton': 'See Active Competitions',
 
     // Forms
     'form.email': 'Email',
