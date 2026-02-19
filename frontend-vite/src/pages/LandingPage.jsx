@@ -170,7 +170,7 @@ const LandingPage = () => {
                   <p className="text-base md:text-xl text-gray-200 mb-2 md:mb-4">{t('landing.virtualCapital')}: {capital} USDT</p>
                   <p className="text-base md:text-xl text-gray-200 mb-2 md:mb-4">{t('landing.participants')}: {competitions[key]?.participants || 0}</p>
                   <p className="text-xl md:text-3xl font-bold text-holy mb-4 md:mb-8">
-                    {t('landing.prizePool')}: {formatNumber(competitions[key]?.prizePool || 0)} USDT
+                    {t('landing.prizePool')}: {formatNumber(competitions[key]?.prizePoolReal || 0)} USDT
                   </p>
                   <Button
                     onClick={() => openForm(key)}

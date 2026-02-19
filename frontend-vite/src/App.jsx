@@ -162,7 +162,7 @@ function Dashboard() {
         const comps = {};
         compRes.data.forEach(c => {
           comps[c.level] = {
-            prizePool: c.prizePool,
+            prizePool: c.prizePoolReal,
             participants: c.participants,
             timeLeft: c.timeLeft
           };
