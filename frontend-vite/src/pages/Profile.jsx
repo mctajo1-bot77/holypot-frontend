@@ -327,7 +327,7 @@ const Profile = () => {
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* SIDEBAR — Desktop only                                           */}
         {/* ══════════════════════════════════════════════════════════════════ */}
-        <aside className="hidden md:flex fixed left-0 top-[72px] bottom-0 w-20 bg-[#0F172A]/90 backdrop-blur border-r border-[#2A2A2A] flex-col items-center py-8 space-y-8">
+        <aside className="hidden md:flex fixed left-0 top-24 bottom-0 w-20 bg-[#0F172A]/90 backdrop-blur border-r border-[#2A2A2A] flex-col items-center py-8 space-y-8">
           <nav className="flex-1 flex flex-col items-center space-y-8">
             <UITooltip>
               <TooltipTrigger asChild>

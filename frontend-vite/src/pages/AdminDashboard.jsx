@@ -20,7 +20,7 @@
 // ✅ NO TOCAR: fetchData | fetchSettlement | triggerBatch | viewAsUser | exportCSV
 // ============================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import apiClient from '@/api';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,6 +75,10 @@ const AdminDashboard = () => {
   const [userStatusFilter, setUserStatusFilter] = useState('all');
   const [payoutsStatusFilter, setPayoutsStatusFilter] = useState('all');
 
+  // ── Fetch guards (prevent concurrent calls & throttle socket events) ───────
+  const isFetchingRef  = useRef(false);
+  const lastFetchedRef = useRef(0);   // timestamp of last completed fetch
+
   const navigate = useNavigate();
   const { t } = useI18n();
 
@@ -84,7 +88,7 @@ const AdminDashboard = () => {
     setTimeout(() => setToast(null), 4500);
   };
 
-  // ── Data fetching (unchanged) ──────────────────────────────────────────────
+  // ── Data fetching (unchanged logic, guarded against concurrent runs) ────────
   const fetchSettlement = async () => {
     try {
       const [pendingRes, batchRes] = await Promise.all([
@@ -99,6 +103,11 @@ const AdminDashboard = () => {
   };
 
   const fetchData = async () => {
+    // Skip if already running or fetched within the last 8 s
+    if (isFetchingRef.current) return;
+    if (Date.now() - lastFetchedRef.current < 8000) return;
+
+    isFetchingRef.current = true;
     try {
       const res = await apiClient.get('/admin/data');
       setData(res.data || {
@@ -113,12 +122,15 @@ const AdminDashboard = () => {
         setPayouts([]);
       }
       await fetchSettlement();
+      lastFetchedRef.current = Date.now();
       setLastUpdated(new Date());
       setLoading(false);
     } catch (err) {
       setLoading(false);
       showToast('error', t('admin.noData'));
       navigate('/admin-login');
+    } finally {
+      isFetchingRef.current = false;
     }
   };
 
@@ -138,9 +150,13 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchData();
-    socket.on('liveUpdate', fetchData);
-    return () => socket.off('liveUpdate');
-  }, [navigate]);
+    // Throttled handler: socket sends liveUpdate on every price tick,
+    // but we only need to re-fetch admin data at most every 8 s.
+    const handleLiveUpdate = () => fetchData();
+    socket.on('liveUpdate', handleLiveUpdate);
+    return () => socket.off('liveUpdate', handleLiveUpdate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const viewAsUser = async (entryId) => {
     try {
