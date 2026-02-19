@@ -172,7 +172,7 @@ const translations = {
     'win.date': 'Fecha',
     'win.paymentConfirmed': 'Pago confirmado en blockchain',
     'win.paymentId': 'Payment ID',
-    'win.walletMsg': '¡El USDT ya está en tu wallet TRC20! Revisa tu billetera.',
+    'win.walletMsg': '¡El USDT ya está en tu wallet! Revisa tu billetera.',
     'win.continue': '¡Genial, seguir compitiendo!',
 
     // Rules section titles
@@ -190,7 +190,7 @@ const translations = {
     'rules.schedule_close': 'Cierre definitivo: 21:00 UTC.',
     'rules.schedule_rollover': 'Si a las 18:00 UTC no se alcanzan 5 participantes, las entradas pagadas se trasladan automáticamente y sin costo adicional al mismo nivel del día siguiente (rollover). No hay devolución de la entrada.',
     'rules.payment': 'Inscripción y pago',
-    'rules.paymentDesc': 'El pago se realiza exclusivamente en USDT (red TRC20) a través del procesador NOWPayments. Una vez confirmado el pago, la inscripción es definitiva y no reembolsable (salvo rollover por falta de mínimo).',
+    'rules.paymentDesc': 'El pago se realiza en USDT (Polygon, TRC-20 o Ethereum) a través del procesador NOWPayments. Una vez confirmado el pago, la inscripción es definitiva y no reembolsable (salvo rollover por falta de mínimo).',
     'rules.distribution': 'Prize pool y distribución',
     'rules.distributionFormula': 'El prize pool de cada nivel se calcula como: total de entradas recolectadas − comisión de la plataforma (~10%).',
     'rules.distributionStandard': 'Distribución estándar (top 3):',
@@ -243,7 +243,7 @@ const translations = {
     'terms.sec6_title': '6. Comisión de la Plataforma y Distribución de Premios',
     'terms.sec6_li1': 'Comisión plataforma 8-10% sobre total cuotas.',
     'terms.sec6_li2': 'Prize pool restante: 1er 50%, 2do 30%, 3ro 20%.',
-    'terms.sec6_li3': 'Premios reales USDT TRC20 directo wallet – mismo día cierre.',
+    'terms.sec6_li3': 'Premios reales USDT (Polygon/TRC-20/Ethereum) directo a tu wallet – mismo día cierre.',
     'terms.sec7_title': '7. Responsabilidad de los Usuarios',
     'terms.sec7_content': 'Cumplir leyes locales. Ganadores declaran/pagan impuestos aplicables.',
     'terms.sec8_title': '8. Retiros',
@@ -480,7 +480,7 @@ const translations = {
     'win.date': 'Date',
     'win.paymentConfirmed': 'Payment confirmed on blockchain',
     'win.paymentId': 'Payment ID',
-    'win.walletMsg': 'The USDT is already in your TRC20 wallet! Check your balance.',
+    'win.walletMsg': 'The USDT is already in your wallet! Check your balance.',
     'win.continue': 'Awesome, keep competing!',
 
     // Rules
@@ -498,7 +498,7 @@ const translations = {
     'rules.schedule_close': 'Final close: 21:00 UTC.',
     'rules.schedule_rollover': 'If 5 participants are not reached by 18:00 UTC, paid entries are automatically transferred at no additional cost to the same level the next day (rollover). No entry fee refunds.',
     'rules.payment': 'Registration & Payment',
-    'rules.paymentDesc': 'Payment is made exclusively in USDT (TRC20 network) through the NOWPayments processor. Once payment is confirmed, registration is final and non-refundable (except for rollover due to minimum not being met).',
+    'rules.paymentDesc': 'Payment is made in USDT (Polygon, TRC-20 or Ethereum) through the NOWPayments processor. Once payment is confirmed, registration is final and non-refundable (except for rollover due to minimum not being met).',
     'rules.distribution': 'Prize Pool & Distribution',
     'rules.distributionFormula': 'The prize pool for each level is calculated as: total entries collected − platform commission (~10%).',
     'rules.distributionStandard': 'Standard distribution (top 3):',
@@ -551,7 +551,7 @@ const translations = {
     'terms.sec6_title': '6. Platform Commission and Prize Distribution',
     'terms.sec6_li1': 'Platform commission 8-10% on total entry fees.',
     'terms.sec6_li2': 'Remaining prize pool: 1st 50%, 2nd 30%, 3rd 20%.',
-    'terms.sec6_li3': 'Real USDT TRC20 prizes sent directly to wallet – same day as close.',
+    'terms.sec6_li3': 'Real USDT prizes (Polygon/TRC-20/Ethereum) sent directly to your wallet – same day as close.',
     'terms.sec7_title': '7. User Responsibility',
     'terms.sec7_content': 'Comply with local laws. Winners declare and pay applicable taxes.',
     'terms.sec8_title': '8. Withdrawals',
