@@ -118,9 +118,9 @@ const HowItWorks = () => {
       descKey: 'howItWorks.step2Desc',
       noteKey: null,
       priceTable: [
-        { level: 'Basic',   entry: 12,  pool: 10.80 },
-        { level: 'Medium',  entry: 54,  pool: 48.60 },
-        { level: 'Premium', entry: 107, pool: 96.30 },
+        { level: 'Basic',   entry: 12,  pool: 10  },
+        { level: 'Medium',  entry: 54,  pool: 50  },
+        { level: 'Premium', entry: 107, pool: 100 },
       ]
     },
     {
@@ -227,7 +227,7 @@ const HowItWorks = () => {
                       <span className="hiw-price-level" style={{ color: step.color }}>{row.level}</span>
                       <span className="hiw-price-entry">${row.entry}</span>
                       <span className="hiw-price-arrow">→</span>
-                      <span className="hiw-price-pool">${row.pool.toFixed(2)} pool</span>
+                      <span className="hiw-price-pool">${row.pool} pool</span>
                     </div>
                   ))}
                 </div>
