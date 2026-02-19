@@ -491,7 +491,7 @@ function Dashboard() {
           </Button>
         </nav>
 
-        <main className="md:ml-20 pt-20 md:pt-32 px-3 md:px-8 pb-24 md:pb-20">
+        <main className="md:ml-20 pt-24 md:pt-36 px-3 md:px-8 pb-24 md:pb-20">
           {/* CONSEJO IA */}
           <div className="relative group mb-6 md:mb-12">
             <div className="absolute inset-0 bg-gradient-to-br from-holy/30 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition" />
