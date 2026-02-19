@@ -262,6 +262,65 @@
   margin-top: 3px;
 }
 
+/* ── Pricing breakdown table (step 2) ───────────────────────── */
+.hiw-price-table {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--pt-color) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pt-color) 22%, transparent);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+@supports not (background: color-mix(in srgb, red 8%, transparent)) {
+  .hiw-price-table {
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.22);
+  }
+}
+
+.hiw-price-table-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #475569;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.hiw-price-row {
+  display: grid;
+  grid-template-columns: 60px 32px 14px 1fr;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+}
+
+.hiw-price-level {
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.hiw-price-entry {
+  color: #94a3b8;
+  font-weight: 600;
+  text-align: right;
+}
+
+.hiw-price-arrow {
+  color: #475569;
+  text-align: center;
+}
+
+.hiw-price-pool {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
 /* ── Features section ────────────────────────────────────────── */
 .hiw-features {
   margin-bottom: 44px;
