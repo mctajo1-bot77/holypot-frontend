@@ -16,14 +16,17 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { io } from "socket.io-client";
-import { 
-  Rocket, 
-  Coins, 
-  Crown, 
+import {
+  Rocket,
+  Coins,
+  Crown,
   Power,
   AlertTriangle,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Bot,
+  Activity,
+  Target
 } from "lucide-react";
 import {
   Tooltip,
@@ -377,64 +380,71 @@ function Dashboard() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen text-white relative overflow-hidden">
+      <div className="min-h-screen text-white relative">
+
+        {/* ── BACKGROUND ─────────────────────────────────────────────────────── */}
         <div className="fixed inset-0 -z-10">
-          <img src={background} alt="Fondo" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-black/60" />
+          <img src={background} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/75" />
         </div>
 
-        {/* ALERTA DE MODO ADMIN */}
+        {/* ── ADMIN ALERT ────────────────────────────────────────────────────── */}
         {isAdminSession && !entryId && (
-          <div className="fixed top-20 md:top-32 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-500/90 backdrop-blur-md border border-yellow-600 px-4 md:px-8 py-3 md:py-4 rounded-lg shadow-2xl max-w-[95vw]">
-            <p className="text-black font-bold text-sm md:text-xl text-center">
-              {t('dash.adminMode')}
-            </p>
+          <div className="fixed top-20 md:top-24 left-1/2 -translate-x-1/2 z-50 bg-yellow-500/90 backdrop-blur-md border border-yellow-600 px-4 md:px-8 py-2.5 rounded-lg shadow-2xl max-w-[95vw]">
+            <p className="text-black font-bold text-sm text-center">{t('dash.adminMode')}</p>
           </div>
         )}
 
-        <header className="fixed top-0 left-0 right-0 z-50 bg-primary/65 backdrop-blur-md border-b border-holy/20 shadow-md py-3 md:py-6">
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* HEADER                                                           */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        <header className="fixed top-0 left-0 right-0 z-50 bg-[#0F172A]/80 backdrop-blur-md border-b border-[#FFD700]/20 py-3 md:py-4">
           <div className="max-w-7xl mx-auto px-3 md:px-6 flex items-center justify-between gap-2">
             <div className="relative shrink-0">
-              <img
-                src={logo}
-                alt="Holypot Logo"
-                className="h-10 w-10 md:h-16 md:w-16 object-contain drop-shadow-2xl animate-float"
-              />
-              <div className="absolute -inset-4 rounded-full bg-holy/20 blur-3xl animate-pulse-slow-halo" />
+              <img src={logo} alt="Holypot" className="h-10 w-10 md:h-14 md:w-14 object-contain drop-shadow-2xl animate-float" />
+              <div className="absolute -inset-3 rounded-full bg-[#FFD700]/15 blur-2xl animate-pulse" />
             </div>
 
             <div className="text-center min-w-0 flex-1">
-              <h1 className="text-lg md:text-4xl font-bold text-holy truncate">Holypot Trading</h1>
-              <p className="text-xs md:text-lg text-gray-300 mt-0.5 md:mt-1 truncate">
+              <h1 className="text-lg md:text-3xl font-bold text-[#FFD700] truncate">Holypot Trading</h1>
+              <p className="text-xs md:text-sm text-gray-400 mt-0.5 truncate">
                 {entryId ? (
-                  <><span className="hidden sm:inline">{t('dash.level')}: {userLevel.toUpperCase()} | {t('dash.participants')}: {userComp.participants} | </span>{t('dash.timeLeft')}: <span className="text-red-500 font-bold animate-pulse">{userComp.timeLeft}</span></>
+                  <>
+                    <span className="hidden sm:inline">{t('dash.level')}: {userLevel.toUpperCase()} | {t('dash.participants')}: {userComp.participants} | </span>
+                    {t('dash.timeLeft')}: <span className="text-red-400 font-bold animate-pulse">{userComp.timeLeft}</span>
+                  </>
                 ) : (
-                  <span className="text-yellow-400 text-xs md:text-base">{t('dash.viewMode')}</span>
+                  <span className="text-yellow-400">{t('dash.viewMode')}</span>
                 )}
               </p>
             </div>
 
             <div className="text-right shrink-0 flex flex-col items-end gap-1">
               <LanguageToggle className="mb-1" />
-              <p className="text-sm md:text-2xl font-bold text-holy animate-pulse whitespace-nowrap">
+              <p className="text-sm md:text-lg font-bold text-[#FFD700] whitespace-nowrap">
                 <span className="hidden sm:inline">{t('dash.prizePool')}: </span>{formatNumber(userComp.prizePool)} USDT
               </p>
               {entryId && (
-                <p className="text-xs md:text-xl mt-0.5 md:mt-1 whitespace-nowrap">
-                  <span className="hidden md:inline">{t('dash.balance')}: </span><span className={percentChange >= 0 ? "text-profit" : "text-red-500"}>{formatNumber(Math.floor(virtualCapital))}</span> <span className="hidden sm:inline">({formatPercent(percentChange)})</span>
+                <p className="text-xs md:text-sm mt-0.5 whitespace-nowrap">
+                  <span className={percentChange >= 0 ? 'text-[#00C853]' : 'text-red-400'}>
+                    {formatNumber(Math.floor(virtualCapital))}
+                  </span>
+                  <span className="hidden sm:inline text-gray-400"> ({formatPercent(percentChange)})</span>
                 </p>
               )}
             </div>
           </div>
         </header>
 
-        {/* SIDEBAR - Desktop only */}
-        <aside className="hidden md:flex fixed left-0 top-28 bottom-0 w-20 bg-primary/90 backdrop-blur border-r border-borderSubtle shadow-card flex-col items-center py-8 space-y-8">
-          <nav className="flex-1 flex flex-col items-center space-y-10">
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* SIDEBAR — Desktop only                                          */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        <aside className="hidden md:flex fixed left-0 top-24 bottom-0 w-20 bg-[#0F172A]/90 backdrop-blur border-r border-[#2A2A2A] flex-col items-center py-8">
+          <nav className="flex-1 flex flex-col items-center space-y-8">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-holy/20" onClick={() => navigate('/dashboard')}>
-                  <Rocket className="h-10 w-10" />
+                <Button variant="ghost" size="icon" className="text-[#FFD700] bg-[#FFD700]/20">
+                  <Rocket className="h-8 w-8" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="right"><p>{t('nav.dashboard')}</p></TooltipContent>
@@ -442,8 +452,8 @@ function Dashboard() {
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-holy/20" onClick={() => navigate('/profile')}>
-                  <Coins className="h-10 w-10" />
+                <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20" onClick={() => navigate('/profile')}>
+                  <Coins className="h-8 w-8" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="right"><p>{t('nav.profile')}</p></TooltipContent>
@@ -452,8 +462,8 @@ function Dashboard() {
             {isAdminSession && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-holy/20" onClick={() => navigate('/admin')}>
-                    <Crown className="h-10 w-10" />
+                  <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20" onClick={() => navigate('/admin')}>
+                    <Crown className="h-8 w-8" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right"><p>{t('nav.admin')}</p></TooltipContent>
@@ -463,8 +473,8 @@ function Dashboard() {
             <div className="mt-auto">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-red-700" onClick={handleLogout}>
-                    <Power className="h-10 w-10" />
+                  <Button variant="ghost" size="icon" className="text-white hover:bg-red-700/50" onClick={handleLogout}>
+                    <Power className="h-8 w-8" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right"><p>{t('nav.logout')}</p></TooltipContent>
@@ -473,411 +483,496 @@ function Dashboard() {
           </nav>
         </aside>
 
-        {/* BOTTOM NAV - Mobile only */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-primary/95 backdrop-blur-md border-t border-holy/20 flex justify-around items-center py-2 px-2">
-          <Button variant="ghost" size="icon" className="text-white hover:bg-holy/20 flex-1" onClick={() => navigate('/dashboard')}>
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* BOTTOM NAV — Mobile only                                        */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0F172A]/95 backdrop-blur-md border-t border-[#FFD700]/20 flex justify-around items-center py-2 px-2">
+          <Button variant="ghost" size="icon" className="text-[#FFD700] bg-[#FFD700]/20 flex-1">
             <Rocket className="h-6 w-6" />
           </Button>
-          <Button variant="ghost" size="icon" className="text-white hover:bg-holy/20 flex-1" onClick={() => navigate('/profile')}>
+          <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20 flex-1" onClick={() => navigate('/profile')}>
             <Coins className="h-6 w-6" />
           </Button>
           {isAdminSession && (
-            <Button variant="ghost" size="icon" className="text-white hover:bg-holy/20 flex-1" onClick={() => navigate('/admin')}>
+            <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20 flex-1" onClick={() => navigate('/admin')}>
               <Crown className="h-6 w-6" />
             </Button>
           )}
-          <Button variant="ghost" size="icon" className="text-white hover:bg-red-700 flex-1" onClick={handleLogout}>
+          <Button variant="ghost" size="icon" className="text-white hover:bg-red-700/50 flex-1" onClick={handleLogout}>
             <Power className="h-6 w-6" />
           </Button>
         </nav>
 
-        <main className="md:ml-20 pt-24 md:pt-36 px-3 md:px-8 pb-24 md:pb-20">
-          {/* CONSEJO IA */}
-          <div className="relative group mb-6 md:mb-12">
-            <div className="absolute inset-0 bg-gradient-to-br from-holy/30 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition" />
-            <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-2xl md:rounded-3xl shadow-2xl p-4 md:p-8 text-center hover:md:scale-105 transition-all duration-500">
-              <p className="text-xl md:text-3xl font-bold text-holy mb-3 md:mb-6">{t('dash.aiAdvice')}</p>
-              <p className="text-base md:text-2xl text-gray-200">
-                {advice || t('dash.aiAdvicePlaceholder')}
-              </p>
-            </Card>
-          </div>
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* MAIN CONTENT                                                     */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        <main className="md:ml-20 pt-24 md:pt-28 px-3 md:px-8 pb-24 md:pb-20">
+          <div className="max-w-7xl mx-auto space-y-5">
 
-          {/* CARDS MULTI-NIVEL */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-12 mb-6 md:mb-12">
-            {[
-              { key: 'basic', color: 'profit', border: 'profit/40', title: 'BASIC' },
-              { key: 'medium', color: 'blue-500', border: 'blue-500/40', title: 'MEDIUM', titleColor: 'text-blue-400' },
-              { key: 'premium', color: 'holy', border: 'holy/50', title: 'PREMIUM' }
-            ].map(({ key, color, border, title, titleColor }) => (
-              <div key={key} className="relative group">
-                <div className={`absolute inset-0 bg-gradient-to-br from-${color}/30 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition`} />
-                <Card className={`relative bg-black/30 backdrop-blur-xl border border-${border} rounded-2xl md:rounded-3xl shadow-2xl p-4 md:p-10 text-center hover:md:scale-105 transition-all duration-500`}>
-                  <CardHeader className="p-2 md:p-6">
-                    <CardTitle className={`text-2xl md:text-4xl ${titleColor || `text-${color}`}`}>{title}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-2 md:p-6">
-                    <p className="text-lg md:text-2xl text-holy mb-2 md:mb-4">{t('dash.prizePool')}: {formatNumber(competitions[key]?.prizePool || 0)} USDT</p>
-                    <p className="text-base md:text-xl text-gray-200 mb-1 md:mb-2">{t('dash.participants')}: {competitions[key]?.participants || 0}</p>
-                    <p className="text-sm md:text-lg text-gray-300">{t('dash.timeLeft')}: <span className="text-red-500 font-bold animate-pulse">{competitions[key]?.timeLeft || '00h 00m'}</span></p>
-                  </CardContent>
-                </Card>
+            {/* ── STATS HERO STRIP ──────────────────────────────────────────── */}
+            {entryId && (
+              <div className="relative rounded-2xl overflow-hidden border border-[#FFD700]/20 bg-gradient-to-br from-[#1a1f2e] to-[#0F172A]">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,215,0,0.06)_0%,_transparent_65%)]" />
+                <div className="relative grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-[#2A2A2A]">
+                  <div className="text-center px-4 py-4">
+                    <p className={`text-2xl md:text-3xl font-bold tabular-nums ${percentChange >= 0 ? 'text-[#00C853]' : 'text-red-400'}`}>
+                      {formatNumber(Math.floor(virtualCapital))}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">{t('dash.balance')} USDT</p>
+                  </div>
+                  <div className="text-center px-4 py-4">
+                    <p className={`text-2xl md:text-3xl font-bold ${percentChange >= 0 ? 'text-[#00C853]' : 'text-red-400'}`}>
+                      {formatPercent(percentChange)}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">P&amp;L</p>
+                  </div>
+                  <div className="text-center px-4 py-4">
+                    <p className="text-2xl md:text-3xl font-bold text-[#FFD700] tabular-nums">
+                      {formatNumber(userComp.prizePool)} USDT
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">{t('dash.prizePool')}</p>
+                  </div>
+                  <div className="text-center px-4 py-4">
+                    <p className="text-2xl md:text-3xl font-bold text-red-400 animate-pulse">
+                      {userComp.timeLeft}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">{t('dash.timeLeft')}</p>
+                  </div>
+                </div>
               </div>
-            ))}
-          </div>
+            )}
 
-          {/* GRÁFICO + NEW TRADE */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-12 mb-6 md:mb-12">
-            <div className="lg:col-span-2 relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition" />
-              <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-2xl md:rounded-3xl shadow-2xl hover:md:scale-103 transition-all duration-300 h-[400px] md:h-[830px]">
-                <CardHeader className="p-3 md:p-6">
-                  <CardTitle className="text-xl md:text-3xl text-holy text-center">{t('dash.chart')} {symbol} {t('dash.live')}</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0 h-full">
-                  <TradingViewChart 
-                    symbol={symbol} 
-                    positions={positions} 
-                    currentPrice={currentPrice} 
-                    virtualCapital={virtualCapital}  
-                  />
-                </CardContent>
-              </Card>
+            {/* ── IA DEL DÍA ────────────────────────────────────────────────── */}
+            <div className="relative rounded-2xl overflow-hidden">
+              <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-[#FFD700]/30 via-[#FFD700]/10 to-purple-600/20 blur-sm" />
+              <div className="relative rounded-2xl border border-[#FFD700]/35 bg-gradient-to-br from-[#1a1a0e] via-[#161616] to-[#120d1e] p-5 md:p-6">
+                <div className="flex flex-col md:flex-row md:items-start gap-4">
+                  <div className="flex items-center gap-3 md:flex-col md:gap-2 md:min-w-[80px] md:items-center">
+                    <div className="relative">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#FFD700]/20 to-purple-600/20 border border-[#FFD700]/30 flex items-center justify-center shadow-[0_0_20px_rgba(255,215,0,0.12)]">
+                        <Bot className="h-5 w-5 text-[#FFD700]" />
+                      </div>
+                      <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#00C853] rounded-full border-2 border-[#161616] flex items-center justify-center">
+                        <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                      </div>
+                    </div>
+                    <p className="text-[#FFD700] font-bold text-sm md:text-center md:mt-1">{t('dash.aiAdvice')}</p>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[#FFD700]/60 text-xs font-medium uppercase tracking-widest mb-2">{t('profile.aiSubtitle')}</p>
+                    <p className="text-sm md:text-base text-white leading-relaxed">
+                      {advice || t('dash.aiAdvicePlaceholder')}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* NEW TRADE CARD */}
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-holy/30 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition" />
-              <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-2xl md:rounded-3xl shadow-2xl p-4 md:p-8 hover:md:scale-103 transition-all duration-300">
-                <CardHeader className="p-3 md:p-6">
-                  <CardTitle className="text-xl md:text-3xl text-holy text-center">{t('dash.newTrade')}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 md:space-y-6">
-                  <p className="text-center text-lg md:text-2xl font-bold text-gray-200">
-                    {t('dash.currentPrice')} {symbol}: {currentPrice ? currentPrice.toFixed(5) : t('dash.loading')}
-                  </p>
-
-                  <Tabs value={orderType} onValueChange={setOrderType} className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 bg-black/40 border border-borderSubtle rounded-xl">
-                      <TabsTrigger value="market" className="text-white">Market</TabsTrigger>
-                      <TabsTrigger value="limit" className="text-white">Limit</TabsTrigger>
-                      <TabsTrigger value="stop" className="text-white">Stop</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-
-                  <div>
-                    <label className="text-base md:text-xl font-bold mb-2 block text-gray-200">{t('dash.symbol')}</label>
-                    <Select value={symbol} onValueChange={setSymbol}>
-                      <SelectTrigger className="w-full bg-black/40 border-borderSubtle text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="EURUSD">EURUSD</SelectItem>
-                        <SelectItem value="GBPUSD">GBPUSD</SelectItem>
-                        <SelectItem value="USDJPY">USDJPY</SelectItem>
-                        <SelectItem value="XAUUSD">XAUUSD</SelectItem>
-                        <SelectItem value="SPX500">SPX500</SelectItem>
-                        <SelectItem value="NAS100">NAS100</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="text-base md:text-xl font-bold mb-2 block text-gray-200">{t('dash.direction')}</label>
-                    <div className="grid grid-cols-2 gap-3 md:gap-4">
-                      <Button
-                        onClick={() => setDirection('long')}
-                        disabled={!entryId}
-                        className={`text-base md:text-xl h-12 md:h-16 font-bold rounded-lg shadow-lg transition-all
-                          ${direction === 'long' ? 'bg-profit hover:bg-profit/80 border-4 border-profit text-black' : 'bg-profit/70 hover:bg-profit/90 text-white'}`}
-                      >
-                        {orderType === 'market' ? 'LONG' : orderType === 'limit' ? 'Buy Limit' : 'Buy Stop'}
-                      </Button>
-                      <Button
-                        onClick={() => setDirection('short')}
-                        disabled={!entryId}
-                        className={`text-base md:text-xl h-12 md:h-16 font-bold rounded-lg shadow-lg transition-all
-                          ${direction === 'short' ? 'bg-red-700 hover:bg-red-800 border-4 border-red-900' : 'bg-red-500 hover:bg-red-600 border-2 border-red-600'}`}
-                      >
-                        {orderType === 'market' ? 'SHORT' : orderType === 'limit' ? 'Sell Limit' : 'Sell Stop'}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {orderType !== 'market' && (
-                    <div>
-                      <label className="text-xl font-bold mb-2 block text-gray-200">Precio objetivo</label>
-                      <Input 
-                        type="number" 
-                        step="0.00001" 
-                        placeholder="ej: 1.10500" 
-                        value={targetPrice} 
-                        onChange={e => setTargetPrice(e.target.value)}
-                        disabled={!entryId}
-                        className="bg-black/40 border-borderSubtle text-white"
-                      />
+            {/* ── COMPETITION LEVEL CARDS ───────────────────────────────────── */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { key: 'basic',   accent: '#00C853', icon: <Rocket    className="h-4 w-4" />, label: 'BASIC'   },
+                { key: 'medium',  accent: '#4a9eff', icon: <TrendingUp className="h-4 w-4" />, label: 'MEDIUM'  },
+                { key: 'premium', accent: '#FFD700', icon: <Crown     className="h-4 w-4" />, label: 'PREMIUM' },
+              ].map(({ key, accent, icon, label }) => (
+                <div
+                  key={key}
+                  className="relative bg-[#161616] rounded-2xl border p-5 transition-all duration-300 hover:border-opacity-60"
+                  style={{ borderColor: key === userLevel ? `${accent}50` : '#2A2A2A' }}
+                >
+                  {key === userLevel && (
+                    <div className="absolute top-3 right-3">
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: accent, backgroundColor: `${accent}20` }}>
+                        {t('profile.tier')}
+                      </span>
                     </div>
                   )}
-
-                  <div className="space-y-3">
-                    <label className="text-base md:text-xl font-bold block text-gray-200">
-                      {t('dash.lotSize')}
-                    </label>
-                    
-                    <div className="flex items-center gap-4">
-                      <Slider 
-                        min={0.01} 
-                        max={1.0} 
-                        step={0.01} 
-                        value={[lotSize]} 
-                        onValueChange={(v) => setLotSize(v[0])}
-                        disabled={!entryId}
-                        className="flex-1 bg-gray-700 [&_[role=slider]]:bg-holy [&_[role=slider]]:hover:bg-holyGlow [&_[role=slider]]:ring-holy"
-                      />
-                      <Input 
-                        type="number" 
-                        min="0.01" 
-                        max="1.0" 
-                        step="0.01"
-                        value={lotSize.toFixed(2)}
-                        onChange={(e) => {
-                          let val = parseFloat(e.target.value);
-                          if (isNaN(val)) val = 0.01;
-                          val = Math.max(0.01, Math.min(1.0, val));
-                          setLotSize(val);
-                        }}
-                        disabled={!entryId}
-                        className="w-32 bg-black/40 border-borderSubtle text-white text-center"
-                      />
+                  <div className="flex items-center gap-2.5 mb-4">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accent}18`, color: accent }}>
+                      {icon}
                     </div>
-                    
-                    <div className="bg-black/40 rounded-lg p-4 space-y-2 border border-white/10">
-                      <p className="text-center text-2xl font-bold text-white">
-                        {lotSize.toFixed(2)} lot
-                      </p>
-                      
-                      {stopLoss && riskInfo.isValid ? (
-                        <>
-                          <p className={`text-center text-sm md:text-lg font-semibold ${riskInfo.riskPercent > 5 ? 'text-yellow-400' : 'text-profit'}`}>
-                            <TrendingUp className="inline w-4 h-4 mr-1" />
-                            {t('dash.riskReal')}: {riskInfo.riskPercent.toFixed(2)}% (${riskInfo.riskUSD.toFixed(0)})
-                          </p>
-                          <p className="text-center text-xs md:text-sm text-gray-400">
-                            {t('dash.slDistance')}: {riskInfo.distancePips.toFixed(0)} {instrumentInfo.pipMultiplier === 1 ? 'pts' : 'pips'}
-                          </p>
+                    <h3 className="font-bold text-base" style={{ color: accent }}>{label}</h3>
+                  </div>
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500">{t('dash.prizePool')}</span>
+                      <span className="text-base font-bold text-[#FFD700]">{formatNumber(competitions[key]?.prizePool || 0)} USDT</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500">{t('dash.participants')}</span>
+                      <span className="text-sm text-gray-300">{competitions[key]?.participants || 0}</span>
+                    </div>
+                    <div className="pt-2 border-t border-[#2A2A2A] flex justify-between items-center">
+                      <span className="text-xs text-gray-500">{t('dash.timeLeft')}</span>
+                      <span className="text-sm font-bold text-red-400 animate-pulse">{competitions[key]?.timeLeft || '00h 00m'}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
 
-                          {riskInfo.riskPercent > 5 && (
-                            <div className="mt-3 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
-                              <p className="text-red-400 font-bold text-center flex items-center justify-center gap-2 text-sm md:text-base">
-                                <AlertTriangle className="w-5 h-5" />
-                                {t('dash.highRisk')}
-                              </p>
-                              <p className="text-xs md:text-sm text-gray-300 text-center mt-1">
-                                {t('dash.suggested')}: <span className="text-profit font-bold">{calculateOptimalLotSize(2).toFixed(2)} lot</span> {t('dash.forRisk')} 2%
-                              </p>
-                              <p className="text-xs text-gray-400 text-center">
-                                o <span className="text-blue-400">{calculateOptimalLotSize(5).toFixed(2)} lot</span> {t('dash.forRisk')} 5%
-                              </p>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <p className="text-center text-xs md:text-sm text-gray-400">
-                          {stopLoss ? t('dash.calculatingRisk') : t('dash.addSL')}
+            {/* ── CHART + NEW TRADE ─────────────────────────────────────────── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+              {/* Chart — 2/3 */}
+              <div className="lg:col-span-2 bg-[#161616] border border-[#2A2A2A] rounded-2xl overflow-hidden">
+                <div className="flex items-center gap-2.5 px-5 py-4 border-b border-[#2A2A2A]">
+                  <div className="w-8 h-8 rounded-lg bg-[#FFD700]/15 flex items-center justify-center">
+                    <TrendingUp className="h-4 w-4 text-[#FFD700]" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-gray-200">{t('dash.chart')} {symbol} {t('dash.live')}</h3>
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-[#00C853] animate-pulse" />
+                    <span className="text-xs text-gray-500">Live</span>
+                  </div>
+                </div>
+                <div className="h-[360px] md:h-[680px]">
+                  <TradingViewChart
+                    symbol={symbol}
+                    positions={positions}
+                    currentPrice={currentPrice}
+                    virtualCapital={virtualCapital}
+                  />
+                </div>
+              </div>
+
+              {/* New Trade — 1/3 */}
+              <div className="bg-[#161616] border border-[#2A2A2A] rounded-2xl p-5 flex flex-col gap-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[#FFD700]/15 flex items-center justify-center">
+                    <Target className="h-4 w-4 text-[#FFD700]" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-gray-200">{t('dash.newTrade')}</h3>
+                  {currentPrice && (
+                    <div className="ml-auto text-right">
+                      <p className="text-xs text-gray-500">{symbol}</p>
+                      <p className="text-sm font-bold text-white">{currentPrice.toFixed(5)}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Order type */}
+                <Tabs value={orderType} onValueChange={setOrderType} className="w-full">
+                  <TabsList className="grid w-full grid-cols-3 bg-[#0F172A] border border-[#2A2A2A] rounded-xl h-9">
+                    <TabsTrigger value="market" className="text-white text-xs data-[state=active]:bg-[#FFD700] data-[state=active]:text-black">Market</TabsTrigger>
+                    <TabsTrigger value="limit"  className="text-white text-xs data-[state=active]:bg-[#FFD700] data-[state=active]:text-black">Limit</TabsTrigger>
+                    <TabsTrigger value="stop"   className="text-white text-xs data-[state=active]:bg-[#FFD700] data-[state=active]:text-black">Stop</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+
+                {/* Symbol */}
+                <div>
+                  <label className="text-xs text-gray-500 mb-1.5 block">{t('dash.symbol')}</label>
+                  <Select value={symbol} onValueChange={setSymbol}>
+                    <SelectTrigger className="w-full bg-[#0F172A] border-[#2A2A2A] text-white h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {['EURUSD','GBPUSD','USDJPY','XAUUSD','SPX500','NAS100'].map(s => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Direction */}
+                <div>
+                  <label className="text-xs text-gray-500 mb-1.5 block">{t('dash.direction')}</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      onClick={() => setDirection('long')}
+                      disabled={!entryId}
+                      className={`h-10 font-bold text-sm rounded-lg transition-all ${
+                        direction === 'long'
+                          ? 'bg-[#00C853] text-black'
+                          : 'bg-[#00C853]/15 text-[#00C853] border border-[#00C853]/30 hover:bg-[#00C853]/25'
+                      }`}
+                    >
+                      {orderType === 'market' ? '▲ LONG' : orderType === 'limit' ? 'Buy Limit' : 'Buy Stop'}
+                    </Button>
+                    <Button
+                      onClick={() => setDirection('short')}
+                      disabled={!entryId}
+                      className={`h-10 font-bold text-sm rounded-lg transition-all ${
+                        direction === 'short'
+                          ? 'bg-red-500 text-white'
+                          : 'bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25'
+                      }`}
+                    >
+                      {orderType === 'market' ? '▼ SHORT' : orderType === 'limit' ? 'Sell Limit' : 'Sell Stop'}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Target price (limit / stop) */}
+                {orderType !== 'market' && (
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1.5 block">Precio objetivo</label>
+                    <Input
+                      type="number" step="0.00001" placeholder="ej: 1.10500"
+                      value={targetPrice} onChange={e => setTargetPrice(e.target.value)}
+                      disabled={!entryId}
+                      className="bg-[#0F172A] border-[#2A2A2A] text-white h-9 text-sm"
+                    />
+                  </div>
+                )}
+
+                {/* Lot size */}
+                <div>
+                  <div className="flex justify-between mb-1.5">
+                    <label className="text-xs text-gray-500">{t('dash.lotSize')}</label>
+                    <span className="text-xs font-bold text-white">{lotSize.toFixed(2)} lot</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Slider
+                      min={0.01} max={1.0} step={0.01} value={[lotSize]}
+                      onValueChange={(v) => setLotSize(v[0])}
+                      disabled={!entryId}
+                      className="flex-1"
+                    />
+                    <Input
+                      type="number" min="0.01" max="1.0" step="0.01"
+                      value={lotSize.toFixed(2)}
+                      onChange={(e) => {
+                        let val = parseFloat(e.target.value);
+                        if (isNaN(val)) val = 0.01;
+                        setLotSize(Math.max(0.01, Math.min(1.0, val)));
+                      }}
+                      disabled={!entryId}
+                      className="w-20 bg-[#0F172A] border-[#2A2A2A] text-white h-9 text-sm text-center"
+                    />
+                  </div>
+
+                  {/* Risk indicator */}
+                  {stopLoss && riskInfo.isValid ? (
+                    <div className={`mt-2 px-3 py-2 rounded-lg border text-xs ${
+                      riskInfo.riskPercent > 5
+                        ? 'bg-red-500/10 border-red-500/30'
+                        : 'bg-[#00C853]/10 border-[#00C853]/30'
+                    }`}>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400">{t('dash.riskReal')}</span>
+                        <span className={`font-bold ${riskInfo.riskPercent > 5 ? 'text-red-400' : 'text-[#00C853]'}`}>
+                          {riskInfo.riskPercent.toFixed(2)}% · ${riskInfo.riskUSD.toFixed(0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-gray-400">{t('dash.slDistance')}</span>
+                        <span className="text-gray-300">{riskInfo.distancePips.toFixed(0)} {instrumentInfo.pipMultiplier === 1 ? 'pts' : 'pips'}</span>
+                      </div>
+                      {riskInfo.riskPercent > 5 && (
+                        <p className="mt-1.5 text-red-400 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          {t('dash.suggested')}: <span className="text-[#00C853] font-bold ml-1">{calculateOptimalLotSize(2).toFixed(2)} lot</span> @ 2%
                         </p>
                       )}
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="text-base md:text-xl font-bold mb-2 block text-gray-200">{t('dash.takeProfit')}</label>
-                    <Input 
-                      type="number" 
-                      step="0.00001" 
-                      placeholder="ej: 1.10500" 
-                      value={takeProfit} 
-                      onChange={e => setTakeProfit(e.target.value)}
-                      disabled={!entryId}
-                      className="bg-black/40 border-borderSubtle text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-base md:text-xl font-bold mb-2 block text-gray-200">{t('dash.stopLoss')}</label>
-                    <Input 
-                      type="number" 
-                      step="0.00001" 
-                      placeholder="ej: 1.09000" 
-                      value={stopLoss} 
-                      onChange={e => setStopLoss(e.target.value)}
-                      disabled={!entryId}
-                      className="bg-black/40 border-borderSubtle text-white"
-                    />
-                  </div>
-
-                  <Button
-                    onClick={openTrade}
-                    disabled={!entryId || riskInfo.riskPercent > 10}
-                    className={`w-full text-xl md:text-3xl py-5 md:py-8 font-bold rounded-full shadow-lg transition duration-300
-                      ${!entryId || riskInfo.riskPercent > 10
-                        ? 'bg-gray-600 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-holy to-purple-600 text-black hover:shadow-holy/50 hover:scale-105'
-                      }`}
-                  >
-                    {!entryId ? t('dash.viewOnly') : riskInfo.riskPercent > 10 ? t('dash.riskTooHigh') : t('dash.openTrade')}
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* POSITIONS */}
-          <div className="relative group mb-6 md:mb-12">
-            <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition" />
-            <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-2xl md:rounded-3xl shadow-2xl p-3 md:p-8 hover:md:scale-103 transition-all duration-400">
-              <h2 className="text-2xl md:text-4xl mb-4 md:mb-6 text-center text-holy font-bold">{t('dash.positions')}</h2>
-              <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-black/40">
-                  <TableRow>
-                    <TableHead className="text-holy">{t('pos.symbol')}</TableHead>
-                    <TableHead className="text-holy">{t('pos.direction')}</TableHead>
-                    <TableHead className="text-holy">{t('pos.lotSize')}</TableHead>
-                    <TableHead className="text-holy">{t('pos.entryPrice')}</TableHead>
-                    <TableHead className="text-holy">{t('pos.pnl')}</TableHead>
-                    <TableHead className="text-holy hidden md:table-cell">{t('pos.tp')}</TableHead>
-                    <TableHead className="text-holy hidden md:table-cell">{t('pos.sl')}</TableHead>
-                    <TableHead className="text-holy">{t('pos.action')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {positions.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-gray-400">
-                        {entryId ? t('dash.noPositions') : t('dash.adminNoPositions')}
-                      </TableCell>
-                    </TableRow>
                   ) : (
-                    positions.map((pos) => {
-                      const positionRisk = calculatePositionRisk(pos);
-                      const livePnl = parseFloat(pos.livePnl || 0).toFixed(2);
-                      
-                      const config = instrumentConfig[pos.symbol] || instrumentConfig['EURUSD'];
-                      const pipsToTP = pos.takeProfit && currentPrice ? (pos.direction === 'long' 
-                        ? ((pos.takeProfit - currentPrice) * config.pipMultiplier).toFixed(0) 
-                        : ((currentPrice - pos.takeProfit) * config.pipMultiplier).toFixed(0)) : '-';
-                      const pipsToSL = pos.stopLoss && currentPrice ? (pos.direction === 'long' 
-                        ? ((currentPrice - pos.stopLoss) * config.pipMultiplier).toFixed(0) 
-                        : ((pos.stopLoss - currentPrice) * config.pipMultiplier).toFixed(0)) : '-';
-
-                      return (
-                        <TableRow key={pos.id} className="hover:bg-white/10 transition">
-                          <TableCell className="text-gray-200">{pos.symbol}</TableCell>
-                          <TableCell>
-                            <Badge variant={pos.direction === 'long' ? "default" : "destructive"} className={pos.direction === 'long' ? "bg-profit text-black" : "bg-red-600 text-white"}>
-                              {pos.direction.toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className={positionRisk.riskPercent > 5 ? "text-red-500 font-semibold" : "text-profit"}>
-                            {pos.lotSize || 0.01} 
-                            <span className="text-sm ml-1">
-                              ({pos.stopLoss ? positionRisk.riskPercent.toFixed(1) : (pos.lotSize * 10).toFixed(1)}%)
-                            </span>
-                            {positionRisk.riskPercent > 5 && (
-                              <AlertTriangle className="inline w-4 h-4 ml-1" />
-                            )}
-                          </TableCell>
-                          <TableCell className="text-gray-200">{pos.entryPrice.toFixed(5)}</TableCell>
-                          <TableCell className={parseFloat(livePnl) > 0 ? "text-profit" : "text-red-500"}>
-                            {livePnl}%
-                          </TableCell>
-                          <TableCell className={`hidden md:table-cell ${pipsToTP !== '-' && pipsToTP > 0 ? "text-profit" : "text-red-500"}`}>
-                            {pos.takeProfit || '-'} ({pipsToTP} {config.pipMultiplier === 1 ? 'pts' : 'p'})
-                          </TableCell>
-                          <TableCell className={`hidden md:table-cell ${pipsToSL !== '-' && pipsToSL > 0 ? "text-red-500" : "text-profit"}`}>
-                            {pos.stopLoss || '-'} ({pipsToSL} {config.pipMultiplier === 1 ? 'pts' : 'p'})
-                          </TableCell>
-                          <TableCell className="flex gap-2">
-                            <Button 
-                              variant="outline" 
-                              className="bg-holy/20 hover:bg-holy/40 text-white" 
-                              onClick={() => setEditingPosition(pos)}
-                              disabled={!entryId}
-                            >
-                              Edit
-                            </Button>
-                            <Button 
-                              variant="destructive" 
-                              onClick={() => closeTrade(pos.id)}
-                              disabled={!entryId}
-                            >
-                              CLOSE
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
+                    <p className="mt-2 text-xs text-gray-600 text-center">{stopLoss ? t('dash.calculatingRisk') : t('dash.addSL')}</p>
                   )}
-                </TableBody>
-              </Table>
+                </div>
+
+                {/* TP + SL */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1.5 block">{t('dash.takeProfit')}</label>
+                    <Input type="number" step="0.00001" placeholder="TP"
+                      value={takeProfit} onChange={e => setTakeProfit(e.target.value)}
+                      disabled={!entryId}
+                      className="bg-[#0F172A] border-[#2A2A2A] text-white h-9 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1.5 block">{t('dash.stopLoss')}</label>
+                    <Input type="number" step="0.00001" placeholder="SL"
+                      value={stopLoss} onChange={e => setStopLoss(e.target.value)}
+                      disabled={!entryId}
+                      className="bg-[#0F172A] border-[#2A2A2A] text-white h-9 text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Open trade button */}
+                <Button
+                  onClick={openTrade}
+                  disabled={!entryId || riskInfo.riskPercent > 10}
+                  className={`w-full h-11 font-bold text-sm rounded-xl mt-auto transition-all ${
+                    !entryId || riskInfo.riskPercent > 10
+                      ? 'bg-[#2A2A2A] text-gray-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-[#FFD700] to-[#f59e0b] text-black hover:opacity-90 hover:shadow-[0_0_20px_rgba(255,215,0,0.25)]'
+                  }`}
+                >
+                  {!entryId ? t('dash.viewOnly') : riskInfo.riskPercent > 10 ? t('dash.riskTooHigh') : t('dash.openTrade')}
+                </Button>
+              </div>
+            </div>
+
+            {/* ── POSITIONS ─────────────────────────────────────────────────── */}
+            <div className="bg-[#161616] border border-[#2A2A2A] rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-2.5 px-5 py-4 border-b border-[#2A2A2A]">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                  <Activity className="h-4 w-4 text-blue-400" />
+                </div>
+                <h2 className="text-sm font-semibold text-gray-200">{t('dash.positions')}</h2>
+                {positions.length > 0 && (
+                  <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
+                    {positions.length} open
+                  </span>
+                )}
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-[#2A2A2A] hover:bg-transparent">
+                      <TableHead className="text-[#FFD700] text-xs font-semibold">{t('pos.symbol')}</TableHead>
+                      <TableHead className="text-[#FFD700] text-xs font-semibold">{t('pos.direction')}</TableHead>
+                      <TableHead className="text-[#FFD700] text-xs font-semibold">{t('pos.lotSize')}</TableHead>
+                      <TableHead className="text-[#FFD700] text-xs font-semibold">{t('pos.entryPrice')}</TableHead>
+                      <TableHead className="text-[#FFD700] text-xs font-semibold">{t('pos.pnl')}</TableHead>
+                      <TableHead className="text-[#FFD700] text-xs font-semibold hidden md:table-cell">{t('pos.tp')}</TableHead>
+                      <TableHead className="text-[#FFD700] text-xs font-semibold hidden md:table-cell">{t('pos.sl')}</TableHead>
+                      <TableHead className="text-[#FFD700] text-xs font-semibold">{t('pos.action')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {positions.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-10 text-gray-600 text-sm">
+                          {entryId ? t('dash.noPositions') : t('dash.adminNoPositions')}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      positions.map((pos) => {
+                        const positionRisk = calculatePositionRisk(pos);
+                        const livePnl = parseFloat(pos.livePnl || 0).toFixed(2);
+                        const config = instrumentConfig[pos.symbol] || instrumentConfig['EURUSD'];
+                        const pipsToTP = pos.takeProfit && currentPrice
+                          ? (pos.direction === 'long'
+                              ? ((pos.takeProfit - currentPrice) * config.pipMultiplier).toFixed(0)
+                              : ((currentPrice - pos.takeProfit) * config.pipMultiplier).toFixed(0))
+                          : '-';
+                        const pipsToSL = pos.stopLoss && currentPrice
+                          ? (pos.direction === 'long'
+                              ? ((currentPrice - pos.stopLoss) * config.pipMultiplier).toFixed(0)
+                              : ((pos.stopLoss - currentPrice) * config.pipMultiplier).toFixed(0))
+                          : '-';
+
+                        return (
+                          <TableRow key={pos.id} className="border-[#2A2A2A] hover:bg-white/5 transition-colors">
+                            <TableCell className="text-gray-200 text-sm font-medium py-3">{pos.symbol}</TableCell>
+                            <TableCell className="py-3">
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                                pos.direction === 'long' ? 'bg-[#00C853]/20 text-[#00C853]' : 'bg-red-500/20 text-red-400'
+                              }`}>
+                                {pos.direction.toUpperCase()}
+                              </span>
+                            </TableCell>
+                            <TableCell className="py-3">
+                              <span className={`text-sm ${positionRisk.riskPercent > 5 ? 'text-red-400' : 'text-gray-300'}`}>
+                                {pos.lotSize || 0.01}
+                                <span className="text-xs ml-1 text-gray-500">
+                                  ({pos.stopLoss ? positionRisk.riskPercent.toFixed(1) : (pos.lotSize * 10).toFixed(1)}%)
+                                </span>
+                              </span>
+                              {positionRisk.riskPercent > 5 && <AlertTriangle className="inline w-3.5 h-3.5 ml-1 text-red-400" />}
+                            </TableCell>
+                            <TableCell className="text-gray-300 text-sm py-3">{pos.entryPrice.toFixed(5)}</TableCell>
+                            <TableCell className={`text-sm font-bold py-3 ${parseFloat(livePnl) > 0 ? 'text-[#00C853]' : 'text-red-400'}`}>
+                              {livePnl}%
+                            </TableCell>
+                            <TableCell className={`hidden md:table-cell text-xs py-3 ${pipsToTP !== '-' && pipsToTP > 0 ? 'text-[#00C853]' : 'text-red-400'}`}>
+                              {pos.takeProfit || '—'} <span className="text-gray-600">({pipsToTP}p)</span>
+                            </TableCell>
+                            <TableCell className={`hidden md:table-cell text-xs py-3 ${pipsToSL !== '-' && pipsToSL > 0 ? 'text-red-400' : 'text-[#00C853]'}`}>
+                              {pos.stopLoss || '—'} <span className="text-gray-600">({pipsToSL}p)</span>
+                            </TableCell>
+                            <TableCell className="py-3">
+                              <div className="flex gap-1.5">
+                                <Button
+                                  variant="outline" size="sm"
+                                  className="h-7 px-2.5 text-xs bg-[#FFD700]/10 border-[#FFD700]/30 text-[#FFD700] hover:bg-[#FFD700]/20"
+                                  onClick={() => setEditingPosition(pos)}
+                                  disabled={!entryId}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="destructive" size="sm"
+                                  className="h-7 px-2.5 text-xs bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
+                                  onClick={() => closeTrade(pos.id)}
+                                  disabled={!entryId}
+                                >
+                                  Close
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
               </div>
 
               {entryId && (
-                <div className="mt-4 md:mt-8">
-                  <p className="text-sm md:text-xl text-center mb-2 text-gray-200">{t('dash.riskTotal')}: {totalRisk.toFixed(1)}% (max 10%)</p>
-                  <Progress 
-                    value={totalRisk} 
-                    className={`h-12 rounded-full bg-gray-700 overflow-hidden shadow-card ${totalRisk > 8 ? 'shadow-[0_0_25px_red]' : totalRisk > 5 ? 'shadow-[0_0_20px_orange]' : 'shadow-[0_0_15px_#00C853]'}`}
-                  >
-                    <div 
-                      className={`h-full transition-all duration-700 ${totalRisk > 8 ? 'bg-red-600' : totalRisk > 5 ? 'bg-orange-500' : 'bg-profit'} shadow-inner`} 
-                      style={{ width: `${totalRisk * 10}%` }} 
+                <div className="px-5 py-4 border-t border-[#2A2A2A]">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-500">{t('dash.riskTotal')}</span>
+                    <span className={`text-xs font-bold ${totalRisk > 8 ? 'text-red-400' : totalRisk > 5 ? 'text-yellow-400' : 'text-[#00C853]'}`}>
+                      {totalRisk.toFixed(1)}% / 10%
+                    </span>
+                  </div>
+                  <div className="w-full bg-[#2A2A2A] rounded-full h-2 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${totalRisk > 8 ? 'bg-red-500' : totalRisk > 5 ? 'bg-yellow-400' : 'bg-[#00C853]'}`}
+                      style={{ width: `${Math.min(totalRisk * 10, 100)}%` }}
                     />
-                  </Progress>
+                  </div>
                 </div>
               )}
-            </Card>
-          </div>
+            </div>
 
-          {editingPosition && (
-            <EditPositionModal
-              position={editingPosition}
-              open={true}
-              onOpenChange={() => setEditingPosition(null)}
-              onSave={async (updates) => {
-                try {
-                  await axios.post(`${API_BASE}/edit-position`, {
-                    positionId: editingPosition.id,
-                    ...updates
-                  });
-                  alert('Posición editada correctamente');
-                  setEditingPosition(null);
-                } catch (err) {
-                  alert('Error editando posición: ' + (err.response?.data?.error || err.message));
-                }
-              }}
-              currentPrice={currentPrice}
-              virtualCapital={virtualCapital}
-            />
-          )}
+            {/* ── EDIT POSITION MODAL ───────────────────────────────────────── */}
+            {editingPosition && (
+              <EditPositionModal
+                position={editingPosition}
+                open={true}
+                onOpenChange={() => setEditingPosition(null)}
+                onSave={async (updates) => {
+                  try {
+                    await axios.post(`${API_BASE}/edit-position`, { positionId: editingPosition.id, ...updates });
+                    alert('Posición editada correctamente');
+                    setEditingPosition(null);
+                  } catch (err) {
+                    alert('Error editando posición: ' + (err.response?.data?.error || err.message));
+                  }
+                }}
+                currentPrice={currentPrice}
+                virtualCapital={virtualCapital}
+              />
+            )}
 
-          {/* RANKING */}
-          <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-holy/20 to-transparent rounded-2xl md:rounded-3xl blur-xl group-hover:blur-2xl transition" />
-            <Card className="relative bg-black/30 backdrop-blur-xl border border-holy/40 rounded-2xl md:rounded-3xl shadow-2xl p-3 md:p-8 hover:md:scale-105 transition-all duration-500">
-              <div className="flex justify-center mb-4 md:mb-8">
-                <div className="w-full max-w-96">
-                  <label className="text-sm md:text-xl font-bold block mb-2 text-center text-gray-200">
-                    {t('dash.selectRanking')}
-                  </label>
+            {/* ── RANKING ───────────────────────────────────────────────────── */}
+            <div className="bg-[#161616] border border-[#2A2A2A] rounded-2xl overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 border-b border-[#2A2A2A]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[#FFD700]/15 flex items-center justify-center">
+                    <Crown className="h-4 w-4 text-[#FFD700]" />
+                  </div>
+                  <h2 className="text-sm font-semibold text-gray-200">
+                    {t('dash.ranking')} — {selectedLevel.toUpperCase()}
+                  </h2>
+                </div>
+                <div className="sm:ml-auto w-full sm:w-44">
                   <Select value={selectedLevel} onValueChange={setSelectedLevel}>
-                    <SelectTrigger className="w-full bg-black/40 border-borderSubtle text-white">
+                    <SelectTrigger className="w-full bg-[#0F172A] border-[#2A2A2A] text-white h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {activeLevels.map(level => (
                         <SelectItem key={level} value={level}>
-                          {level.toUpperCase()} ({competitions[level]?.participants || 0} participantes)
+                          {level.toUpperCase()} ({competitions[level]?.participants || 0})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -885,91 +980,98 @@ function Dashboard() {
                 </div>
               </div>
 
-              <h2 className="text-xl md:text-4xl mb-4 md:mb-6 text-center text-holy font-bold">
-                {t('dash.ranking')} – {selectedLevel.toUpperCase()}
-              </h2>
-
               <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-black/40">
-                  <TableRow>
-                    <TableHead className="text-holy">{t('rank.spot')}</TableHead>
-                    <TableHead className="text-holy">{t('rank.trader')}</TableHead>
-                    <TableHead className="text-holy">{t('rank.return')}</TableHead>
-                    <TableHead className="text-holy">{t('rank.capital')}</TableHead>
-                    <TableHead className="text-holy hidden md:table-cell">{t('rank.openPos')}</TableHead>
-                    <TableHead className="text-holy hidden md:table-cell">{t('rank.prize')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {currentRanking.slice(0, 10).map((r, i) => (
-                    <TableRow key={i} className={i < 3 ? "bg-gradient-to-r from-holy/20 to-transparent" : "hover:bg-white/10 transition"}>
-                      <TableCell className="text-gray-200">#{i + 1}</TableCell>
-                      <TableCell className="text-gray-200">
-                        {r.displayName || 'Anónimo'}
-                      </TableCell>
-                      <TableCell className={parseFloat(r.retorno) > 0 ? "text-profit" : "text-red-500"}>
-                        {r.retorno}
-                      </TableCell>
-                      <TableCell className="text-gray-200">{formatNumber(r.liveCapital)} USDT</TableCell>
-                      <TableCell className="text-gray-200 hidden md:table-cell">0</TableCell>
-                      <TableCell className="text-profit font-bold hidden md:table-cell">
-                        0 USDT
-                      </TableCell>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-[#2A2A2A] hover:bg-transparent">
+                      <TableHead className="text-[#FFD700] text-xs font-semibold">{t('rank.spot')}</TableHead>
+                      <TableHead className="text-[#FFD700] text-xs font-semibold">{t('rank.trader')}</TableHead>
+                      <TableHead className="text-[#FFD700] text-xs font-semibold">{t('rank.return')}</TableHead>
+                      <TableHead className="text-[#FFD700] text-xs font-semibold">{t('rank.capital')}</TableHead>
+                      <TableHead className="text-[#FFD700] text-xs font-semibold hidden md:table-cell">{t('rank.openPos')}</TableHead>
+                      <TableHead className="text-[#FFD700] text-xs font-semibold hidden md:table-cell">{t('rank.prize')}</TableHead>
                     </TableRow>
-                  )) || (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-400">
-                        {t('dash.loadingRanking')}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {currentRanking.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-10 text-gray-600 text-sm">
+                          {t('dash.loadingRanking')}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      currentRanking.slice(0, 10).map((r, i) => (
+                        <TableRow
+                          key={i}
+                          className={`border-[#2A2A2A] transition-colors ${
+                            i === 0 ? 'bg-[#FFD700]/8 hover:bg-[#FFD700]/12' :
+                            i === 1 ? 'bg-gray-400/4 hover:bg-white/5' :
+                            i === 2 ? 'bg-orange-700/4 hover:bg-white/5' :
+                            'hover:bg-white/5'
+                          }`}
+                        >
+                          <TableCell className="py-3">
+                            <span className={`text-sm font-bold ${
+                              i === 0 ? 'text-[#FFD700]' :
+                              i === 1 ? 'text-gray-300' :
+                              i === 2 ? 'text-orange-400' : 'text-gray-600'
+                            }`}>
+                              #{i + 1}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-gray-200 text-sm py-3">{r.displayName || 'Anónimo'}</TableCell>
+                          <TableCell className={`text-sm font-bold py-3 ${parseFloat(r.retorno) > 0 ? 'text-[#00C853]' : 'text-red-400'}`}>
+                            {r.retorno}
+                          </TableCell>
+                          <TableCell className="text-gray-300 text-sm py-3">{formatNumber(r.liveCapital)} USDT</TableCell>
+                          <TableCell className="text-gray-500 text-sm py-3 hidden md:table-cell">0</TableCell>
+                          <TableCell className="text-[#FFD700] font-bold text-sm py-3 hidden md:table-cell">0 USDT</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </div>
-            </Card>
-          </div>
+            </div>
 
-          {/* MODAL GANASTE */}
-          {!isAdminSession && (
-            <Dialog open={showWinModal} onOpenChange={setShowWinModal}>
-              <DialogContent className="bg-black/80 backdrop-blur-xl border border-holy/40 text-white max-w-[95vw] md:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl md:text-4xl text-center text-holy animate-pulse">
-                    {t('win.congrats')}
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 md:space-y-6 text-center">
-                  <p className="text-xl md:text-2xl text-profit font-bold">
-                    {latestWin ? formatNumber(latestWin.amount) : 0} USDT
-                  </p>
-                  <p className="text-base md:text-xl text-gray-200">
-                    {t('win.position')} #{latestWin?.position} {t('win.inCompetition')} {latestWin?.level.toUpperCase()}
-                  </p>
-                  <p className="text-sm md:text-lg text-gray-300">
-                    {t('win.date')}: {latestWin ? new Date(latestWin.date).toLocaleDateString('es-ES') : ''}
-                  </p>
-                  <p className="text-sm md:text-lg">
-                    <Badge className="bg-profit text-black text-sm md:text-lg px-4 md:px-6 py-2">
+            {/* ── WIN MODAL ─────────────────────────────────────────────────── */}
+            {!isAdminSession && (
+              <Dialog open={showWinModal} onOpenChange={setShowWinModal}>
+                <DialogContent className="bg-[#161616] backdrop-blur-xl border border-[#FFD700]/30 text-white max-w-[95vw] md:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="text-2xl md:text-3xl text-center text-[#FFD700]">
+                      {t('win.congrats')}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 text-center">
+                    <p className="text-3xl font-bold text-[#00C853]">
+                      {latestWin ? formatNumber(latestWin.amount) : 0} USDT
+                    </p>
+                    <p className="text-base text-gray-300">
+                      {t('win.position')} #{latestWin?.position} {t('win.inCompetition')} {latestWin?.level.toUpperCase()}
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      {t('win.date')}: {latestWin ? new Date(latestWin.date).toLocaleDateString('es-ES') : ''}
+                    </p>
+                    <Badge className="bg-[#00C853] text-black text-sm px-4 py-1.5">
                       {t('win.paymentConfirmed')}
                     </Badge>
-                  </p>
-                  <p className="text-xs md:text-sm text-gray-400">
-                    {t('win.paymentId')}: {latestWin?.paymentId ? '...' + latestWin.paymentId.slice(-10) : '-'}
-                  </p>
-                  <p className="text-sm md:text-lg text-gray-200">
-                    {t('win.walletMsg')}
-                  </p>
-                  <Button
-                    onClick={() => setShowWinModal(false)}
-                    className="w-full bg-gradient-to-r from-holy to-purple-600 text-black text-lg md:text-xl py-4 md:py-6 font-bold rounded-full"
-                  >
-                    {t('win.continue')}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
+                    <p className="text-xs text-gray-500">
+                      {t('win.paymentId')}: {latestWin?.paymentId ? '...' + latestWin.paymentId.slice(-10) : '-'}
+                    </p>
+                    <p className="text-sm text-gray-300">{t('win.walletMsg')}</p>
+                    <Button
+                      onClick={() => setShowWinModal(false)}
+                      className="w-full bg-gradient-to-r from-[#FFD700] to-[#f59e0b] text-black font-bold rounded-xl h-11"
+                    >
+                      {t('win.continue')}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+
+          </div>
         </main>
       </div>
     </TooltipProvider>
