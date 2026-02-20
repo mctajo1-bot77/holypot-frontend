@@ -271,7 +271,7 @@ const LandingPage = () => {
             <div className="relative group md:-translate-y-4">
               <div className="absolute -top-5 inset-x-0 flex justify-center z-10">
                 <span className="bg-gradient-to-r from-[#D4AF37] to-[#FFD700] text-black text-xs font-extrabold uppercase tracking-wider px-5 py-1.5 rounded-full shadow-lg shadow-[#D4AF37]/30">
-                  MÁS POPULAR
+                  {t('landing.mostPopular')}
                 </span>
               </div>
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-transparent rounded-3xl blur-xl group-hover:blur-2xl transition duration-700" />
@@ -372,9 +372,9 @@ const LandingPage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
               {[
-                { num: '1', title: t('rules.type'), desc: 'Competencias diarias skill-based en trading simulado de divisas, cripto, oro e índices. El resultado depende 100% de tu habilidad.' },
-                { num: '5', title: t('rules.distribution'), desc: '1er lugar: 50% · 2do lugar: 30% · 3er lugar: 20% del prize pool total.' },
-                { num: '6', title: t('rules.tradingRules'), desc: t('rules.trading_data') + ' Long/Short con TP y SL opcionales. Mín. 1 trade cerrado para aparecer en ranking.' },
+                { num: '1', title: t('rules.type'), desc: t('rules.typeDesc') },
+                { num: '5', title: t('rules.distribution'), desc: t('landing.rulesDistribDesc') },
+                { num: '6', title: t('rules.tradingRules'), desc: t('landing.rulesTradingDesc') },
                 { num: '9', title: t('rules.prizePayout'), desc: t('rules.prizePayoutDesc') },
               ].map(({ num, title, desc }) => (
                 <div
