@@ -45,6 +45,9 @@ const translations = {
     'landing.trustAuditable': 'Auditable on-chain',
     'landing.seeCompetitions': 'Ver Competencias',
     'form.paymentNetwork': 'Red de pago USDT',
+    'landing.mostPopular': 'MÁS POPULAR',
+    'landing.rulesDistribDesc': '1er lugar: 50% · 2do lugar: 30% · 3er lugar: 20% del prize pool total.',
+    'landing.rulesTradingDesc': 'Datos en tiempo real (Finnhub/OANDA). LONG/SHORT con TP y SL opcionales. Mín. 1 trade cerrado para aparecer en ranking.',
 
     // How It Works
     'howItWorks.mainTitle': '¿Cómo Funciona?',
@@ -414,6 +417,9 @@ const translations = {
     'landing.trustAuditable': 'Auditable on-chain',
     'landing.seeCompetitions': 'See Competitions',
     'form.paymentNetwork': 'USDT payment network',
+    'landing.mostPopular': 'MOST POPULAR',
+    'landing.rulesDistribDesc': '1st place: 50% · 2nd place: 30% · 3rd place: 20% of total prize pool.',
+    'landing.rulesTradingDesc': 'Real-time data (Finnhub/OANDA). LONG/SHORT with optional TP and SL. Min. 1 closed trade to appear in ranking.',
 
     // How It Works
     'howItWorks.mainTitle': 'How It Works',
