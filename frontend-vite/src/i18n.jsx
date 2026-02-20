@@ -35,6 +35,16 @@ const translations = {
     'landing.winnersRotate': '(cambia cada hora)',
     'landing.noWinners': 'Próximamente los primeros ganadores reales',
     'landing.beFirst': '¡Sé el primero en aparecer aquí!',
+    'landing.skillBased': 'Competencia de habilidad · No gambling',
+    'landing.compete': 'Compite.',
+    'landing.earn': 'Gana.',
+    'landing.withdraw': 'Retira.',
+    'landing.subtitle2': 'premios reales en USDT directamente a tu wallet',
+    'landing.trustSkill': 'Basado en habilidad',
+    'landing.trustPayment': 'Pagos USDT verificados',
+    'landing.trustAuditable': 'Auditable on-chain',
+    'landing.seeCompetitions': 'Ver Competencias',
+    'form.paymentNetwork': 'Red de pago USDT',
 
     // How It Works
     'howItWorks.mainTitle': '¿Cómo Funciona?',
@@ -394,6 +404,16 @@ const translations = {
     'landing.winnersRotate': '(rotates hourly)',
     'landing.noWinners': 'First real winners coming soon',
     'landing.beFirst': 'Be the first to appear here!',
+    'landing.skillBased': 'Skill-based competition · Not gambling',
+    'landing.compete': 'Compete.',
+    'landing.earn': 'Earn.',
+    'landing.withdraw': 'Withdraw.',
+    'landing.subtitle2': 'real prizes in USDT sent directly to your wallet',
+    'landing.trustSkill': 'Skill-based',
+    'landing.trustPayment': 'Verified USDT payments',
+    'landing.trustAuditable': 'Auditable on-chain',
+    'landing.seeCompetitions': 'See Competitions',
+    'form.paymentNetwork': 'USDT payment network',
 
     // How It Works
     'howItWorks.mainTitle': 'How It Works',
