@@ -398,8 +398,8 @@ function Dashboard() {
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* HEADER                                                           */}
         {/* ══════════════════════════════════════════════════════════════════ */}
-        <header className="fixed top-0 left-0 right-0 z-50 bg-[#0F172A]/80 backdrop-blur-md border-b border-[#FFD700]/20 py-3 md:py-4">
-          <div className="max-w-7xl mx-auto px-3 md:px-6 flex items-center justify-between gap-2">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-[#0F172A]/80 backdrop-blur-md border-b border-[#FFD700]/20 h-[88px] md:h-[112px]">
+          <div className="max-w-7xl mx-auto px-3 md:px-6 h-full flex items-center justify-between gap-2">
             <div className="relative shrink-0">
               <img src={logo} alt="Holypot" className="h-10 w-10 md:h-14 md:w-14 object-contain drop-shadow-2xl animate-float" />
               <div className="absolute -inset-3 rounded-full bg-[#FFD700]/15 blur-2xl animate-pulse" />
@@ -439,7 +439,7 @@ function Dashboard() {
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* SIDEBAR — Desktop only                                          */}
         {/* ══════════════════════════════════════════════════════════════════ */}
-        <aside className="hidden md:flex fixed left-0 top-24 bottom-0 w-20 bg-[#0F172A]/90 backdrop-blur border-r border-[#2A2A2A] flex-col items-center py-8">
+        <aside className="hidden md:flex fixed left-0 top-[112px] bottom-0 w-20 bg-[#0F172A]/90 backdrop-blur border-r border-[#2A2A2A] flex-col items-center py-8">
           <nav className="flex-1 flex flex-col items-center space-y-8">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -506,7 +506,7 @@ function Dashboard() {
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* MAIN CONTENT                                                     */}
         {/* ══════════════════════════════════════════════════════════════════ */}
-        <main className="md:ml-20 pt-24 md:pt-28 px-3 md:px-8 pb-24 md:pb-20">
+        <main className="md:ml-20 pt-[88px] md:pt-[112px] px-3 md:px-8 pb-24 md:pb-20">
           <div className="max-w-7xl mx-auto space-y-5">
 
             {/* ── STATS HERO STRIP ──────────────────────────────────────────── */}
