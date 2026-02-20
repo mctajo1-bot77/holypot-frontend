@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Trophy } from "lucide-react";
-import { Link } from "react-router-dom";
-import logo from "@/assets/Holypot-logo.webp";
 import { useI18n } from '@/i18n';
 
 const API_BASE = import.meta.env.VITE_API_URL
@@ -22,11 +18,9 @@ const LandingHeaderWinners = () => {
 
   useEffect(() => {
     const updateLevel = () => {
-      const hour = new Date().getUTCHours();
-      const index = hour % 3;
+      const index = new Date().getUTCHours() % 3;
       setCurrentLevel(levels[index]);
     };
-
     updateLevel();
     const interval = setInterval(updateLevel, 60000);
     return () => clearInterval(interval);
@@ -35,16 +29,16 @@ const LandingHeaderWinners = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const winnersRes = await axios.get(`${API_BASE}/last-winners`);
+        const [winnersRes, totalRes] = await Promise.all([
+          axios.get(`${API_BASE}/last-winners`),
+          axios.get(`${API_BASE}/total-prizes-paid`),
+        ]);
         setWinners(winnersRes.data || { basic: [], medium: [], premium: [] });
-
-        const totalRes = await axios.get(`${API_BASE}/total-prizes-paid`);
         setTotalPaid(totalRes.data.totalPaid || 0);
       } catch (err) {
         console.error('Error fetching header data:', err);
       }
     };
-
     fetchData();
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
@@ -54,120 +48,79 @@ const LandingHeaderWinners = () => {
   const formatNumber = (num) => new Intl.NumberFormat('es-ES').format(Math.round(num || 0));
 
   return (
-    <div className="relative w-full max-w-7xl mx-auto px-2 md:px-6">
-      {/* Login button */}
-      <Button
-        asChild
-        className="absolute top-2 right-2 md:top-4 md:right-6 text-xs md:text-sm py-1.5 md:py-2 px-4 md:px-6 bg-gradient-to-r from-holy to-purple-600 text-black font-bold rounded-full shadow-lg hover:scale-105 transition duration-300 z-10"
-      >
-        <Link to="/login">{t('nav.login')}</Link>
-      </Button>
+    <div className="flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12">
 
-      {/* Desktop: horizontal layout */}
-      <div className="hidden md:flex items-center justify-between">
-        {/* IZQUIERDA: LOGO + TEXTO */}
-        <div className="text-left flex items-center gap-8">
-          <div className="relative">
-            <img
-              src={logo}
-              alt="Holypot Logo"
-              className="h-32 w-32 object-contain drop-shadow-2xl animate-float"
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
-            <div className="absolute -inset-8 rounded-full bg-holy/20 blur-3xl animate-pulse-slow-halo" />
-          </div>
-
-          <div>
-            <h1 className="text-5xl font-bold text-holy">Holypot Trading</h1>
-            <p className="text-xl text-gray-300 max-w-md">
-              {t('landing.tagline')}
-            </p>
-          </div>
-        </div>
-
-        {/* CENTRO: TOP3 ROTATIVO */}
-        <div className="flex flex-col items-center">
-          <p className="text-lg text-gray-400 mb-4">{t('landing.winnersTitle')} {levelNames[currentLevel]} {t('landing.winnersRotate')}</p>
-          {top3.length === 0 ? (
-            <div className="text-center py-8">
-              <Trophy className="w-20 h-20 mx-auto text-gray-600 mb-4" />
-              <p className="text-2xl text-gray-400">{t('landing.noWinners')}</p>
-              <p className="text-lg text-gray-500 mt-2">{t('landing.beFirst')}</p>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-4">
-              {top3[0] && (
-                <Card className="bg-cardDark border border-borderSubtle shadow-md hover:shadow-xl transition p-5 w-72">
-                  <Trophy className="w-14 h-14 mx-auto text-yellow-500 mb-2" />
-                  <p className="text-center font-bold text-xl">1er {top3[0].nickname}</p>
-                  <p className="text-center text-sm text-gray-400">{t('landing.prizePool')}: {formatNumber(top3[0].prize)} USDT</p>
-                </Card>
-              )}
-              <div className="flex gap-6">
-                {top3[1] && (
-                  <Card className="bg-cardDark border border-borderSubtle shadow-md hover:shadow-xl transition p-4 w-56">
-                    <p className="text-center font-bold text-lg">2do {top3[1].nickname}</p>
-                    <p className="text-center text-sm text-gray-400">{formatNumber(top3[1].prize)} USDT</p>
-                  </Card>
-                )}
-                {top3[2] && (
-                  <Card className="bg-cardDark border border-borderSubtle shadow-md hover:shadow-xl transition p-4 w-56">
-                    <p className="text-center font-bold text-lg">3er {top3[2].nickname}</p>
-                    <p className="text-center text-sm text-gray-400">{formatNumber(top3[2].prize)} USDT</p>
-                  </Card>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* DERECHA: TOTAL PREMIOS */}
-        <div className="text-right">
-          <p className="text-xl text-gray-400">{t('landing.totalPaid')}</p>
-          <p className="text-5xl font-bold text-holy">
-            {formatNumber(totalPaid)} USDT
-          </p>
-        </div>
+      {/* Total pagado */}
+      <div className="text-center md:text-left shrink-0">
+        <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">
+          {t('landing.totalPaid')}
+        </p>
+        <p className="text-4xl md:text-5xl font-extrabold text-[#D4AF37] tabular-nums leading-none">
+          {formatNumber(totalPaid)}
+        </p>
+        <p className="text-sm text-gray-400 mt-1">USDT</p>
       </div>
 
-      {/* Mobile: vertical stacked layout */}
-      <div className="md:hidden flex flex-col items-center gap-4 pt-8">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <img
-              src={logo}
-              alt="Holypot Logo"
-              className="h-16 w-16 object-contain drop-shadow-2xl animate-float"
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-holy">Holypot Trading</h1>
-            <p className="text-xs text-gray-300">{t('landing.tagline')}</p>
-          </div>
-        </div>
+      {/* Divider – visible on desktop */}
+      <div className="hidden md:block w-px h-20 bg-[#D4AF37]/15 shrink-0" />
 
-        <div className="text-center">
-          <p className="text-xs text-gray-400">{t('landing.totalPaid')}</p>
-          <p className="text-2xl font-bold text-holy">{formatNumber(totalPaid)} USDT</p>
-        </div>
+      {/* Winners */}
+      <div className="flex-1 w-full">
+        <p className="text-xs text-gray-500 uppercase tracking-widest text-center mb-4">
+          {t('landing.winnersTitle')} {levelNames[currentLevel]}{' '}
+          <span className="normal-case text-gray-600">{t('landing.winnersRotate')}</span>
+        </p>
 
         {top3.length === 0 ? (
-          <div className="text-center py-2">
-            <Trophy className="w-10 h-10 mx-auto text-gray-600 mb-2" />
-            <p className="text-sm text-gray-400">{t('landing.noWinners')}</p>
+          <div className="flex flex-col md:flex-row items-center justify-center gap-3 py-4">
+            <Trophy className="w-8 h-8 text-gray-700 shrink-0" />
+            <div className="text-center">
+              <p className="text-gray-400 text-sm">{t('landing.noWinners')}</p>
+              <p className="text-gray-600 text-xs mt-0.5">{t('landing.beFirst')}</p>
+            </div>
           </div>
         ) : (
-          <div className="flex gap-2 flex-wrap justify-center">
-            {top3.slice(0, 3).map((w, i) => (
-              <Card key={i} className="bg-cardDark border border-borderSubtle shadow-md p-2 w-28 text-center">
-                <p className="text-xs font-bold">#{i + 1} {w.nickname}</p>
-                <p className="text-xs text-gray-400">{formatNumber(w.prize)} USDT</p>
-              </Card>
-            ))}
+          <div className="flex flex-wrap justify-center gap-3">
+
+            {/* 1st */}
+            {top3[0] && (
+              <div className="flex items-center gap-3 bg-yellow-500/8 border border-yellow-500/25 rounded-2xl px-4 py-3 min-w-[160px]">
+                <div className="shrink-0">
+                  <Trophy className="w-5 h-5 text-yellow-500" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-white text-sm truncate">{top3[0].nickname}</p>
+                  <p className="text-yellow-400 text-xs tabular-nums">{formatNumber(top3[0].prize)} USDT</p>
+                </div>
+              </div>
+            )}
+
+            {/* 2nd */}
+            {top3[1] && (
+              <div className="flex items-center gap-3 bg-gray-400/5 border border-gray-500/20 rounded-2xl px-4 py-3 min-w-[140px]">
+                <span className="text-gray-400 font-extrabold text-sm shrink-0">2°</span>
+                <div className="min-w-0">
+                  <p className="font-bold text-white text-sm truncate">{top3[1].nickname}</p>
+                  <p className="text-gray-400 text-xs tabular-nums">{formatNumber(top3[1].prize)} USDT</p>
+                </div>
+              </div>
+            )}
+
+            {/* 3rd */}
+            {top3[2] && (
+              <div className="flex items-center gap-3 bg-amber-800/5 border border-amber-700/20 rounded-2xl px-4 py-3 min-w-[140px]">
+                <span className="text-amber-600 font-extrabold text-sm shrink-0">3°</span>
+                <div className="min-w-0">
+                  <p className="font-bold text-white text-sm truncate">{top3[2].nickname}</p>
+                  <p className="text-amber-600/70 text-xs tabular-nums">{formatNumber(top3[2].prize)} USDT</p>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
       </div>
+
     </div>
   );
 };
