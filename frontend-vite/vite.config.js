@@ -14,6 +14,8 @@ export default defineConfig({
     port: process.env.PORT || 4173,                   // puerto Render o local
     allowedHosts: [                                   // permite estos hosts
       'holypot-landing.onrender.com',
+      'holypottrading.com',
+      'www.holypottrading.com',
       'localhost',
       '.onrender.com'                                 // wildcard para todos subdominios Render (pro)
     ]
