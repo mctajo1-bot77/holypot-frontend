@@ -154,22 +154,21 @@ const LandingPage = () => {
           <div className="inline-flex items-center gap-2 bg-[#D4AF37]/10 border border-[#D4AF37]/30 rounded-full px-4 py-1.5 mb-6">
             <Shield className="w-3.5 h-3.5 text-[#D4AF37]" />
             <span className="text-xs md:text-sm text-[#D4AF37] font-semibold tracking-wide">
-              Competencia de habilidad · No gambling
+              {t('landing.skillBased')}
             </span>
           </div>
 
           {/* Headline */}
           <h1 className="text-5xl md:text-7xl font-extrabold mb-5 leading-tight tracking-tight">
-            <span className="text-white">Compite.</span>
+            <span className="text-white">{t('landing.compete')}</span>
             {' '}
-            <span className="text-[#D4AF37]">Gana.</span>
+            <span className="text-[#D4AF37]">{t('landing.earn')}</span>
             {' '}
-            <span className="text-white">Retira.</span>
+            <span className="text-white">{t('landing.withdraw')}</span>
           </h1>
 
           <p className="text-lg md:text-2xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
-            {t('landing.tagline')} – premios reales en USDT
-            <br className="hidden md:block" /> directamente a tu wallet
+            {t('landing.tagline')} – {t('landing.subtitle2')}
           </p>
 
           {/* Countdown badge */}
@@ -182,9 +181,9 @@ const LandingPage = () => {
           {/* Trust strip */}
           <div className="flex flex-wrap justify-center gap-5 mb-10">
             {[
-              { icon: <Shield className="w-4 h-4" />, label: 'Basado en habilidad' },
-              { icon: <Lock className="w-4 h-4" />, label: 'Pagos USDT verificados' },
-              { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Auditable on-chain' },
+              { icon: <Shield className="w-4 h-4" />, label: t('landing.trustSkill') },
+              { icon: <Lock className="w-4 h-4" />, label: t('landing.trustPayment') },
+              { icon: <CheckCircle2 className="w-4 h-4" />, label: t('landing.trustAuditable') },
             ].map(({ icon, label }) => (
               <div key={label} className="flex items-center gap-1.5 text-gray-400 text-sm">
                 <span className="text-[#D4AF37]">{icon}</span>
@@ -198,7 +197,7 @@ const LandingPage = () => {
             onClick={() => document.getElementById('competitions')?.scrollIntoView({ behavior: 'smooth' })}
             className="bg-gradient-to-r from-[#D4AF37] to-[#FFD700] text-black text-lg md:text-xl px-10 py-6 font-extrabold rounded-full shadow-2xl shadow-[#D4AF37]/20 hover:scale-105 transition duration-300"
           >
-            Ver Competencias <ChevronDown className="ml-2 w-5 h-5" />
+            {t('landing.seeCompetitions')} <ChevronDown className="ml-2 w-5 h-5" />
           </Button>
         </div>
 
@@ -435,7 +434,7 @@ const LandingPage = () => {
           onClick={() => setShowForm(false)}
         >
           <div
-            className="bg-[#0F172A]/95 backdrop-blur-xl border border-[#D4AF37]/20 rounded-2xl md:rounded-3xl shadow-2xl p-5 md:p-10 max-w-lg w-full max-h-[95vh] overflow-y-auto relative"
+            className="bg-[#0F172A]/95 backdrop-blur-xl border border-[#D4AF37]/20 rounded-2xl md:rounded-3xl shadow-2xl p-5 md:p-10 max-w-lg w-full max-h-[98vh] overflow-y-auto relative"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -453,7 +452,7 @@ const LandingPage = () => {
               {selectedLevel.toUpperCase()}
             </p>
 
-            <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
               <Input type="email" placeholder={t('form.email')} required value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value })}
                 className="bg-black/40 border-[#2A2A2A] text-white" />
@@ -464,9 +463,9 @@ const LandingPage = () => {
                 onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
                 className="bg-black/40 border-[#2A2A2A] text-white" />
 
-              {/* Red de pago */}
+              {/* Payment Network */}
               <div>
-                <p className="text-white text-sm mb-2 font-semibold">Red de pago USDT</p>
+                <p className="text-white text-sm mb-2 font-semibold">{t('form.paymentNetwork')}</p>
                 <div className="grid grid-cols-3 gap-2">
                   {NETWORKS.map(net => (
                     <button
@@ -524,7 +523,7 @@ const LandingPage = () => {
                 onChange={e => setForm({ ...form, birthDate: e.target.value })}
                 className="bg-black/40 border-[#2A2A2A] text-white" />
 
-              <div className="flex justify-center mt-4">
+              <div className="flex justify-center mt-2 mb-2">
                 <HCaptcha
                   sitekey={HCAPTCHA_SITEKEY}
                   onVerify={(token) => setCaptchaToken(token)}
@@ -532,26 +531,28 @@ const LandingPage = () => {
                 />
               </div>
 
-              <div className="flex items-center space-x-3">
+              <div className="flex items-start space-x-2 mt-3 mb-3 p-2 bg-black/30 rounded-lg border border-[#2A2A2A]">
                 <Checkbox id="terms" checked={form.acceptTerms}
-                  onCheckedChange={checked => setForm({ ...form, acceptTerms: checked })} />
-                <Label htmlFor="terms" className="text-gray-300 text-sm">
+                  onCheckedChange={checked => setForm({ ...form, acceptTerms: checked })}
+                  className="mt-1 shrink-0"
+                />
+                <Label htmlFor="terms" className="text-gray-300 text-xs md:text-sm cursor-pointer">
                   {t('form.acceptTerms')}{' '}
-                  <a href="/terms" className="text-[#D4AF37] underline">{t('form.termsLink')}</a>
+                  <a href="/terms" className="text-[#D4AF37] underline hover:text-[#FFD700]">{t('form.termsLink')}</a>
                 </Label>
               </div>
 
-              <div className="flex gap-3 pt-3">
+              <div className="flex gap-2 md:gap-3 pt-1">
                 <Button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="flex-1 bg-[#1E293B] hover:bg-[#2A3A4A] text-white text-base py-4 rounded-2xl border border-[#2A2A2A]"
+                  className="flex-1 bg-[#1E293B] hover:bg-[#2A3A4A] text-white text-sm md:text-base py-3 md:py-4 rounded-xl md:rounded-2xl border border-[#2A2A2A] font-semibold"
                 >
                   {t('form.cancel')}
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-[#D4AF37] to-purple-600 text-black text-base py-4 font-extrabold rounded-2xl hover:scale-105 transition"
+                  className="flex-1 bg-gradient-to-r from-[#D4AF37] to-purple-600 text-black text-sm md:text-base py-3 md:py-4 font-extrabold rounded-xl md:rounded-2xl hover:scale-105 transition"
                   disabled={!captchaToken}
                 >
                   {t('form.payAndCompete')}
