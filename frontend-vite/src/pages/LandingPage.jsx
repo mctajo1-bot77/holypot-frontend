@@ -104,7 +104,9 @@ const LandingPage = () => {
       localStorage.setItem('holypotEntryId', res.data.entryId);
       window.open(res.data.paymentUrl, '_blank');
     } catch (err) {
-      alert('Error: ' + (err.response?.data?.error || err.message));
+      const errMsg = err.response?.data?.error || err.message;
+      const errDetail = err.response?.data?.details;
+      alert('Error: ' + errMsg + (errDetail ? `\nDetalle: ${JSON.stringify(errDetail)}` : ''));
       captchaRef.current?.resetCaptcha();
       setCaptchaToken(null);
     }
