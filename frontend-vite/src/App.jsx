@@ -88,6 +88,11 @@ function Dashboard() {
   const [showWinModal, setShowWinModal] = useState(false);
   const [latestWin, setLatestWin] = useState(null);
   const [adminTestMode, setAdminTestMode] = useState(false);
+  const [testEntryId, setTestEntryId] = useState('');
+  const [chartFullscreen, setChartFullscreen] = useState(false);
+
+  // entryId efectivo: en test mode usa el testEntryId temporal
+  const activeEntryId = adminTestMode && testEntryId ? testEntryId : entryId;
 
   const { calculateRealRisk, calculateOptimalLotSize, instrumentInfo } = useRiskCalculator(
     symbol, 
@@ -280,9 +285,8 @@ function Dashboard() {
   }, [isAdminSession]);
 
   const openTrade = async () => {
-    // ✅ CORRECCIÓN: Bloquear si es admin o no hay entryId
-    if (!entryId) {
-      alert('⚠️ No puedes abrir trades en modo admin. Inicia sesión como usuario normal.');
+    if (!activeEntryId) {
+      alert('⚠️ No hay entry activa. En test mode presiona "Activar" primero.');
       return;
     }
 
@@ -332,7 +336,7 @@ function Dashboard() {
 
     try {
       const res = await axios.post(`${API_BASE}/open-trade`, {
-        entryId,
+        entryId: activeEntryId,
         symbol,
         direction,
         lotSize,
@@ -397,17 +401,38 @@ function Dashboard() {
               : 'bg-yellow-500/90 border-yellow-600'
           }`}>
             <p className="text-black font-bold text-sm">
-              {adminTestMode ? '🧪 TEST MODE ACTIVO' : t('dash.adminMode')}
+              {adminTestMode ? `🧪 TEST MODE — entry: ${testEntryId.slice(0,8)}…` : t('dash.adminMode')}
             </p>
             <button
-              onClick={() => setAdminTestMode(m => !m)}
+              onClick={async () => {
+                if (adminTestMode) {
+                  // Desactivar: limpiar entry de test
+                  setAdminTestMode(false);
+                  setTestEntryId('');
+                  setPositions([]);
+                  setVirtualCapital(10000);
+                } else {
+                  // Activar: crear entry de test en backend
+                  try {
+                    const res = await axios.post(`${API_BASE}/manual-create-confirm`, {
+                      email: 'admin-test@holypot.com',
+                      walletAddress: '0x0000000000000000000000000000000000000000',
+                      level: 'basic'
+                    }, { withCredentials: true });
+                    setTestEntryId(res.data.entryId);
+                    setAdminTestMode(true);
+                  } catch (err) {
+                    alert('Error creando entry de test: ' + (err.response?.data?.error || err.message));
+                  }
+                }
+              }}
               className={`text-xs font-bold px-2 py-1 rounded transition ${
                 adminTestMode
                   ? 'bg-white text-red-600 hover:bg-red-100'
                   : 'bg-black/20 text-black hover:bg-black/30'
               }`}
             >
-              {adminTestMode ? 'Desactivar' : 'Test mode'}
+              {adminTestMode ? 'Desactivar' : 'Activar test mode'}
             </button>
           </div>
         )}
@@ -649,12 +674,18 @@ function Dashboard() {
                     positions={positions}
                     currentPrice={currentPrice}
                     virtualCapital={virtualCapital}
+                    isFullscreen={chartFullscreen}
+                    onToggleFullscreen={() => setChartFullscreen(f => !f)}
                   />
                 </div>
               </div>
 
-              {/* New Trade — 1/3 */}
-              <div className="bg-[#161616] border border-[#2A2A2A] rounded-2xl p-5 flex flex-col gap-4">
+              {/* New Trade — 1/3 (flotante en fullscreen) */}
+              <div className={
+                chartFullscreen
+                  ? 'fixed right-4 top-1/2 -translate-y-1/2 z-[10000] w-80 max-h-[90vh] overflow-y-auto bg-[#161616] border border-[#2A2A2A] rounded-2xl p-5 flex flex-col gap-4 shadow-2xl'
+                  : 'bg-[#161616] border border-[#2A2A2A] rounded-2xl p-5 flex flex-col gap-4'
+              }>
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-[#FFD700]/15 flex items-center justify-center">
                     <Target className="h-4 w-4 text-[#FFD700]" />
@@ -698,7 +729,7 @@ function Dashboard() {
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       onClick={() => setDirection('long')}
-                      disabled={!entryId}
+                      disabled={!activeEntryId}
                       className={`h-10 font-bold text-sm rounded-lg transition-all ${
                         direction === 'long'
                           ? 'bg-[#00C853] text-black'
@@ -709,7 +740,7 @@ function Dashboard() {
                     </Button>
                     <Button
                       onClick={() => setDirection('short')}
-                      disabled={!entryId}
+                      disabled={!activeEntryId}
                       className={`h-10 font-bold text-sm rounded-lg transition-all ${
                         direction === 'short'
                           ? 'bg-red-500 text-white'
@@ -728,7 +759,7 @@ function Dashboard() {
                     <Input
                       type="number" step="0.00001" placeholder="ej: 1.10500"
                       value={targetPrice} onChange={e => setTargetPrice(e.target.value)}
-                      disabled={!entryId}
+                      disabled={!activeEntryId}
                       className="bg-[#0F172A] border-[#2A2A2A] text-white h-9 text-sm"
                     />
                   </div>
@@ -744,7 +775,7 @@ function Dashboard() {
                     <Slider
                       min={0.01} max={1.0} step={0.01} value={[lotSize]}
                       onValueChange={(v) => setLotSize(v[0])}
-                      disabled={!entryId}
+                      disabled={!activeEntryId}
                       className="flex-1"
                     />
                     <Input
@@ -755,7 +786,7 @@ function Dashboard() {
                         if (isNaN(val)) val = 0.01;
                         setLotSize(Math.max(0.01, Math.min(1.0, val)));
                       }}
-                      disabled={!entryId}
+                      disabled={!activeEntryId}
                       className="w-20 bg-[#0F172A] border-[#2A2A2A] text-white h-9 text-sm text-center"
                     />
                   </div>
@@ -795,7 +826,7 @@ function Dashboard() {
                     <label className="text-xs text-gray-500 mb-1.5 block">{t('dash.takeProfit')}</label>
                     <Input type="number" step="0.00001" placeholder="TP"
                       value={takeProfit} onChange={e => setTakeProfit(e.target.value)}
-                      disabled={!entryId}
+                      disabled={!activeEntryId}
                       className="bg-[#0F172A] border-[#2A2A2A] text-white h-9 text-sm"
                     />
                   </div>
@@ -803,7 +834,7 @@ function Dashboard() {
                     <label className="text-xs text-gray-500 mb-1.5 block">{t('dash.stopLoss')}</label>
                     <Input type="number" step="0.00001" placeholder="SL"
                       value={stopLoss} onChange={e => setStopLoss(e.target.value)}
-                      disabled={!entryId}
+                      disabled={!activeEntryId}
                       className="bg-[#0F172A] border-[#2A2A2A] text-white h-9 text-sm"
                     />
                   </div>
@@ -812,14 +843,14 @@ function Dashboard() {
                 {/* Open trade button */}
                 <Button
                   onClick={openTrade}
-                  disabled={!entryId || riskInfo.riskPercent > 10}
+                  disabled={!activeEntryId || riskInfo.riskPercent > 10}
                   className={`w-full h-11 font-bold text-sm rounded-xl mt-auto transition-all ${
-                    !entryId || riskInfo.riskPercent > 10
+                    !activeEntryId || riskInfo.riskPercent > 10
                       ? 'bg-[#2A2A2A] text-gray-500 cursor-not-allowed'
                       : 'bg-gradient-to-r from-[#FFD700] to-[#f59e0b] text-black hover:opacity-90 hover:shadow-[0_0_20px_rgba(255,215,0,0.25)]'
                   }`}
                 >
-                  {!entryId ? t('dash.viewOnly') : riskInfo.riskPercent > 10 ? t('dash.riskTooHigh') : t('dash.openTrade')}
+                  {!activeEntryId ? t('dash.viewOnly') : riskInfo.riskPercent > 10 ? t('dash.riskTooHigh') : t('dash.openTrade')}
                 </Button>
               </div>
             </div>

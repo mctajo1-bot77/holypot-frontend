@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-function TradingViewChart({ symbol, currentPrice, virtualCapital = 10000 }) {
+function TradingViewChart({ symbol, currentPrice, virtualCapital = 10000, isFullscreen = false, onToggleFullscreen }) {
   const containerRef = useRef(null);
   const widgetRef = useRef(null);
   const [tvReady, setTvReady] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Mapeo symbols OANDA (datos precisos + consistentes con backend Finnhub)
   const tvSymbolMap = {
@@ -96,7 +95,7 @@ function TradingViewChart({ symbol, currentPrice, virtualCapital = 10000 }) {
 
       {/* Botón fullscreen */}
       <button
-        onClick={() => setIsFullscreen(f => !f)}
+        onClick={() => onToggleFullscreen && onToggleFullscreen()}
         className="absolute top-3 right-3 z-20 bg-black/70 hover:bg-black/90 border border-holy/40 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition"
         title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
       >
