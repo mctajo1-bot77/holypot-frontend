@@ -102,11 +102,11 @@ function TradingViewChart({ symbol, currentPrice, virtualCapital = 10000, isFull
         {isFullscreen ? '✕ Salir' : '⛶ Fullscreen'}
       </button>
 
-      {/* Container del widget – ocupa TODO el espacio disponible */}
+      {/* Container del widget – cuando fullscreen deja 340px libre en la derecha para el form flotante */}
       <div
         id="tradingview_chart_container"
         ref={containerRef}
-        className="absolute inset-0 w-full h-full"
+        className={`absolute inset-0 ${isFullscreen ? 'right-[340px]' : 'right-0'}`}
       />
     </div>
   );
