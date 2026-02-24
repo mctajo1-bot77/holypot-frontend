@@ -87,6 +87,7 @@ function Dashboard() {
   const [myPayouts, setMyPayouts] = useState([]);
   const [showWinModal, setShowWinModal] = useState(false);
   const [latestWin, setLatestWin] = useState(null);
+  const [adminTestMode, setAdminTestMode] = useState(false);
 
   const { calculateRealRisk, calculateOptimalLotSize, instrumentInfo } = useRiskCalculator(
     symbol, 
@@ -389,9 +390,25 @@ function Dashboard() {
         </div>
 
         {/* ── ADMIN ALERT ────────────────────────────────────────────────────── */}
-        {isAdminSession && !entryId && (
-          <div className="fixed top-20 md:top-24 left-1/2 -translate-x-1/2 z-50 bg-yellow-500/90 backdrop-blur-md border border-yellow-600 px-4 md:px-8 py-2.5 rounded-lg shadow-2xl max-w-[95vw]">
-            <p className="text-black font-bold text-sm text-center">{t('dash.adminMode')}</p>
+        {isAdminSession && (
+          <div className={`fixed top-20 md:top-24 left-1/2 -translate-x-1/2 z-50 backdrop-blur-md border px-4 md:px-8 py-2.5 rounded-lg shadow-2xl max-w-[95vw] flex items-center gap-3 ${
+            adminTestMode
+              ? 'bg-red-600/90 border-red-700'
+              : 'bg-yellow-500/90 border-yellow-600'
+          }`}>
+            <p className="text-black font-bold text-sm">
+              {adminTestMode ? '🧪 TEST MODE ACTIVO' : t('dash.adminMode')}
+            </p>
+            <button
+              onClick={() => setAdminTestMode(m => !m)}
+              className={`text-xs font-bold px-2 py-1 rounded transition ${
+                adminTestMode
+                  ? 'bg-white text-red-600 hover:bg-red-100'
+                  : 'bg-black/20 text-black hover:bg-black/30'
+              }`}
+            >
+              {adminTestMode ? 'Desactivar' : 'Test mode'}
+            </button>
           </div>
         )}
 

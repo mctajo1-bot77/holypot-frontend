@@ -92,6 +92,7 @@ const RulesPage = () => {
               <li>{t('rules.trading_tpsl')}</li>
               <li>{t('rules.trading_lotsize')}</li>
               <li>{t('rules.trading_minclosed')}</li>
+              <li className="text-red-400 font-semibold">{t('rules.trading_drawdown')}</li>
             </ul>
           </li>
 
