@@ -73,6 +73,23 @@ const EditPositionModal = ({
   const [initialized,     setInitialized]     = useState(false);
   // Toggle: true = ver mi entrada (con líneas), false = modo análisis limpio
   const [showEntryLines,  setShowEntryLines]  = useState(true);
+  // Indicador visual de auto-guardado tras arrastrar
+  const [dragSaved,       setDragSaved]       = useState(null); // 'tp' | 'sl' | null
+  const [dragError,       setDragError]       = useState(false);
+
+  // Refs con los últimos valores para leerlos dentro de event handlers sin deps
+  const editTakeProfitRef = useRef(editTakeProfit);
+  const editStopLossRef   = useRef(editStopLoss);
+  const editLotSizeRef    = useRef(editLotSize);
+  const isDraggingRef     = useRef(null);
+  const showEntryLinesRef = useRef(true);
+
+  // Mantener refs sincronizados con el estado actual
+  useEffect(() => { editTakeProfitRef.current = editTakeProfit; }, [editTakeProfit]);
+  useEffect(() => { editStopLossRef.current   = editStopLoss;   }, [editStopLoss]);
+  useEffect(() => { editLotSizeRef.current    = editLotSize;    }, [editLotSize]);
+  useEffect(() => { isDraggingRef.current     = isDragging;     }, [isDragging]);
+  useEffect(() => { showEntryLinesRef.current = showEntryLines; }, [showEntryLines]);
 
   const equityLive    = Math.floor(virtualCapital).toLocaleString('es-ES');
   const returnPercent = ((virtualCapital - 10000) / 10000 * 100).toFixed(2);
@@ -355,7 +372,7 @@ const EditPositionModal = ({
     }
   }, [currentPrice, trailingActive, trailingPips, position?.direction, editStopLoss]);
 
-  // ─── Drag SL/TP sobre el gráfico ───────────────────────────────────────────
+  // ─── Drag SL/TP sobre el gráfico (con auto-save al soltar) ────────────────
   useEffect(() => {
     if (!open || !chartRef.current || !chartContainerRef.current) return;
 
@@ -369,62 +386,90 @@ const EditPositionModal = ({
       return seriesRef.current?.coordinateToPrice(e.clientY - rect.top) ?? null;
     };
 
+    // Usa refs para leer siempre el valor más reciente sin re-attachar listeners
     const handleMouseMove = (e) => {
-      if (!showEntryLines) { container.style.cursor = 'default'; return; }
+      if (!showEntryLinesRef.current) { container.style.cursor = 'default'; return; }
       const price = getPriceFromMouse(e);
       if (price === null) return;
 
-      if (isDragging === 'tp') {
+      const dragging = isDraggingRef.current;
+      if (dragging === 'tp') {
         container.style.cursor = 'grabbing';
-        // Validar lógica: LONG → TP encima de entry; SHORT → TP debajo de entry
         if (dir === 'long'  && price > entry) setEditTakeProfit(price.toFixed(4));
         if (dir === 'short' && price < entry) setEditTakeProfit(price.toFixed(4));
-      } else if (isDragging === 'sl') {
+      } else if (dragging === 'sl') {
         container.style.cursor = 'grabbing';
-        // Validar lógica: LONG → SL debajo de entry; SHORT → SL encima de entry
         if (dir === 'long'  && price < entry && price > 0) setEditStopLoss(price.toFixed(4));
         if (dir === 'short' && price > entry)              setEditStopLoss(price.toFixed(4));
       } else {
-        const overTP = editTakeProfit && Math.abs(price - parseFloat(editTakeProfit)) < tolerance;
-        const overSL = editStopLoss   && Math.abs(price - parseFloat(editStopLoss))   < tolerance;
+        const tp  = editTakeProfitRef.current;
+        const sl  = editStopLossRef.current;
+        const overTP = tp && Math.abs(price - parseFloat(tp)) < tolerance;
+        const overSL = sl && Math.abs(price - parseFloat(sl)) < tolerance;
         container.style.cursor = overTP || overSL ? 'ns-resize' : 'default';
       }
     };
 
     const handleMouseDown = (e) => {
-      if (!showEntryLines) return;
+      if (!showEntryLinesRef.current) return;
       const price = getPriceFromMouse(e);
       if (price === null) return;
 
-      if (editTakeProfit && Math.abs(price - parseFloat(editTakeProfit)) < tolerance) {
+      const tp = editTakeProfitRef.current;
+      const sl = editStopLossRef.current;
+
+      if (tp && Math.abs(price - parseFloat(tp)) < tolerance) {
         setIsDragging('tp');
         soundDragStart.play().catch(() => {});
-      } else if (editStopLoss && Math.abs(price - parseFloat(editStopLoss)) < tolerance) {
+      } else if (sl && Math.abs(price - parseFloat(sl)) < tolerance) {
         setIsDragging('sl');
         soundDragStart.play().catch(() => {});
       }
     };
 
-    const handleMouseUp = () => {
-      if (isDragging) {
-        soundDragEnd.play().catch(() => {});
-        setIsDragging(null);
-        container.style.cursor = 'default';
+    // Auto-save cuando se suelta la línea
+    const handleMouseUp = async () => {
+      const wasDragging = isDraggingRef.current;
+      if (!wasDragging) return;
+
+      soundDragEnd.play().catch(() => {});
+      setIsDragging(null);
+      container.style.cursor = 'default';
+
+      // Leer valores actualizados desde refs
+      const tp  = editTakeProfitRef.current ? parseFloat(editTakeProfitRef.current) : null;
+      const sl  = editStopLossRef.current   ? parseFloat(editStopLossRef.current)   : null;
+      const lot = parseFloat(editLotSizeRef.current) || position?.lotSize;
+
+      try {
+        await apiClient.post('/edit-position', {
+          positionId: position.id,
+          lotSize:    lot,
+          takeProfit: tp,
+          stopLoss:   sl,
+        });
+        setDragSaved(wasDragging);
+        setTimeout(() => setDragSaved(null), 2000);
+      } catch (err) {
+        console.error('Auto-save drag failed:', err);
+        setDragError(true);
+        setTimeout(() => setDragError(false), 3000);
       }
     };
 
-    container.addEventListener('mousemove', handleMouseMove);
-    container.addEventListener('mousedown', handleMouseDown);
-    container.addEventListener('mouseup',   handleMouseUp);
+    container.addEventListener('mousemove',  handleMouseMove);
+    container.addEventListener('mousedown',  handleMouseDown);
+    container.addEventListener('mouseup',    handleMouseUp);
     container.addEventListener('mouseleave', handleMouseUp);
 
     return () => {
-      container.removeEventListener('mousemove', handleMouseMove);
-      container.removeEventListener('mousedown', handleMouseDown);
-      container.removeEventListener('mouseup',   handleMouseUp);
+      container.removeEventListener('mousemove',  handleMouseMove);
+      container.removeEventListener('mousedown',  handleMouseDown);
+      container.removeEventListener('mouseup',    handleMouseUp);
       container.removeEventListener('mouseleave', handleMouseUp);
     };
-  }, [open, editTakeProfit, editStopLoss, isDragging, position?.symbol, position?.direction, position?.entryPrice, showEntryLines]);
+  // Solo re-attachar si cambian datos estáticos de la posición o si se abre/cierra
+  }, [open, position?.id, position?.symbol, position?.direction, position?.entryPrice, position?.lotSize]);
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const handleBreakeven = () => {
@@ -561,6 +606,23 @@ const EditPositionModal = ({
                 <p className="text-xs text-holy animate-pulse">Cargando...</p>
               </div>
             )}
+
+            {/* Indicador de auto-guardado */}
+            {dragSaved && (
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+                <span className="flex items-center gap-1.5 bg-profit/20 border border-profit/50 text-profit text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg animate-pulse">
+                  ✓ {dragSaved === 'tp' ? 'TP' : 'SL'} guardado automáticamente
+                </span>
+              </div>
+            )}
+            {dragError && (
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+                <span className="flex items-center gap-1.5 bg-red-500/20 border border-red-500/50 text-red-400 text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg">
+                  ✕ Error al guardar — usa el botón manual
+                </span>
+              </div>
+            )}
+
             {showEntryLines && (
               <div className="absolute bottom-2 left-2 z-10 flex gap-2 pointer-events-none">
                 <span className="text-[10px] bg-black/60 px-1.5 py-0.5 rounded text-yellow-400">— Entry</span>
