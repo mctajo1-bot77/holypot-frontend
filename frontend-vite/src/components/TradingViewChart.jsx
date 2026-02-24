@@ -4,6 +4,7 @@ function TradingViewChart({ symbol, currentPrice, virtualCapital = 10000 }) {
   const containerRef = useRef(null);
   const widgetRef = useRef(null);
   const [tvReady, setTvReady] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Mapeo symbols OANDA (datos precisos + consistentes con backend Finnhub)
   const tvSymbolMap = {
@@ -73,7 +74,11 @@ function TradingViewChart({ symbol, currentPrice, virtualCapital = 10000 }) {
   }, [tvReady, tvSymbol]);
 
   return (
-    <div className="relative w-full h-full min-h-[500px] bg-black overflow-hidden rounded-3xl">
+    <div className={
+      isFullscreen
+        ? 'fixed inset-0 z-[9999] bg-black'
+        : 'relative w-full h-full min-h-[500px] bg-black overflow-hidden rounded-3xl'
+    }>
       {/* Equity live flotante (mejor posición y estilo) */}
       <div className="absolute bottom-4 left-4 z-20 bg-black/80 backdrop-blur-lg border border-holy/50 rounded-xl px-6 py-4 shadow-2xl">
         <p className="text-white text-lg font-bold">
@@ -88,6 +93,15 @@ function TradingViewChart({ symbol, currentPrice, virtualCapital = 10000 }) {
           </p>
         )}
       </div>
+
+      {/* Botón fullscreen */}
+      <button
+        onClick={() => setIsFullscreen(f => !f)}
+        className="absolute top-3 right-3 z-20 bg-black/70 hover:bg-black/90 border border-holy/40 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+        title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+      >
+        {isFullscreen ? '✕ Salir' : '⛶ Fullscreen'}
+      </button>
 
       {/* Container del widget – ocupa TODO el espacio disponible */}
       <div
