@@ -65,6 +65,7 @@ const AdminDashboard = () => {
   const [batches, setBatches] = useState([]);
   const [settlementLoading, setSettlementLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [nowpaymentsBalance, setNowpaymentsBalance] = useState(null);
 
   // ── UI-only state ──────────────────────────────────────────────────────────
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -120,6 +121,12 @@ const AdminDashboard = () => {
         setPayouts(payoutsRes.data || []);
       } catch {
         setPayouts([]);
+      }
+      try {
+        const balRes = await apiClient.get('/admin/nowpayments-status');
+        setNowpaymentsBalance(balRes.data?.balance || null);
+      } catch {
+        setNowpaymentsBalance(null);
       }
       await fetchSettlement();
       lastFetchedRef.current = Date.now();
@@ -372,8 +379,8 @@ const AdminDashboard = () => {
       {/* ══════════════════════════════════════════════════════════════════════ */}
       <div className="max-w-7xl mx-auto px-3 md:px-6 py-6 md:py-8">
 
-        {/* ── OVERVIEW CARDS (4) ─────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        {/* ── OVERVIEW CARDS ──────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
 
           <div className={`${card} p-4 md:p-5`}>
             <div className="flex items-center gap-2 mb-2">
@@ -423,6 +430,31 @@ const AdminDashboard = () => {
               {formatNumber(data.overview?.prizePoolTotal ?? 0)}
               <span className="text-xs text-gray-500 font-normal ml-1">USDT</span>
             </p>
+          </div>
+
+          {/* Saldo real NowPayments */}
+          <div className={`${card} p-4 md:p-5 col-span-2 md:col-span-1`}>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-lg bg-cyan-500/15 flex items-center justify-center">
+                <DollarSign className="h-3.5 w-3.5 text-cyan-400" />
+              </div>
+              <span className="text-xs text-gray-500">Saldo NowPayments</span>
+            </div>
+            {nowpaymentsBalance ? (
+              <>
+                <p className="text-2xl md:text-3xl font-bold text-cyan-400 tabular-nums">
+                  {formatNumber(nowpaymentsBalance.usdtAvailable ?? 0)}
+                  <span className="text-xs text-gray-500 font-normal ml-1">USDT</span>
+                </p>
+                {nowpaymentsBalance.usdtPending > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Pendiente: {formatNumber(nowpaymentsBalance.usdtPending)} USDT
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-2xl font-bold text-gray-600">—</p>
+            )}
           </div>
         </div>
 
