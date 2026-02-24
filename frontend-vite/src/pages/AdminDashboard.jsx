@@ -178,6 +178,26 @@ const AdminDashboard = () => {
     }
   };
 
+  // Crear entry de test y abrir /dashboard como usuario real (para probar modales)
+  const activateTestMode = async () => {
+    try {
+      const createRes = await apiClient.post('/manual-create-confirm', {
+        email: 'admin-test@holypot.com',
+        walletAddress: '0x0000000000000000000000000000000000000000',
+        level: 'basic'
+      });
+      const testEntryId = createRes.data.entryId;
+      const tokenRes = await apiClient.post('/admin/generate-user-token', { entryId: testEntryId });
+      const adminToken = localStorage.getItem('holypotToken');
+      localStorage.setItem('holypotAdminToken', adminToken);
+      localStorage.setItem('holypotToken', tokenRes.data.token);
+      localStorage.setItem('holypotEntryId', testEntryId);
+      window.open('/dashboard', '_blank');
+    } catch (err) {
+      showToast('error', 'Error test mode: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
   const exportCSV = (level) => {
     const csv = data?.competencias?.[level]?.top3CSV || '';
     const blob = new Blob([`Wallet,Amount USDT\n${csv}`], { type: 'text/csv' });
@@ -362,6 +382,14 @@ const AdminDashboard = () => {
             >
               <RefreshCw className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{t('admin.refresh')}</span>
+            </Button>
+            <Button
+              size="sm"
+              className="bg-purple-600/20 text-purple-300 hover:bg-purple-600/40 border border-purple-600/40 font-bold text-xs gap-1.5"
+              onClick={activateTestMode}
+              title="Crea una entry de test y abre el dashboard como usuario real en nueva pestaña"
+            >
+              🧪 <span className="hidden sm:inline">Test mode</span>
             </Button>
             <Button
               size="sm"
