@@ -403,17 +403,23 @@ function Dashboard() {
     const lot = position.lotSize || 0.01;
     const config = instrumentConfig[position.symbol] || instrumentConfig['EURUSD'];
 
-    if (!sl || !entryPrice) {
-      // Sin SL: 100 pips por defecto (igual que backend)
-      const defaultPips = 100;
-      const riskUSD     = defaultPips * config.pipValue * lot;
-      const riskPercent = (riskUSD / virtualCapital) * 100;
-      return { riskPercent, riskUSD, distancePips: defaultPips };
+    if (!entryPrice || entryPrice === 0) {
+      return { riskPercent: 0, riskUSD: 0, distancePips: 0 };
+    }
+
+    if (!sl) {
+      // Sin SL: estima con 100 pips convertidos a distancia de precio
+      const defaultPriceDistance = 100 / config.pipMultiplier;
+      const percentMove = (defaultPriceDistance / entryPrice) * 100;
+      const riskPercent = lot * percentMove;
+      const riskUSD     = (virtualCapital * riskPercent) / 100;
+      return { riskPercent, riskUSD, distancePips: 100 };
     }
 
     const distancePips = Math.abs(entryPrice - sl) * config.pipMultiplier;
-    const riskUSD      = distancePips * config.pipValue * lot;
-    const riskPercent  = (riskUSD / virtualCapital) * 100;
+    const percentMove  = (Math.abs(entryPrice - sl) / entryPrice) * 100;
+    const riskPercent  = lot * percentMove;
+    const riskUSD      = (virtualCapital * riskPercent) / 100;
 
     return { riskPercent, riskUSD, distancePips };
   };
@@ -977,7 +983,7 @@ function Dashboard() {
                               <span className={`text-sm ${positionRisk.riskPercent > 5 ? 'text-red-400' : 'text-gray-300'}`}>
                                 {pos.lotSize || 0.01}
                                 <span className="text-xs ml-1 text-gray-500">
-                                  ({pos.stopLoss ? positionRisk.riskPercent.toFixed(1) : (pos.lotSize * 10).toFixed(1)}%)
+                                  ({positionRisk.riskPercent.toFixed(1)}%)
                                 </span>
                               </span>
                               {positionRisk.riskPercent > 5 && <AlertTriangle className="inline w-3.5 h-3.5 ml-1 text-red-400" />}
