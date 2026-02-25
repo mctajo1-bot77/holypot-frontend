@@ -117,6 +117,18 @@ const EditPositionModal = ({
     }
   }, [open]);
 
+  // ─── Resetear inputs cada vez que el modal abre con una posición ────────────
+  // useState solo inicializa una vez; sin esto los inputs quedan stale al reabrir
+  useEffect(() => {
+    if (open && position) {
+      const d = getPriceDecimals(position.symbol);
+      setEditStopLoss(position.stopLoss   ? position.stopLoss.toFixed(d)   : '');
+      setEditTakeProfit(position.takeProfit ? position.takeProfit.toFixed(d) : '');
+      setEditLotSize((position.lotSize || 0.01).toFixed(2));
+      setTrailingActive(false);
+    }
+  }, [open, position?.id]);
+
   // ─── Cargar velas (poll 1 s) ────────────────────────────────────────────────
   useEffect(() => {
     if (!open || !position?.symbol) {
@@ -426,14 +438,12 @@ const EditPositionModal = ({
         if (dir === 'short' && price < entry) setEditTakeProfit(price.toFixed(decimals));
       } else if (dragging === 'sl') {
         container.style.cursor = 'grabbing';
-        // Verificar que el nuevo SL no supere el 10% de riesgo máximo
-        // Fórmula consistente con PnL: risk% = lotSize × |entry - SL| / entry × 100
-        const percentMove = (Math.abs(entry - price) / entry) * 100;
-        const riskPct     = lotSize * percentMove;
+        // Fórmula oficial (pipConfig.js): riskPct = lotSize × |entry − SL| / entry × 100
+        const riskPct = lotSize * (Math.abs(entry - price) / entry) * 100;
         if (riskPct > 10) {
           setSlRiskBlocked(true);
           setTimeout(() => setSlRiskBlocked(false), 1500);
-          return; // no mover el SL — excede el 10%
+          return; // no mover el SL — excede el 10% de riesgo máximo
         }
         if (dir === 'long'  && price < entry && price > 0) setEditStopLoss(price.toFixed(decimals));
         if (dir === 'short' && price > entry)              setEditStopLoss(price.toFixed(decimals));
@@ -728,9 +738,18 @@ const EditPositionModal = ({
             <div>
               <Label className="text-xs text-gray-400">
                 Take Profit
-                {editTakeProfit && currentPrice && (
+                {editTakeProfit && (
                   <span className="ml-2 text-green-400 font-mono">
-                    ({((parseFloat(editTakeProfit) - (position.direction === 'long' ? currentPrice : 0) + (position.direction === 'short' ? currentPrice : 0)) / pipSize * (position.direction === 'short' ? -1 : 1)).toFixed(0)} pips)
+                    ({(position.direction === 'long'
+                        ? (parseFloat(editTakeProfit) - position.entryPrice)
+                        : (position.entryPrice - parseFloat(editTakeProfit))
+                      ) / pipSize >= 0
+                        ? '+'
+                        : ''
+                    }{((position.direction === 'long'
+                        ? (parseFloat(editTakeProfit) - position.entryPrice)
+                        : (position.entryPrice - parseFloat(editTakeProfit))
+                      ) / pipSize).toFixed(0)} pips desde entry)
                   </span>
                 )}
               </Label>
@@ -749,9 +768,12 @@ const EditPositionModal = ({
             <div>
               <Label className="text-xs text-gray-400">
                 Stop Loss
-                {editStopLoss && currentPrice && (
+                {editStopLoss && (
                   <span className="ml-2 text-red-400 font-mono">
-                    ({Math.abs((parseFloat(editStopLoss) - currentPrice) / pipSize).toFixed(0)} pips)
+                    (-{((position.direction === 'long'
+                        ? (position.entryPrice - parseFloat(editStopLoss))
+                        : (parseFloat(editStopLoss) - position.entryPrice)
+                      ) / pipSize).toFixed(0)} pips desde entry)
                   </span>
                 )}
               </Label>
