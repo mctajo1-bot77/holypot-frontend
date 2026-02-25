@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createChart, ColorType, CrosshairMode, LineStyle } from 'lightweight-charts';
 import apiClient from '@/api';
 import { instrumentConfig } from '@/components/pipConfig';
+import { toast } from '@/components/Toaster';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -516,7 +517,7 @@ const EditPositionModal = ({
 
   const handlePartialClose = async () => {
     if (partialPercent < 10 || partialPercent > 90) {
-      alert('Partial close entre 10% y 90%');
+      toast.warning('Partial close inválido', 'El porcentaje debe estar entre 10% y 90%');
       return;
     }
     try {
@@ -525,9 +526,10 @@ const EditPositionModal = ({
         percent:    partialPercent / 100,
       });
       soundAction.play().catch(() => {});
+      toast.success('Cierre parcial ejecutado', `${partialPercent}% de la posición cerrado`);
       onSave();
     } catch (err) {
-      alert('Error partial close: ' + (err.response?.data?.error || err.message));
+      toast.error('Error en cierre parcial', err.response?.data?.error || err.message);
     }
   };
 
@@ -537,22 +539,22 @@ const EditPositionModal = ({
     const sl  = editStopLoss   ? parseFloat(editStopLoss.replace(',', '.'))   : null;
 
     if (isNaN(lot) || lot <= 0) {
-      alert('LotSize inválido');
+      toast.warning('LotSize inválido', 'Ingresa un valor mayor a 0');
       return;
     }
     if (lot > currentLotSize) {
-      alert('LotSize no puede ser mayor al actual');
+      toast.warning('LotSize inválido', 'No puede ser mayor al lote actual');
       return;
     }
 
     const entry = position.entryPrice;
     if (tp !== null) {
-      if (position.direction === 'long'  && tp <= entry) { alert('TP debe ser mayor al entry en LONG');  return; }
-      if (position.direction === 'short' && tp >= entry) { alert('TP debe ser menor al entry en SHORT'); return; }
+      if (position.direction === 'long'  && tp <= entry) { toast.warning('TP inválido', 'Debe ser mayor al entry en LONG');  return; }
+      if (position.direction === 'short' && tp >= entry) { toast.warning('TP inválido', 'Debe ser menor al entry en SHORT'); return; }
     }
     if (sl !== null) {
-      if (position.direction === 'long'  && sl >= entry) { alert('SL debe ser menor al entry en LONG');  return; }
-      if (position.direction === 'short' && sl <= entry) { alert('SL debe ser mayor al entry en SHORT'); return; }
+      if (position.direction === 'long'  && sl >= entry) { toast.warning('SL inválido', 'Debe ser menor al entry en LONG');  return; }
+      if (position.direction === 'short' && sl <= entry) { toast.warning('SL inválido', 'Debe ser mayor al entry en SHORT'); return; }
     }
 
     onSave({ lotSize: lot, takeProfit: tp, stopLoss: sl });

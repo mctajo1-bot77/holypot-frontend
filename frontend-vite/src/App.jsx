@@ -3,6 +3,7 @@ import axios from "axios";
 import apiClient from '@/api';
 import { instrumentConfig } from '@/components/pipConfig';
 import { useRiskCalculator } from '@/components/useRiskCalculator';
+import { toast, Toaster } from '@/components/Toaster';
 import { useNavigate } from "react-router-dom";
 import { useI18n, LanguageToggle } from '@/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -299,13 +300,18 @@ function Dashboard() {
 
     socket.on('tradeClosedAuto', (data) => {
       if (data.entryId === entryId) {
-        alert(`¡Trade cerrado automáticamente!\nMotivo: ${data.reason === 'TP_hit' ? 'Take Profit' : 'Stop Loss'}\nP&L: ${data.pnlPercent}%`);
+        const pnl = parseFloat(data.pnlPercent);
+        if (data.reason === 'TP_hit') {
+          toast.tp({ symbol: data.symbol || '', pnl });
+        } else {
+          toast.sl({ symbol: data.symbol || '', pnl });
+        }
       }
     });
 
     socket.on('entryDisqualified', (data) => {
       if (data.entryId === entryId) {
-        alert('⚠️ Tu cuenta ha sido descalificada por superar el drawdown máximo del 10%.');
+        toast.drawdown();
       }
     });
 
@@ -353,51 +359,40 @@ function Dashboard() {
 
   const openTrade = async () => {
     if (!activeEntryId) {
-      alert('⚠️ No hay entry activa. En test mode presiona "Activar" primero.');
+      toast.warning('Sin entry activa', 'En test mode presiona "Activar" primero.');
       return;
     }
 
     if (lotSize < 0.01) {
-      alert('LotSize mínimo: 0.01');
+      toast.warning('LotSize inválido', 'El mínimo permitido es 0.01');
       return;
     }
 
     if (riskInfo.riskPercent > 10) {
-      alert(`⚠️ Riesgo demasiado alto: ${riskInfo.riskPercent.toFixed(1)}%\nMáximo permitido: 10%\n\nSugerencia: Usa ${calculateOptimalLotSize(2).toFixed(2)} lot para 2% de riesgo`);
+      toast.warning(
+        `Riesgo demasiado alto: ${riskInfo.riskPercent.toFixed(1)}%`,
+        `Máximo 10%. Sugerencia: ${calculateOptimalLotSize(2).toFixed(2)} lots para 2% de riesgo`
+      );
       return;
     }
 
     if (orderType !== 'market') {
       if (!targetPrice) {
-        alert('Precio objetivo obligatorio para orden Limit/Stop');
+        toast.warning('Precio objetivo requerido', 'Obligatorio para órdenes Limit/Stop');
         return;
       }
       const tp = parseFloat(targetPrice);
       if (isNaN(tp)) {
-        alert('Precio objetivo inválido');
+        toast.warning('Precio objetivo inválido');
         return;
       }
-
       if (orderType === 'limit') {
-        if (direction === 'long' && tp >= currentPrice) {
-          alert('Buy Limit debe ser menor al precio actual');
-          return;
-        }
-        if (direction === 'short' && tp <= currentPrice) {
-          alert('Sell Limit debe ser mayor al precio actual');
-          return;
-        }
+        if (direction === 'long'  && tp >= currentPrice) { toast.warning('Buy Limit', 'Debe ser menor al precio actual'); return; }
+        if (direction === 'short' && tp <= currentPrice) { toast.warning('Sell Limit', 'Debe ser mayor al precio actual'); return; }
       }
-
       if (orderType === 'stop') {
-        if (direction === 'long' && tp <= currentPrice) {
-          alert('Buy Stop debe ser mayor al precio actual');
-          return;
-        }
-        if (direction === 'short' && tp >= currentPrice) {
-          alert('Sell Stop debe ser menor al precio actual');
-          return;
-        }
+        if (direction === 'long'  && tp <= currentPrice) { toast.warning('Buy Stop', 'Debe ser mayor al precio actual'); return; }
+        if (direction === 'short' && tp >= currentPrice) { toast.warning('Sell Stop', 'Debe ser menor al precio actual'); return; }
       }
     }
 
@@ -412,21 +407,29 @@ function Dashboard() {
         takeProfit: takeProfit ? parseFloat(takeProfit) : null,
         stopLoss: stopLoss ? parseFloat(stopLoss) : null
       });
-      alert(res.data.message);
+      toast.trade({
+        title: `¡Trade Abierto! ${direction.toUpperCase()} ${symbol}`,
+        detail: `${lotSize} lots · entrada ${currentPrice?.toFixed(instrumentConfig[symbol]?.decimals ?? 5) ?? ''}`,
+        pnl: res.data.riskInfo?.riskPercent != null ? null : undefined
+      });
       setTargetPrice('');
       setTakeProfit('');
       setStopLoss('');
     } catch (err) {
-      alert('Error: ' + (err.response?.data?.error || err.message));
+      toast.error('Error al abrir trade', err.response?.data?.error || err.message);
     }
   };
 
   const closeTrade = async (positionId) => {
     try {
       const res = await axios.post(`${API_BASE}/close-trade`, { positionId });
-      alert(res.data.message);
+      const pnl = parseFloat(res.data.message?.match(/([+-]?\d+\.?\d*)\)/)?.?.[1] ?? 'NaN');
+      toast.success(
+        'Trade cerrado',
+        res.data.message?.split('!')[1]?.trim() || 'Posición cerrada manualmente'
+      );
     } catch (err) {
-      alert('Error close: ' + (err.response?.data?.error || err.message));
+      toast.error('Error al cerrar trade', err.response?.data?.error || err.message);
     }
   };
 
@@ -463,6 +466,7 @@ function Dashboard() {
   return (
     <TooltipProvider>
       <div className="min-h-screen text-white relative">
+        <Toaster />
 
         {/* ── BACKGROUND ─────────────────────────────────────────────────────── */}
         <div className="fixed inset-0 -z-10">
@@ -499,7 +503,7 @@ function Dashboard() {
                     setTestEntryId(res.data.entryId);
                     setAdminTestMode(true);
                   } catch (err) {
-                    alert('Error creando entry de test: ' + (err.response?.data?.error || err.message));
+                    toast.error('Error creando entry de test', err.response?.data?.error || err.message);
                   }
                 }
               }}
@@ -1098,10 +1102,10 @@ function Dashboard() {
                 onSave={async (updates) => {
                   try {
                     await axios.post(`${API_BASE}/edit-position`, { positionId: editingPosition.id, ...updates });
-                    alert('Posición editada correctamente');
+                    toast.success('Posición actualizada', 'TP/SL guardados correctamente');
                     setEditingPosition(null);
                   } catch (err) {
-                    alert('Error editando posición: ' + (err.response?.data?.error || err.message));
+                    toast.error('Error al editar posición', err.response?.data?.error || err.message);
                   }
                 }}
                 currentPrice={currentPrice}
