@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from "axios";
 import apiClient from '@/api';
 import { instrumentConfig } from '@/components/pipConfig';
@@ -119,6 +119,42 @@ function Dashboard() {
   );
 
   const riskInfo = calculateRealRisk(lotSize);
+
+  // Riesgo actual del portafolio (suma de posiciones abiertas)
+  const portfolioRisk = useMemo(() => {
+    return positions.filter(p => !p.closedAt).reduce((sum, p) => {
+      if (!p.entryPrice || p.entryPrice === 0) return sum;
+      const lot = p.lotSize || 0.01;
+      const cfg = instrumentConfig[p.symbol] || instrumentConfig['EURUSD'];
+      if (p.stopLoss) {
+        return sum + lot * (Math.abs(p.entryPrice - p.stopLoss) / p.entryPrice) * 100;
+      }
+      const defaultDist = 100 / cfg.pipMultiplier;
+      return sum + lot * (defaultDist / p.entryPrice) * 100;
+    }, 0);
+  }, [positions]);
+
+  // Máximo de lots para el nuevo trade = cuánto cabe hasta llegar al 10% de portafolio
+  // maxLots = (10% − riesgoPortafolio) / percentMoveNuevoPosicion
+  const maxLotByRisk = useMemo(() => {
+    if (!currentPrice || currentPrice === 0) return 5.0;
+    const cfg = instrumentConfig[symbol] || instrumentConfig['EURUSD'];
+    const remainingRisk = Math.max(0, 10 - portfolioRisk);
+    if (remainingRisk <= 0) return 0.01; // portafolio ya al límite
+    let percentMove = 0;
+    if (stopLoss) {
+      const sl = parseFloat(stopLoss);
+      if (!isNaN(sl) && sl > 0) {
+        percentMove = (Math.abs(currentPrice - sl) / currentPrice) * 100;
+      }
+    }
+    if (percentMove <= 0) {
+      const defaultDist = 100 / cfg.pipMultiplier;
+      percentMove = (defaultDist / currentPrice) * 100;
+    }
+    // Redondeamos hacia abajo para no exceder nunca el 10%
+    return Math.min(parseFloat(Math.floor((remainingRisk / percentMove) * 100) / 100), 100.0);
+  }, [symbol, currentPrice, stopLoss, portfolioRisk]);
 
   // ✅ FUNCIÓN PARA VERIFICAR SI ES ADMIN
   const isAdmin = () => {
@@ -321,8 +357,8 @@ function Dashboard() {
       return;
     }
 
-    if (lotSize < 0.01 || lotSize > 1.0) {
-      alert('LotSize debe estar entre 0.01 y 1.0');
+    if (lotSize < 0.01) {
+      alert('LotSize mínimo: 0.01');
       return;
     }
 
@@ -818,22 +854,31 @@ function Dashboard() {
                 <div>
                   <div className="flex justify-between mb-1.5">
                     <label className="text-xs text-gray-500">{t('dash.lotSize')}</label>
-                    <span className="text-xs font-bold text-white">{lotSize.toFixed(2)} lot</span>
+                    <span className="text-xs font-bold text-white">
+                      {lotSize.toFixed(2)}
+                      <span className="text-gray-500 font-normal"> / {maxLotByRisk.toFixed(2)} max</span>
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Slider
-                      min={0.01} max={1.0} step={0.01} value={[lotSize]}
+                      min={0.01}
+                      max={maxLotByRisk}
+                      step={maxLotByRisk > 10 ? 0.1 : 0.01}
+                      value={[Math.min(lotSize, maxLotByRisk)]}
                       onValueChange={(v) => setLotSize(v[0])}
                       disabled={!activeEntryId}
                       className="flex-1"
                     />
                     <Input
-                      type="number" min="0.01" max="1.0" step="0.01"
+                      type="number"
+                      min="0.01"
+                      max={maxLotByRisk}
+                      step={maxLotByRisk > 10 ? 0.1 : 0.01}
                       value={lotSize.toFixed(2)}
                       onChange={(e) => {
                         let val = parseFloat(e.target.value);
                         if (isNaN(val)) val = 0.01;
-                        setLotSize(Math.max(0.01, Math.min(1.0, val)));
+                        setLotSize(Math.max(0.01, Math.min(maxLotByRisk, val)));
                       }}
                       disabled={!activeEntryId}
                       className="w-20 bg-[#0F172A] border-[#2A2A2A] text-white h-9 text-sm text-center"
@@ -1030,14 +1075,14 @@ function Dashboard() {
                 <div className="px-5 py-4 border-t border-[#2A2A2A]">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs text-gray-500">{t('dash.riskTotal')}</span>
-                    <span className={`text-xs font-bold ${totalRisk > 8 ? 'text-red-400' : totalRisk > 5 ? 'text-yellow-400' : 'text-[#00C853]'}`}>
-                      {totalRisk.toFixed(1)}% / 10%
+                    <span className={`text-xs font-bold ${portfolioRisk > 8 ? 'text-red-400' : portfolioRisk > 5 ? 'text-yellow-400' : 'text-[#00C853]'}`}>
+                      {portfolioRisk.toFixed(2)}% / 10%
                     </span>
                   </div>
                   <div className="w-full bg-[#2A2A2A] rounded-full h-2 overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-700 ${totalRisk > 8 ? 'bg-red-500' : totalRisk > 5 ? 'bg-yellow-400' : 'bg-[#00C853]'}`}
-                      style={{ width: `${Math.min(totalRisk * 10, 100)}%` }}
+                      className={`h-full rounded-full transition-all duration-700 ${portfolioRisk > 8 ? 'bg-red-500' : portfolioRisk > 5 ? 'bg-yellow-400' : 'bg-[#00C853]'}`}
+                      style={{ width: `${Math.min(portfolioRisk * 10, 100)}%` }}
                     />
                   </div>
                 </div>
