@@ -426,9 +426,9 @@ const EditPositionModal = ({
       } else if (dragging === 'sl') {
         container.style.cursor = 'grabbing';
         // Verificar que el nuevo SL no supere el 10% de riesgo máximo
-        const distPips   = Math.abs(entry - price) * pipCfg.pipMultiplier;
-        const riskUSD    = distPips * pipCfg.pipValue * lotSize;
-        const riskPct    = (riskUSD / capital) * 100;
+        // Fórmula consistente con PnL: risk% = lotSize × |entry - SL| / entry × 100
+        const percentMove = (Math.abs(entry - price) / entry) * 100;
+        const riskPct     = lotSize * percentMove;
         if (riskPct > 10) {
           setSlRiskBlocked(true);
           setTimeout(() => setSlRiskBlocked(false), 1500);
