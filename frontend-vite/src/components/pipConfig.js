@@ -14,8 +14,8 @@ export const instrumentConfig = {
     pipMultiplier: 100,  // 0.01 = 1 pip (only 2 decimals)
     displayName: 'USD/JPY'
   },
-  'XAUUSD': { 
-    pipValue: 10,
+  'XAUUSD': {
+    pipValue: 1,         // $1 por pip por lote (mini-lot 10oz)
     pipMultiplier: 10,   // Gold: 0.10 = 1 pip
     displayName: 'Gold'
   },

@@ -52,6 +52,18 @@ const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
   timeout: 10000
 });
 
+const COUNTRY_FLAGS = {
+  AR: '🇦🇷', BO: '🇧🇴', BR: '🇧🇷', CL: '🇨🇱', CO: '🇨🇴', CR: '🇨🇷',
+  CU: '🇨🇺', DO: '🇩🇴', EC: '🇪🇨', SV: '🇸🇻', GT: '🇬🇹', HN: '🇭🇳',
+  MX: '🇲🇽', NI: '🇳🇮', PA: '🇵🇦', PY: '🇵🇾', PE: '🇵🇪', PR: '🇵🇷',
+  UY: '🇺🇾', VE: '🇻🇪', ES: '🇪🇸', US: '🇺🇸', CA: '🇨🇦', DE: '🇩🇪',
+  FR: '🇫🇷', GB: '🇬🇧', IT: '🇮🇹', PT: '🇵🇹', NL: '🇳🇱', SE: '🇸🇪',
+  CH: '🇨🇭', RU: '🇷🇺', TR: '🇹🇷', NG: '🇳🇬', ZA: '🇿🇦', EG: '🇪🇬',
+  MA: '🇲🇦', GH: '🇬🇭', KE: '🇰🇪', IN: '🇮🇳', CN: '🇨🇳', JP: '🇯🇵',
+  KR: '🇰🇷', ID: '🇮🇩', PH: '🇵🇭', VN: '🇻🇳', TH: '🇹🇭', PK: '🇵🇰',
+  AU: '🇦🇺', NZ: '🇳🇿', OTHER: '🌍'
+};
+
 axios.interceptors.request.use(config => {
   const userToken = localStorage.getItem('holypotToken');
   const adminToken = localStorage.getItem('holypotAdminToken');
@@ -1100,7 +1112,12 @@ function Dashboard() {
                               #{i + 1}
                             </span>
                           </TableCell>
-                          <TableCell className="text-gray-200 text-sm py-3">{r.displayName || 'Anónimo'}</TableCell>
+                          <TableCell className="text-gray-200 text-sm py-3">
+                            <span className="flex items-center gap-1.5">
+                              {r.country && <span title={r.country}>{COUNTRY_FLAGS[r.country] || '🌍'}</span>}
+                              {r.displayName || 'Anónimo'}
+                            </span>
+                          </TableCell>
                           <TableCell className={`text-sm font-bold py-3 ${parseFloat(r.retorno) > 0 ? 'text-[#00C853]' : 'text-red-400'}`}>
                             {r.retorno}
                           </TableCell>

@@ -1,4 +1,58 @@
 import React, { useState, useEffect, useRef } from 'react';
+
+const COUNTRIES = [
+  { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
+  { code: 'BO', name: 'Bolivia', flag: '🇧🇴' },
+  { code: 'BR', name: 'Brasil', flag: '🇧🇷' },
+  { code: 'CL', name: 'Chile', flag: '🇨🇱' },
+  { code: 'CO', name: 'Colombia', flag: '🇨🇴' },
+  { code: 'CR', name: 'Costa Rica', flag: '🇨🇷' },
+  { code: 'CU', name: 'Cuba', flag: '🇨🇺' },
+  { code: 'DO', name: 'Rep. Dominicana', flag: '🇩🇴' },
+  { code: 'EC', name: 'Ecuador', flag: '🇪🇨' },
+  { code: 'SV', name: 'El Salvador', flag: '🇸🇻' },
+  { code: 'GT', name: 'Guatemala', flag: '🇬🇹' },
+  { code: 'HN', name: 'Honduras', flag: '🇭🇳' },
+  { code: 'MX', name: 'México', flag: '🇲🇽' },
+  { code: 'NI', name: 'Nicaragua', flag: '🇳🇮' },
+  { code: 'PA', name: 'Panamá', flag: '🇵🇦' },
+  { code: 'PY', name: 'Paraguay', flag: '🇵🇾' },
+  { code: 'PE', name: 'Perú', flag: '🇵🇪' },
+  { code: 'PR', name: 'Puerto Rico', flag: '🇵🇷' },
+  { code: 'UY', name: 'Uruguay', flag: '🇺🇾' },
+  { code: 'VE', name: 'Venezuela', flag: '🇻🇪' },
+  { code: 'ES', name: 'España', flag: '🇪🇸' },
+  { code: 'US', name: 'Estados Unidos', flag: '🇺🇸' },
+  { code: 'CA', name: 'Canadá', flag: '🇨🇦' },
+  { code: 'DE', name: 'Alemania', flag: '🇩🇪' },
+  { code: 'FR', name: 'Francia', flag: '🇫🇷' },
+  { code: 'GB', name: 'Reino Unido', flag: '🇬🇧' },
+  { code: 'IT', name: 'Italia', flag: '🇮🇹' },
+  { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
+  { code: 'NL', name: 'Países Bajos', flag: '🇳🇱' },
+  { code: 'SE', name: 'Suecia', flag: '🇸🇪' },
+  { code: 'CH', name: 'Suiza', flag: '🇨🇭' },
+  { code: 'RU', name: 'Rusia', flag: '🇷🇺' },
+  { code: 'TR', name: 'Turquía', flag: '🇹🇷' },
+  { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
+  { code: 'ZA', name: 'Sudáfrica', flag: '🇿🇦' },
+  { code: 'EG', name: 'Egipto', flag: '🇪🇬' },
+  { code: 'MA', name: 'Marruecos', flag: '🇲🇦' },
+  { code: 'GH', name: 'Ghana', flag: '🇬🇭' },
+  { code: 'KE', name: 'Kenia', flag: '🇰🇪' },
+  { code: 'IN', name: 'India', flag: '🇮🇳' },
+  { code: 'CN', name: 'China', flag: '🇨🇳' },
+  { code: 'JP', name: 'Japón', flag: '🇯🇵' },
+  { code: 'KR', name: 'Corea del Sur', flag: '🇰🇷' },
+  { code: 'ID', name: 'Indonesia', flag: '🇮🇩' },
+  { code: 'PH', name: 'Filipinas', flag: '🇵🇭' },
+  { code: 'VN', name: 'Vietnam', flag: '🇻🇳' },
+  { code: 'TH', name: 'Tailandia', flag: '🇹🇭' },
+  { code: 'PK', name: 'Pakistán', flag: '🇵🇰' },
+  { code: 'AU', name: 'Australia', flag: '🇦🇺' },
+  { code: 'NZ', name: 'Nueva Zelanda', flag: '🇳🇿' },
+  { code: 'OTHER', name: 'Otro', flag: '🌍' },
+];
 import axios from 'axios';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
 import { Input } from "@/components/ui/input";
@@ -92,6 +146,7 @@ const LandingPage = () => {
     if (!form.level) return alert('Elige un nivel');
     if (!form.walletAddress) return alert('Wallet obligatoria para la red seleccionada');
     if (!nickname) return alert('Nickname obligatorio – será tu nombre visible en el ranking');
+    if (!form.country) return alert('Selecciona tu país');
     if (!captchaToken) return alert('Completa el CAPTCHA');
     try {
       const res = await axios.post(`${API_BASE}/create-payment`, {
@@ -518,9 +573,19 @@ const LandingPage = () => {
               <Input type="text" placeholder={t('form.fullName')} value={form.fullName}
                 onChange={e => setForm({ ...form, fullName: e.target.value })}
                 className="bg-black/40 border-[#2A2A2A] text-white" />
-              <Input type="text" placeholder={t('form.country')} value={form.country}
+              <select
+                required
+                value={form.country}
                 onChange={e => setForm({ ...form, country: e.target.value })}
-                className="bg-black/40 border-[#2A2A2A] text-white" />
+                className="w-full bg-black/40 border border-[#2A2A2A] text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-holy/50"
+              >
+                <option value="" disabled>{t('form.country') || 'País *'}</option>
+                {COUNTRIES.map(c => (
+                  <option key={c.code} value={c.code} style={{ background: '#1a1a1a' }}>
+                    {c.flag} {c.name}
+                  </option>
+                ))}
+              </select>
               <Input type="date" value={form.birthDate}
                 onChange={e => setForm({ ...form, birthDate: e.target.value })}
                 className="bg-black/40 border-[#2A2A2A] text-white" />

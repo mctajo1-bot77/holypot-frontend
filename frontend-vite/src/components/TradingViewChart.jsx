@@ -11,8 +11,8 @@ function TradingViewChart({ symbol, currentPrice, virtualCapital = 10000, isFull
     GBPUSD: 'OANDA:GBPUSD',
     USDJPY: 'OANDA:USDJPY',
     XAUUSD: 'OANDA:XAUUSD',
-    SPX500: 'SP:SPX',
-    NAS100: 'NASDAQ:NDX',
+    SPX500: 'OANDA:SPX500_USD',
+    NAS100: 'OANDA:NAS100_USD',
   };
   const tvSymbol = tvSymbolMap[symbol] || 'OANDA:EURUSD';
 
