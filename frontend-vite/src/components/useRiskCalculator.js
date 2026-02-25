@@ -45,7 +45,8 @@ export const useRiskCalculator = (symbol, entryPrice, stopLoss, virtualCapital) 
     if (percentMove === 0) return 0.01;
 
     const optimalLot = targetRiskPercent / percentMove;
-    return Math.min(1.0, Math.max(0.01, parseFloat(optimalLot.toFixed(2))));
+    // Cap a 100 lots como máximo absoluto; el mínimo es siempre 0.01
+    return Math.min(100.0, Math.max(0.01, parseFloat(optimalLot.toFixed(2))));
   };
 
   return {
