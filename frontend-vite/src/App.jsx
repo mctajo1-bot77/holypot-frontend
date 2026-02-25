@@ -919,9 +919,9 @@ function Dashboard() {
                   <Activity className="h-4 w-4 text-blue-400" />
                 </div>
                 <h2 className="text-sm font-semibold text-gray-200">{t('dash.positions')}</h2>
-                {positions.length > 0 && (
+                {positions.filter(p => !p.closedAt).length > 0 && (
                   <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
-                    {positions.length} open
+                    {positions.filter(p => !p.closedAt).length} open
                   </span>
                 )}
               </div>
@@ -941,14 +941,14 @@ function Dashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {positions.length === 0 ? (
+                    {positions.filter(p => !p.closedAt).length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-10 text-gray-600 text-sm">
                           {entryId ? t('dash.noPositions') : t('dash.adminNoPositions')}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      positions.map((pos) => {
+                      positions.filter(p => !p.closedAt).map((pos) => {
                         const positionRisk = calculatePositionRisk(pos);
                         const livePnl = parseFloat(pos.livePnl || 0).toFixed(2);
                         const config = instrumentConfig[pos.symbol] || instrumentConfig['EURUSD'];
