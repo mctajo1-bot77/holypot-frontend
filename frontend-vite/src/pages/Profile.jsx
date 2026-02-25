@@ -909,6 +909,71 @@ const Profile = () => {
               )}
             </div>
 
+            {/* ── OPERACIONES CERRADAS HOY ──────────────────────────────────── */}
+            {(profile?.closedPositions?.length > 0) && (
+              <div className={`${card} p-5 md:p-6`}>
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                      <Activity className="h-4 w-4 text-blue-400" />
+                    </div>
+                    <h3 className="text-base font-semibold text-gray-200">Operaciones cerradas hoy</h3>
+                  </div>
+                  <span className="text-xs text-gray-500">{profile.closedPositions.length} operaciones</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-[#2A2A2A] hover:bg-transparent">
+                        <TableHead className="text-[#FFD700] text-xs font-semibold">Par</TableHead>
+                        <TableHead className="text-[#FFD700] text-xs font-semibold">Dir.</TableHead>
+                        <TableHead className="text-[#FFD700] text-xs font-semibold hidden md:table-cell">Lots</TableHead>
+                        <TableHead className="text-[#FFD700] text-xs font-semibold hidden md:table-cell">Entrada</TableHead>
+                        <TableHead className="text-[#FFD700] text-xs font-semibold">P&L %</TableHead>
+                        <TableHead className="text-[#FFD700] text-xs font-semibold">Cierre</TableHead>
+                        <TableHead className="text-[#FFD700] text-xs font-semibold hidden md:table-cell">Hora</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {profile.closedPositions.map((pos) => {
+                        const pnl = parseFloat(pos.currentPnl || 0);
+                        const reasonLabel = {
+                          'manual':                 '✋ Manual',
+                          'TP_hit':                 '🎯 TP',
+                          'SL_hit':                 '🛑 SL',
+                          'drawdown_disqualified':  '⚠️ Drawdown',
+                          'competition_end':        '🏁 Fin comp.',
+                        }[pos.closeReason] || pos.closeReason || 'Manual';
+                        const closedTime = pos.closedAt
+                          ? new Date(pos.closedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+                          : '—';
+
+                        return (
+                          <TableRow key={pos.id} className="border-[#2A2A2A] hover:bg-white/5 transition-colors">
+                            <TableCell className="text-gray-200 text-sm font-medium py-2.5">{pos.symbol}</TableCell>
+                            <TableCell className="py-2.5">
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                                pos.direction === 'long' ? 'bg-[#00C853]/20 text-[#00C853]' : 'bg-red-500/20 text-red-400'
+                              }`}>
+                                {pos.direction.toUpperCase()}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-gray-400 text-xs py-2.5 hidden md:table-cell">{pos.lotSize}</TableCell>
+                            <TableCell className="text-gray-400 text-xs py-2.5 hidden md:table-cell font-mono">{parseFloat(pos.entryPrice).toFixed(4)}</TableCell>
+                            <TableCell className={`text-sm font-bold py-2.5 ${pnl > 0 ? 'text-[#00C853]' : pnl < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                              {pnl > 0 ? '+' : ''}{pnl}%
+                            </TableCell>
+                            <TableCell className="text-xs py-2.5 text-gray-300">{reasonLabel}</TableCell>
+                            <TableCell className="text-xs py-2.5 text-gray-500 hidden md:table-cell">{closedTime}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+
             {/* ── COMPETITION HISTORY ────────────────────────────────────────── */}
             <div className={`${card} p-5 md:p-6`}>
               <div className="flex items-center justify-between mb-5">

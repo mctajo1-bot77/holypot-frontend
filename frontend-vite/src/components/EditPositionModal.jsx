@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createChart, ColorType, CrosshairMode, LineStyle } from 'lightweight-charts';
 import apiClient from '@/api';
+import { instrumentConfig } from '@/components/pipConfig';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -86,6 +87,7 @@ const EditPositionModal = ({
   // Indicador visual de auto-guardado tras arrastrar
   const [dragSaved,       setDragSaved]       = useState(null); // 'tp' | 'sl' | null
   const [dragError,       setDragError]       = useState(false);
+  const [slRiskBlocked,   setSlRiskBlocked]   = useState(false); // SL drag bloqueado por 10% max
 
   // Refs con los últimos valores para leerlos dentro de event handlers sin deps
   const editTakeProfitRef = useRef(editTakeProfit);
@@ -395,12 +397,15 @@ const EditPositionModal = ({
   useEffect(() => {
     if (!open || !isModalVisible || !chartRef.current || !chartContainerRef.current) return;
 
-    const container = chartContainerRef.current;
-    const entry     = position?.entryPrice;
-    const dir       = position?.direction;
-    const sym       = position?.symbol;
-    const tolerance = getDragTolerance(sym);
-    const decimals  = getPriceDecimals(sym);
+    const container  = chartContainerRef.current;
+    const entry      = position?.entryPrice;
+    const dir        = position?.direction;
+    const sym        = position?.symbol;
+    const tolerance  = getDragTolerance(sym);
+    const decimals   = getPriceDecimals(sym);
+    const pipCfg     = instrumentConfig[sym] || instrumentConfig['EURUSD'];
+    const lotSize    = parseFloat(position?.lotSize) || 0.01;
+    const capital    = virtualCapital || 10000;
 
     const getPriceFromMouse = (e) => {
       const rect = container.getBoundingClientRect();
@@ -420,6 +425,15 @@ const EditPositionModal = ({
         if (dir === 'short' && price < entry) setEditTakeProfit(price.toFixed(decimals));
       } else if (dragging === 'sl') {
         container.style.cursor = 'grabbing';
+        // Verificar que el nuevo SL no supere el 10% de riesgo máximo
+        const distPips   = Math.abs(entry - price) * pipCfg.pipMultiplier;
+        const riskUSD    = distPips * pipCfg.pipValue * lotSize;
+        const riskPct    = (riskUSD / capital) * 100;
+        if (riskPct > 10) {
+          setSlRiskBlocked(true);
+          setTimeout(() => setSlRiskBlocked(false), 1500);
+          return; // no mover el SL — excede el 10%
+        }
         if (dir === 'long'  && price < entry && price > 0) setEditStopLoss(price.toFixed(decimals));
         if (dir === 'short' && price > entry)              setEditStopLoss(price.toFixed(decimals));
       } else {
@@ -640,6 +654,13 @@ const EditPositionModal = ({
               <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
                 <span className="flex items-center gap-1.5 bg-red-500/20 border border-red-500/50 text-red-400 text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg">
                   ✕ Error al guardar — usa el botón manual
+                </span>
+              </div>
+            )}
+            {slRiskBlocked && (
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+                <span className="flex items-center gap-1.5 bg-orange-500/20 border border-orange-500/50 text-orange-300 text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg animate-pulse">
+                  ⚠ SL bloqueado — excede el 10% de riesgo máximo
                 </span>
               </div>
             )}
