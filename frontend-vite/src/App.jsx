@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { io } from "socket.io-client";
+import CompetitionEndedModal from '@/components/CompetitionEndedModal';
 import {
   Rocket,
   Coins,
@@ -90,6 +91,10 @@ function Dashboard() {
   const [adminTestMode, setAdminTestMode] = useState(false);
   const [testEntryId, setTestEntryId] = useState('');
   const [chartFullscreen, setChartFullscreen] = useState(false);
+  // Fin de competición diaria
+  const [competitionEnded, setCompetitionEnded] = useState(() => new Date().getUTCHours() >= 21);
+  const [competitionResults, setCompetitionResults] = useState(null);
+  const [showEndModal, setShowEndModal] = useState(false);
 
   // entryId efectivo: en test mode usa el testEntryId temporal
   const activeEntryId = adminTestMode && testEntryId ? testEntryId : entryId;
@@ -250,9 +255,23 @@ function Dashboard() {
       }
     });
 
+    socket.on('entryDisqualified', (data) => {
+      if (data.entryId === entryId) {
+        alert('⚠️ Tu cuenta ha sido descalificada por superar el drawdown máximo del 10%.');
+      }
+    });
+
+    socket.on('competitionEnded', (results) => {
+      setCompetitionEnded(true);
+      setCompetitionResults(results);
+      setShowEndModal(true);
+    });
+
     return () => {
       socket.off('liveUpdate');
       socket.off('tradeClosedAuto');
+      socket.off('entryDisqualified');
+      socket.off('competitionEnded');
     };
   }, [entryId]);
 
@@ -477,6 +496,14 @@ function Dashboard() {
             </div>
           </div>
         </header>
+
+        {/* Banner competición cerrada */}
+        {competitionEnded && !isAdminSession && (
+          <div className="fixed top-[88px] md:top-[112px] left-0 right-0 z-40 bg-[#1a0a00] border-b border-orange-500/40 text-orange-300 text-xs font-semibold text-center py-1.5 flex items-center justify-center gap-2">
+            🔒 Competición cerrada · Solo visualización · Nueva sesión a las <span className="text-white font-bold">00:00 UTC</span>
+            <button onClick={() => setShowEndModal(true)} className="underline text-orange-400 hover:text-orange-200 ml-1">Ver resultados</button>
+          </div>
+        )}
 
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* SIDEBAR — Desktop only                                          */}
@@ -840,18 +867,24 @@ function Dashboard() {
                   </div>
                 </div>
 
-                {/* Open trade button */}
-                <Button
-                  onClick={openTrade}
-                  disabled={!activeEntryId || riskInfo.riskPercent > 10}
-                  className={`w-full h-11 font-bold text-sm rounded-xl mt-auto transition-all ${
-                    !activeEntryId || riskInfo.riskPercent > 10
-                      ? 'bg-[#2A2A2A] text-gray-500 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-[#FFD700] to-[#f59e0b] text-black hover:opacity-90 hover:shadow-[0_0_20px_rgba(255,215,0,0.25)]'
-                  }`}
-                >
-                  {!activeEntryId ? t('dash.viewOnly') : riskInfo.riskPercent > 10 ? t('dash.riskTooHigh') : t('dash.openTrade')}
-                </Button>
+                {/* Open trade button — bloqueado si la competición terminó */}
+                {competitionEnded ? (
+                  <div className="w-full h-11 flex items-center justify-center rounded-xl bg-[#1a1a1a] border border-white/10 text-gray-500 text-sm font-semibold gap-2">
+                    🔒 Competición cerrada · Abre a las 00:00 UTC
+                  </div>
+                ) : (
+                  <Button
+                    onClick={openTrade}
+                    disabled={!activeEntryId || riskInfo.riskPercent > 10}
+                    className={`w-full h-11 font-bold text-sm rounded-xl mt-auto transition-all ${
+                      !activeEntryId || riskInfo.riskPercent > 10
+                        ? 'bg-[#2A2A2A] text-gray-500 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-[#FFD700] to-[#f59e0b] text-black hover:opacity-90 hover:shadow-[0_0_20px_rgba(255,215,0,0.25)]'
+                    }`}
+                  >
+                    {!activeEntryId ? t('dash.viewOnly') : riskInfo.riskPercent > 10 ? t('dash.riskTooHigh') : t('dash.openTrade')}
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -1081,6 +1114,17 @@ function Dashboard() {
                 </Table>
               </div>
             </div>
+
+            {/* ── COMPETITION ENDED MODAL ───────────────────────────────────── */}
+            {!isAdminSession && (
+              <CompetitionEndedModal
+                open={showEndModal}
+                onClose={() => setShowEndModal(false)}
+                results={competitionResults}
+                userEntryId={entryId}
+                userLevel={userLevel}
+              />
+            )}
 
             {/* ── WIN MODAL ─────────────────────────────────────────────────── */}
             {!isAdminSession && (
