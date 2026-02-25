@@ -31,6 +31,15 @@ const getPipSize = (symbol) => {
   return 0.0001;
 };
 
+// Decimales a mostrar según instrumento
+const getPriceDecimals = (symbol) => {
+  if (!symbol) return 4;
+  if (symbol === 'XAUUSD') return 2;
+  if (symbol === 'SPX500' || symbol === 'NAS100') return 1;
+  if (symbol.includes('JPY')) return 3;
+  return 4;
+};
+
 // Tolerancia para detectar hover sobre una línea
 const getDragTolerance = (symbol) => {
   if (!symbol) return 0.0002;
@@ -57,11 +66,12 @@ const EditPositionModal = ({
   const currentLotSize = position?.lotSize || 0.01;
 
   const [editLotSize,    setEditLotSize]    = useState(currentLotSize.toFixed(2));
+  const dec = getPriceDecimals(position?.symbol);
   const [editTakeProfit, setEditTakeProfit] = useState(
-    position?.takeProfit ? position.takeProfit.toFixed(4) : ''
+    position?.takeProfit ? position.takeProfit.toFixed(dec) : ''
   );
   const [editStopLoss, setEditStopLoss] = useState(
-    position?.stopLoss ? position.stopLoss.toFixed(4) : ''
+    position?.stopLoss ? position.stopLoss.toFixed(dec) : ''
   );
   const [trailingActive,  setTrailingActive]  = useState(false);
   const [trailingPips,    setTrailingPips]    = useState(20);
@@ -161,7 +171,7 @@ const EditPositionModal = ({
       },
       handleScroll: true,
       handleScale:  true,
-      localization: { priceFormatter: p => p.toFixed(4) },
+      localization: { priceFormatter: p => p.toFixed(getPriceDecimals(position?.symbol)) },
     });
     chartRef.current = chart;
 
@@ -174,13 +184,15 @@ const EditPositionModal = ({
     seriesRef.current = series;
 
     // ── Líneas iniciales (entrada + live + TP/SL) ──
+    const d = getPriceDecimals(position.symbol);
+
     linesRef.current.entry = series.createPriceLine({
       price:            position.entryPrice,
       color:            '#FFD700',
       lineWidth:        2,
       lineStyle:        LineStyle.Dashed,
       axisLabelVisible: true,
-      title:            `Entry ${position.entryPrice.toFixed(4)}`,
+      title:            `Entry ${position.entryPrice.toFixed(d)}`,
     });
 
     if (currentPrice) {
@@ -190,7 +202,7 @@ const EditPositionModal = ({
         lineWidth:        2,
         lineStyle:        LineStyle.Solid,
         axisLabelVisible: true,
-        title:            `Live ${currentPrice.toFixed(4)}`,
+        title:            `Live ${currentPrice.toFixed(d)}`,
       });
     }
 
@@ -200,7 +212,7 @@ const EditPositionModal = ({
         color:            '#00C853',
         lineWidth:        3,
         axisLabelVisible: true,
-        title:            `TP ${position.takeProfit.toFixed(4)}`,
+        title:            `TP ${position.takeProfit.toFixed(d)}`,
       });
     }
 
@@ -210,7 +222,7 @@ const EditPositionModal = ({
         color:            '#F44336',
         lineWidth:        3,
         axisLabelVisible: true,
-        title:            `SL ${position.stopLoss.toFixed(4)}`,
+        title:            `SL ${position.stopLoss.toFixed(d)}`,
       });
     }
 
@@ -232,11 +244,12 @@ const EditPositionModal = ({
   // ─── Update línea live ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!seriesRef.current || !currentPrice || !showEntryLines) return;
+    const d = getPriceDecimals(position?.symbol);
 
     if (linesRef.current.live) {
       linesRef.current.live.applyOptions({
         price: currentPrice,
-        title: `Live ${currentPrice.toFixed(4)}`,
+        title: `Live ${currentPrice.toFixed(d)}`,
       });
     } else {
       linesRef.current.live = seriesRef.current.createPriceLine({
@@ -245,7 +258,7 @@ const EditPositionModal = ({
         lineWidth:        2,
         lineStyle:        LineStyle.Solid,
         axisLabelVisible: true,
-        title:            `Live ${currentPrice.toFixed(4)}`,
+        title:            `Live ${currentPrice.toFixed(d)}`,
       });
     }
   }, [currentPrice, showEntryLines]);
@@ -253,6 +266,7 @@ const EditPositionModal = ({
   // ─── Update línea TP ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!seriesRef.current || !showEntryLines) return;
+    const d = getPriceDecimals(position?.symbol);
 
     if (linesRef.current.tp) seriesRef.current.removePriceLine(linesRef.current.tp);
     linesRef.current.tp = null;
@@ -265,7 +279,7 @@ const EditPositionModal = ({
           color:            '#00C853',
           lineWidth:        3,
           axisLabelVisible: true,
-          title:            `TP ${price.toFixed(4)}`,
+          title:            `TP ${price.toFixed(d)}`,
         });
       }
     }
@@ -274,6 +288,7 @@ const EditPositionModal = ({
   // ─── Update línea SL ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!seriesRef.current || !showEntryLines) return;
+    const d = getPriceDecimals(position?.symbol);
 
     if (linesRef.current.sl) seriesRef.current.removePriceLine(linesRef.current.sl);
     linesRef.current.sl = null;
@@ -286,7 +301,7 @@ const EditPositionModal = ({
           color:            '#F44336',
           lineWidth:        3,
           axisLabelVisible: true,
-          title:            `SL ${price.toFixed(4)}`,
+          title:            `SL ${price.toFixed(d)}`,
         });
       }
     }
@@ -306,6 +321,7 @@ const EditPositionModal = ({
       });
     } else {
       // Volver a crear todas las líneas con valores actuales
+      const d = getPriceDecimals(position?.symbol);
       if (position?.entryPrice) {
         linesRef.current.entry = seriesRef.current.createPriceLine({
           price:            position.entryPrice,
@@ -313,7 +329,7 @@ const EditPositionModal = ({
           lineWidth:        2,
           lineStyle:        LineStyle.Dashed,
           axisLabelVisible: true,
-          title:            `Entry ${position.entryPrice.toFixed(4)}`,
+          title:            `Entry ${position.entryPrice.toFixed(d)}`,
         });
       }
       if (currentPrice) {
@@ -323,7 +339,7 @@ const EditPositionModal = ({
           lineWidth:        2,
           lineStyle:        LineStyle.Solid,
           axisLabelVisible: true,
-          title:            `Live ${currentPrice.toFixed(4)}`,
+          title:            `Live ${currentPrice.toFixed(d)}`,
         });
       }
       if (editTakeProfit) {
@@ -334,7 +350,7 @@ const EditPositionModal = ({
             color:            '#00C853',
             lineWidth:        3,
             axisLabelVisible: true,
-            title:            `TP ${tp.toFixed(4)}`,
+            title:            `TP ${tp.toFixed(d)}`,
           });
         }
       }
@@ -346,7 +362,7 @@ const EditPositionModal = ({
             color:            '#F44336',
             lineWidth:        3,
             axisLabelVisible: true,
-            title:            `SL ${sl.toFixed(4)}`,
+            title:            `SL ${sl.toFixed(d)}`,
           });
         }
       }
@@ -359,27 +375,32 @@ const EditPositionModal = ({
 
     const pipsValue = trailingPips * getPipSize(position.symbol);
 
+    const d = getPriceDecimals(position?.symbol);
     if (position.direction === 'long') {
       const newSL = currentPrice - pipsValue;
       if (newSL > (parseFloat(editStopLoss) || -Infinity)) {
-        setEditStopLoss(newSL.toFixed(4));
+        setEditStopLoss(newSL.toFixed(d));
       }
     } else {
       const newSL = currentPrice + pipsValue;
       if (newSL < (parseFloat(editStopLoss) || Infinity)) {
-        setEditStopLoss(newSL.toFixed(4));
+        setEditStopLoss(newSL.toFixed(d));
       }
     }
   }, [currentPrice, trailingActive, trailingPips, position?.direction, editStopLoss]);
 
   // ─── Drag SL/TP sobre el gráfico (con auto-save al soltar) ────────────────
+  // isModalVisible en deps: el chart se crea DESPUÉS de que el modal es visible (150ms),
+  // así que sin este dep el effect se ejecutaba antes de que chartRef.current existiera.
   useEffect(() => {
-    if (!open || !chartRef.current || !chartContainerRef.current) return;
+    if (!open || !isModalVisible || !chartRef.current || !chartContainerRef.current) return;
 
     const container = chartContainerRef.current;
     const entry     = position?.entryPrice;
     const dir       = position?.direction;
-    const tolerance = getDragTolerance(position?.symbol);
+    const sym       = position?.symbol;
+    const tolerance = getDragTolerance(sym);
+    const decimals  = getPriceDecimals(sym);
 
     const getPriceFromMouse = (e) => {
       const rect = container.getBoundingClientRect();
@@ -395,12 +416,12 @@ const EditPositionModal = ({
       const dragging = isDraggingRef.current;
       if (dragging === 'tp') {
         container.style.cursor = 'grabbing';
-        if (dir === 'long'  && price > entry) setEditTakeProfit(price.toFixed(4));
-        if (dir === 'short' && price < entry) setEditTakeProfit(price.toFixed(4));
+        if (dir === 'long'  && price > entry) setEditTakeProfit(price.toFixed(decimals));
+        if (dir === 'short' && price < entry) setEditTakeProfit(price.toFixed(decimals));
       } else if (dragging === 'sl') {
         container.style.cursor = 'grabbing';
-        if (dir === 'long'  && price < entry && price > 0) setEditStopLoss(price.toFixed(4));
-        if (dir === 'short' && price > entry)              setEditStopLoss(price.toFixed(4));
+        if (dir === 'long'  && price < entry && price > 0) setEditStopLoss(price.toFixed(decimals));
+        if (dir === 'short' && price > entry)              setEditStopLoss(price.toFixed(decimals));
       } else {
         const tp  = editTakeProfitRef.current;
         const sl  = editStopLossRef.current;
@@ -468,14 +489,14 @@ const EditPositionModal = ({
       container.removeEventListener('mouseup',    handleMouseUp);
       container.removeEventListener('mouseleave', handleMouseUp);
     };
-  // Solo re-attachar si cambian datos estáticos de la posición o si se abre/cierra
-  }, [open, position?.id, position?.symbol, position?.direction, position?.entryPrice, position?.lotSize]);
+  // isModalVisible aquí es clave: garantiza que el chart ya existe cuando se attachen los listeners
+  }, [open, isModalVisible, position?.id, position?.symbol, position?.direction, position?.entryPrice, position?.lotSize]);
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
   const handleBreakeven = () => {
     const pip = getPipSize(position?.symbol);
     const offset = position.direction === 'long' ? pip : -pip;
-    setEditStopLoss((position.entryPrice + offset).toFixed(4));
+    setEditStopLoss((position.entryPrice + offset).toFixed(getPriceDecimals(position?.symbol)));
     soundAction.play().catch(() => {});
   };
 
@@ -553,9 +574,9 @@ const EditPositionModal = ({
               <span className="text-gray-400 text-sm font-normal">× {position.lotSize}</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-gray-500 mt-0.5">
-              Entry: <span className="text-white font-mono">{position.entryPrice?.toFixed(4)}</span>
+              Entry: <span className="text-white font-mono">{position.entryPrice?.toFixed(getPriceDecimals(position.symbol))}</span>
               {currentPrice && (
-                <> · Live: <span className="text-cyan-400 font-mono">{currentPrice.toFixed(4)}</span></>
+                <> · Live: <span className="text-cyan-400 font-mono">{currentPrice.toFixed(getPriceDecimals(position.symbol))}</span></>
               )}
               {pnlPips !== 0 && (
                 <> · <span className={`font-bold ${pnlColor}`}>{pnlPips >= 0 ? '+' : ''}{pnlPips.toFixed(1)} pips</span></>

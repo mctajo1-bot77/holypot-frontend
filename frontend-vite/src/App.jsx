@@ -399,18 +399,22 @@ function Dashboard() {
 
   const calculatePositionRisk = (position) => {
     const entryPrice = position.entryPrice;
-    const sl = position.stopLoss;
+    const sl  = position.stopLoss;
     const lot = position.lotSize || 0.01;
-    
-    if (!sl || !entryPrice) {
-      return { riskPercent: lot * 10, riskUSD: 0, distancePips: 0 };
-    }
-    
     const config = instrumentConfig[position.symbol] || instrumentConfig['EURUSD'];
+
+    if (!sl || !entryPrice) {
+      // Sin SL: 100 pips por defecto (igual que backend)
+      const defaultPips = 100;
+      const riskUSD     = defaultPips * config.pipValue * lot;
+      const riskPercent = (riskUSD / virtualCapital) * 100;
+      return { riskPercent, riskUSD, distancePips: defaultPips };
+    }
+
     const distancePips = Math.abs(entryPrice - sl) * config.pipMultiplier;
-    const riskUSD = distancePips * config.pipValue * lot;
-    const riskPercent = (riskUSD / virtualCapital) * 100;
-    
+    const riskUSD      = distancePips * config.pipValue * lot;
+    const riskPercent  = (riskUSD / virtualCapital) * 100;
+
     return { riskPercent, riskUSD, distancePips };
   };
 
@@ -863,16 +867,24 @@ function Dashboard() {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-xs text-gray-500 mb-1.5 block">{t('dash.takeProfit')}</label>
-                    <Input type="number" step="0.00001" placeholder="TP"
-                      value={takeProfit} onChange={e => setTakeProfit(e.target.value)}
+                    <Input type="text" inputMode="decimal" placeholder="TP"
+                      value={takeProfit}
+                      onChange={e => {
+                        const val = e.target.value.replace(',', '.');
+                        if (val === '' || /^\d*\.?\d*$/.test(val)) setTakeProfit(val);
+                      }}
                       disabled={!activeEntryId}
                       className="bg-[#0F172A] border-[#2A2A2A] text-white h-9 text-sm"
                     />
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 mb-1.5 block">{t('dash.stopLoss')}</label>
-                    <Input type="number" step="0.00001" placeholder="SL"
-                      value={stopLoss} onChange={e => setStopLoss(e.target.value)}
+                    <Input type="text" inputMode="decimal" placeholder="SL"
+                      value={stopLoss}
+                      onChange={e => {
+                        const val = e.target.value.replace(',', '.');
+                        if (val === '' || /^\d*\.?\d*$/.test(val)) setStopLoss(val);
+                      }}
                       disabled={!activeEntryId}
                       className="bg-[#0F172A] border-[#2A2A2A] text-white h-9 text-sm"
                     />
