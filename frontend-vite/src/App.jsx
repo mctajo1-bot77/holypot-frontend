@@ -423,11 +423,8 @@ function Dashboard() {
   const closeTrade = async (positionId) => {
     try {
       const res = await axios.post(`${API_BASE}/close-trade`, { positionId });
-      const pnl = parseFloat(res.data.message?.match(/([+-]?\d+\.?\d*)\)/)?.?.[1] ?? 'NaN');
-      toast.success(
-        'Trade cerrado',
-        res.data.message?.split('!')[1]?.trim() || 'Posición cerrada manualmente'
-      );
+      const detail = res.data.message?.split('!')[1]?.trim() || 'Posición cerrada manualmente';
+      toast.success('Trade cerrado', detail);
     } catch (err) {
       toast.error('Error al cerrar trade', err.response?.data?.error || err.message);
     }
