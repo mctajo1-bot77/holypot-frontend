@@ -29,7 +29,8 @@ import {
   Bot,
   Activity,
   Target,
-  Trophy
+  Trophy,
+  Shield
 } from "lucide-react";
 import {
   Tooltip,
@@ -572,88 +573,121 @@ function Dashboard() {
         )}
 
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* SIDEBAR — Desktop only                                          */}
+        {/* SIDEBAR — Desktop only (FundingPips style)                     */}
         {/* ══════════════════════════════════════════════════════════════════ */}
-        <aside className="hidden md:flex fixed left-0 top-[112px] bottom-0 w-20 bg-[#0F172A]/90 backdrop-blur border-r border-[#2A2A2A] flex-col items-center py-8">
-          <nav className="flex-1 flex flex-col items-center space-y-8">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-[#FFD700] bg-[#FFD700]/20">
-                  <Rocket className="h-8 w-8" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right"><p>{t('nav.dashboard')}</p></TooltipContent>
-            </Tooltip>
+        <aside className="hidden md:flex fixed left-0 top-[112px] bottom-0 w-56 bg-[#0B1120] border-r border-[#1E2A3A] flex-col z-30">
+          <nav className="flex flex-col flex-1 px-3 py-5 overflow-y-auto">
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20" onClick={() => navigate('/profile')}>
-                  <Coins className="h-8 w-8" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right"><p>{t('nav.profile')}</p></TooltipContent>
-            </Tooltip>
+            {/* ─── TRADING ──────────────────────────────────── */}
+            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-2 mb-2">Trading</p>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20" onClick={() => navigate('/ganadores')}>
-                  <Trophy className="h-8 w-8" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right"><p>Ganadores</p></TooltipContent>
-            </Tooltip>
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 text-[#FFD700] bg-[#FFD700]/10 hover:bg-[#FFD700]/15 rounded-lg mb-1 h-10"
+            >
+              <Rocket className="h-5 w-5 shrink-0" />
+              <span className="text-sm font-medium">{t('nav.dashboard')}</span>
+            </Button>
 
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 text-gray-300 hover:text-white hover:bg-white/5 rounded-lg mb-1 h-10"
+              onClick={() => navigate('/profile')}
+            >
+              <Coins className="h-5 w-5 shrink-0" />
+              <span className="text-sm font-medium">{t('nav.profile')}</span>
+            </Button>
+
+            {/* ─── COMUNIDAD ────────────────────────────────── */}
+            <div className="border-t border-[#1E2A3A] my-3" />
+            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-2 mb-2">Comunidad</p>
+
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 text-gray-300 hover:text-white hover:bg-white/5 rounded-lg mb-1 h-10"
+              onClick={() => navigate('/ganadores')}
+            >
+              <Trophy className="h-5 w-5 shrink-0" />
+              <span className="text-sm font-medium">Hall of Fame</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 text-gray-300 hover:text-white hover:bg-white/5 rounded-lg mb-1 h-10"
+              onClick={() => navigate('/ganadores#pagos-verificados')}
+            >
+              <Shield className="h-5 w-5 shrink-0" />
+              <span className="text-sm font-medium">Pagos Verificados</span>
+            </Button>
+
+            {/* ─── ADMIN ────────────────────────────────────── */}
             {isAdminSession && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20" onClick={() => navigate('/admin')}>
-                    <Crown className="h-8 w-8" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right"><p>{t('nav.admin')}</p></TooltipContent>
-              </Tooltip>
+              <>
+                <div className="border-t border-[#1E2A3A] my-3" />
+                <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-2 mb-2">Admin</p>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 text-gray-300 hover:text-white hover:bg-white/5 rounded-lg mb-1 h-10"
+                  onClick={() => navigate('/admin')}
+                >
+                  <Crown className="h-5 w-5 shrink-0" />
+                  <span className="text-sm font-medium">{t('nav.admin')}</span>
+                </Button>
+              </>
             )}
 
+            {/* ─── BOTTOM ───────────────────────────────────── */}
             <div className="mt-auto">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-red-700/50" onClick={handleLogout}>
-                    <Power className="h-8 w-8" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right"><p>{t('nav.logout')}</p></TooltipContent>
-              </Tooltip>
+              <div className="border-t border-[#1E2A3A] my-3" />
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg h-10"
+                onClick={handleLogout}
+              >
+                <Power className="h-5 w-5 shrink-0" />
+                <span className="text-sm font-medium">{t('nav.logout')}</span>
+              </Button>
             </div>
+
           </nav>
         </aside>
 
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* BOTTOM NAV — Mobile only                                        */}
         {/* ══════════════════════════════════════════════════════════════════ */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0F172A]/95 backdrop-blur-md border-t border-[#FFD700]/20 flex justify-around items-center py-2 px-2">
-          <Button variant="ghost" size="icon" className="text-[#FFD700] bg-[#FFD700]/20 flex-1">
-            <Rocket className="h-6 w-6" />
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0B1120]/98 backdrop-blur-md border-t border-[#1E2A3A] flex justify-around items-center py-1 px-1">
+          <Button variant="ghost" size="icon" className="text-[#FFD700] bg-[#FFD700]/20 flex-1 flex-col gap-0.5 h-14 rounded-none">
+            <Rocket className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Trading</span>
           </Button>
-          <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20 flex-1" onClick={() => navigate('/profile')}>
-            <Coins className="h-6 w-6" />
+          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/profile')}>
+            <Coins className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Perfil</span>
           </Button>
-          <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20 flex-1" onClick={() => navigate('/ganadores')}>
-            <Trophy className="h-6 w-6" />
+          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/ganadores')}>
+            <Trophy className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Hall of Fame</span>
+          </Button>
+          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/ganadores#pagos-verificados')}>
+            <Shield className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Pagos</span>
           </Button>
           {isAdminSession && (
-            <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20 flex-1" onClick={() => navigate('/admin')}>
-              <Crown className="h-6 w-6" />
+            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/admin')}>
+              <Crown className="h-5 w-5" />
+              <span className="text-[9px] font-medium">Admin</span>
             </Button>
           )}
-          <Button variant="ghost" size="icon" className="text-white hover:bg-red-700/50 flex-1" onClick={handleLogout}>
-            <Power className="h-6 w-6" />
+          <Button variant="ghost" size="icon" className="text-red-400 hover:bg-red-900/20 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={handleLogout}>
+            <Power className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Salir</span>
           </Button>
         </nav>
 
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* MAIN CONTENT                                                     */}
         {/* ══════════════════════════════════════════════════════════════════ */}
-        <main className="md:ml-20 pt-[88px] md:pt-[112px] px-3 md:px-8 pb-24 md:pb-20">
+        <main className="md:ml-56 pt-[88px] md:pt-[112px] px-3 md:px-8 pb-24 md:pb-20">
           <div className="max-w-7xl mx-auto space-y-5">
 
             {/* ── STATS HERO STRIP ──────────────────────────────────────────── */}
