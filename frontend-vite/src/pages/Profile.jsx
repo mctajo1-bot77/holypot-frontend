@@ -34,7 +34,8 @@ import {
   Rocket, Coins, Crown, Power, Trophy, Medal,
   TrendingUp, TrendingDown, Sparkles, Bot, Share2,
   Globe, Zap, Activity, BarChart2, Star, Award,
-  Calendar, DollarSign, ChevronDown, ChevronUp, Target
+  Calendar, DollarSign, ChevronDown, ChevronUp, Target,
+  Shield, Wallet, ArrowDownLeft, ArrowUpRight
 } from "lucide-react";
 import {
   RadialBarChart, RadialBar, PolarAngleAxis,
@@ -127,6 +128,9 @@ const Profile = () => {
 
   // ── UI-only state ─────────────────────────────────────────────────────────
   const [expandedRow, setExpandedRow] = useState(null);
+  const [payouts, setPayouts] = useState([]);
+  const [payoutsLoading, setPayoutsLoading] = useState(false);
+  const [activePayTab, setActivePayTab] = useState('recibidos');
 
   const isAdminSession = !!localStorage.getItem('holypotAdminToken');
 
@@ -199,6 +203,22 @@ const Profile = () => {
     fetchProfileData();
     const interval = setInterval(fetchProfileData, 10000);
     return () => clearInterval(interval);
+  }, [entryId]);
+
+  useEffect(() => {
+    if (!entryId) return;
+    const fetchPayouts = async () => {
+      setPayoutsLoading(true);
+      try {
+        const res = await axios.get(`${API_BASE}/my-payouts`);
+        setPayouts(Array.isArray(res.data) ? res.data : []);
+      } catch (err) {
+        console.error('payouts error:', err);
+      } finally {
+        setPayoutsLoading(false);
+      }
+    };
+    fetchPayouts();
   }, [entryId]);
 
   // ── Loading state ─────────────────────────────────────────────────────────
@@ -333,76 +353,121 @@ const Profile = () => {
         </header>
 
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* SIDEBAR — Desktop only                                           */}
+        {/* SIDEBAR — Desktop only (FundingPips style)                      */}
         {/* ══════════════════════════════════════════════════════════════════ */}
-        <aside className="hidden md:flex fixed left-0 top-[112px] bottom-0 w-20 bg-[#0F172A]/90 backdrop-blur border-r border-[#2A2A2A] flex-col items-center py-8 space-y-8">
-          <nav className="flex-1 flex flex-col items-center space-y-8">
-            <UITooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20" onClick={() => navigate('/dashboard')}>
-                  <Rocket className="h-8 w-8" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right"><p>{t('nav.dashboard')}</p></TooltipContent>
-            </UITooltip>
+        <aside className="hidden md:flex fixed left-0 top-[112px] bottom-0 w-56 bg-[#0B1120] border-r border-[#1E2A3A] flex-col z-30">
+          <nav className="flex flex-col flex-1 px-3 py-5 overflow-y-auto">
 
-            <UITooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-[#FFD700] bg-[#FFD700]/20">
-                  <Coins className="h-8 w-8" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right"><p>{t('nav.profile')}</p></TooltipContent>
-            </UITooltip>
+            {/* ─── TRADING ──────────────────────────────────── */}
+            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-2 mb-2">Trading</p>
 
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 text-gray-300 hover:text-white hover:bg-white/5 rounded-lg mb-1 h-10"
+              onClick={() => navigate('/dashboard')}
+            >
+              <Rocket className="h-5 w-5 shrink-0" />
+              <span className="text-sm font-medium">{t('nav.dashboard')}</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 text-[#FFD700] bg-[#FFD700]/10 hover:bg-[#FFD700]/15 rounded-lg mb-1 h-10"
+            >
+              <Coins className="h-5 w-5 shrink-0" />
+              <span className="text-sm font-medium">{t('nav.profile')}</span>
+            </Button>
+
+            {/* ─── COMUNIDAD ────────────────────────────────── */}
+            <div className="border-t border-[#1E2A3A] my-3" />
+            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-2 mb-2">Comunidad</p>
+
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 text-gray-300 hover:text-white hover:bg-white/5 rounded-lg mb-1 h-10"
+              onClick={() => navigate('/ganadores')}
+            >
+              <Trophy className="h-5 w-5 shrink-0" />
+              <span className="text-sm font-medium">Hall of Fame</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 text-gray-300 hover:text-white hover:bg-white/5 rounded-lg mb-1 h-10"
+              onClick={() => navigate('/ganadores#pagos-verificados')}
+            >
+              <Shield className="h-5 w-5 shrink-0" />
+              <span className="text-sm font-medium">Pagos Verificados</span>
+            </Button>
+
+            {/* ─── ADMIN ────────────────────────────────────── */}
             {isAdminSession && (
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20" onClick={() => navigate('/admin')}>
-                    <Crown className="h-8 w-8" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right"><p>{t('nav.admin')}</p></TooltipContent>
-              </UITooltip>
+              <>
+                <div className="border-t border-[#1E2A3A] my-3" />
+                <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-2 mb-2">Admin</p>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 text-gray-300 hover:text-white hover:bg-white/5 rounded-lg mb-1 h-10"
+                  onClick={() => navigate('/admin')}
+                >
+                  <Crown className="h-5 w-5 shrink-0" />
+                  <span className="text-sm font-medium">{t('nav.admin')}</span>
+                </Button>
+              </>
             )}
 
+            {/* ─── BOTTOM ───────────────────────────────────── */}
             <div className="mt-auto">
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-red-700/50" onClick={handleLogout}>
-                    <Power className="h-8 w-8" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right"><p>{t('nav.logout')}</p></TooltipContent>
-              </UITooltip>
+              <div className="border-t border-[#1E2A3A] my-3" />
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg h-10"
+                onClick={handleLogout}
+              >
+                <Power className="h-5 w-5 shrink-0" />
+                <span className="text-sm font-medium">{t('nav.logout')}</span>
+              </Button>
             </div>
+
           </nav>
         </aside>
 
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* BOTTOM NAV — Mobile only                                         */}
         {/* ══════════════════════════════════════════════════════════════════ */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0F172A]/95 backdrop-blur-md border-t border-[#FFD700]/20 flex justify-around items-center py-2 px-2">
-          <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20 flex-1" onClick={() => navigate('/dashboard')}>
-            <Rocket className="h-6 w-6" />
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0B1120]/98 backdrop-blur-md border-t border-[#1E2A3A] flex justify-around items-center py-1 px-1">
+          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/dashboard')}>
+            <Rocket className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Trading</span>
           </Button>
-          <Button variant="ghost" size="icon" className="text-[#FFD700] bg-[#FFD700]/20 flex-1">
-            <Coins className="h-6 w-6" />
+          <Button variant="ghost" size="icon" className="text-[#FFD700] bg-[#FFD700]/10 flex-1 flex-col gap-0.5 h-14 rounded-none">
+            <Coins className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Perfil</span>
+          </Button>
+          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/ganadores')}>
+            <Trophy className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Hall of Fame</span>
+          </Button>
+          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/ganadores#pagos-verificados')}>
+            <Shield className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Pagos</span>
           </Button>
           {isAdminSession && (
-            <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20 flex-1" onClick={() => navigate('/admin')}>
-              <Crown className="h-6 w-6" />
+            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/admin')}>
+              <Crown className="h-5 w-5" />
+              <span className="text-[9px] font-medium">Admin</span>
             </Button>
           )}
-          <Button variant="ghost" size="icon" className="text-white hover:bg-red-700/50 flex-1" onClick={handleLogout}>
-            <Power className="h-6 w-6" />
+          <Button variant="ghost" size="icon" className="text-red-400 hover:bg-red-900/20 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={handleLogout}>
+            <Power className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Salir</span>
           </Button>
         </nav>
 
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* MAIN CONTENT                                                     */}
         {/* ══════════════════════════════════════════════════════════════════ */}
-        <main className="md:ml-20 pt-[88px] md:pt-[112px] px-3 md:px-6 pb-24 md:pb-12">
+        <main className="md:ml-56 pt-[88px] md:pt-[112px] px-3 md:px-6 pb-24 md:pb-12">
           <div className="max-w-7xl mx-auto space-y-5">
 
             {/* ── USER HERO ────────────────────────────────────────────────── */}
@@ -1114,6 +1179,162 @@ const Profile = () => {
                     </TableBody>
                   </Table>
                 </div>
+              )}
+            </div>
+
+          </div>
+
+            {/* ── HISTORIAL DE PAGOS ─────────────────────────────────────────── */}
+            <div className={`${card} p-5 md:p-6`}>
+              <div className="flex items-center gap-2.5 mb-5">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                  <Wallet className="h-4 w-4 text-blue-400" />
+                </div>
+                <h3 className="text-base font-semibold text-gray-200">Historial de Pagos</h3>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex gap-1 mb-5 bg-[#0F172A] rounded-xl p-1 border border-[#2A2A2A]">
+                <button
+                  className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-lg transition ${activePayTab === 'recibidos' ? 'bg-[#00C853] text-black' : 'text-gray-400 hover:text-white'}`}
+                  onClick={() => setActivePayTab('recibidos')}
+                >
+                  <ArrowDownLeft className="h-3.5 w-3.5" />
+                  Recibidos
+                </button>
+                <button
+                  className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-lg transition ${activePayTab === 'enviados' ? 'bg-[#FFD700] text-black' : 'text-gray-400 hover:text-white'}`}
+                  onClick={() => setActivePayTab('enviados')}
+                >
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                  Enviados
+                </button>
+              </div>
+
+              {activePayTab === 'recibidos' ? (
+                payoutsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-[#00C853]/30 border-t-[#00C853] rounded-full animate-spin" />
+                  </div>
+                ) : payouts.length === 0 ? (
+                  <div className="flex flex-col items-center py-10 gap-3">
+                    <ArrowDownLeft className="h-10 w-10 text-gray-700" />
+                    <p className="text-gray-500 text-sm">Aún no has recibido premios</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-[#2A2A2A] hover:bg-transparent">
+                          <TableHead className="text-[#00C853] text-xs font-semibold">Fecha</TableHead>
+                          <TableHead className="text-[#00C853] text-xs font-semibold">Nivel</TableHead>
+                          <TableHead className="text-[#00C853] text-xs font-semibold">Pos.</TableHead>
+                          <TableHead className="text-[#00C853] text-xs font-semibold">Premio</TableHead>
+                          <TableHead className="text-[#00C853] text-xs font-semibold hidden md:table-cell">Red</TableHead>
+                          <TableHead className="text-[#00C853] text-xs font-semibold">Estado</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {payouts.map((p, i) => (
+                          <TableRow key={i} className="border-[#2A2A2A] hover:bg-white/5">
+                            <TableCell className="text-gray-300 text-sm py-3">{p.date ? new Date(p.date).toLocaleDateString('es-ES') : '—'}</TableCell>
+                            <TableCell className="py-3">
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                                p.level === 'premium' ? 'bg-[#FFD700]/15 text-[#FFD700]' :
+                                p.level === 'medium'  ? 'bg-blue-400/15 text-blue-400' :
+                                'bg-emerald-400/15 text-emerald-400'
+                              }`}>
+                                {(p.level || '—').toUpperCase()}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-gray-300 text-sm py-3">
+                              {p.position === 1 ? '🥇' : p.position === 2 ? '🥈' : p.position === 3 ? '🥉' : `#${p.position}`}
+                            </TableCell>
+                            <TableCell className="text-[#00C853] font-bold text-sm py-3">
+                              +{parseFloat(p.amount || 0).toFixed(2)} USDT
+                            </TableCell>
+                            <TableCell className="py-3 hidden md:table-cell">
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                                (p.network || '').toUpperCase() === 'POLYGON' ? 'bg-purple-500/15 text-purple-400' : 'bg-red-400/15 text-red-400'
+                              }`}>
+                                {(p.network || '—').toUpperCase()}
+                              </span>
+                            </TableCell>
+                            <TableCell className="py-3">
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                p.status === 'confirmed' ? 'bg-[#00C853]/15 text-[#00C853]' :
+                                p.status === 'sent'      ? 'bg-blue-400/15 text-blue-400' :
+                                p.status === 'failed'    ? 'bg-red-500/15 text-red-400' :
+                                'bg-gray-700/40 text-gray-400'
+                              }`}>
+                                {p.status === 'confirmed' ? 'Confirmado' :
+                                 p.status === 'sent'      ? 'Enviado' :
+                                 p.status === 'failed'    ? 'Fallido' : 'Pendiente'}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
+              ) : (
+                history.length === 0 ? (
+                  <div className="flex flex-col items-center py-10 gap-3">
+                    <ArrowUpRight className="h-10 w-10 text-gray-700" />
+                    <p className="text-gray-500 text-sm">Aún no has participado en ninguna competencia</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-[#2A2A2A] hover:bg-transparent">
+                          <TableHead className="text-[#FFD700] text-xs font-semibold">Fecha</TableHead>
+                          <TableHead className="text-[#FFD700] text-xs font-semibold">Nivel</TableHead>
+                          <TableHead className="text-[#FFD700] text-xs font-semibold">Entry Fee</TableHead>
+                          <TableHead className="text-[#FFD700] text-xs font-semibold">Posición</TableHead>
+                          <TableHead className="text-[#FFD700] text-xs font-semibold">Resultado</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {history.map((h, i) => {
+                          const FEES = { basic: 12, medium: 50, premium: 150 };
+                          const fee = FEES[(h.level || 'basic').toLowerCase()] || 12;
+                          const hReturn = parseFloat(h.return || 0);
+                          const hPrize  = parseFloat(h.prize  || 0);
+                          const hPosNum = parseInt((h.position ?? '999').toString().replace('#', ''));
+                          return (
+                            <TableRow key={i} className="border-[#2A2A2A] hover:bg-white/5">
+                              <TableCell className="text-gray-300 text-sm py-3">{h.date}</TableCell>
+                              <TableCell className="py-3">
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                                  (h.level || '') === 'premium' ? 'bg-[#FFD700]/15 text-[#FFD700]' :
+                                  (h.level || '') === 'medium'  ? 'bg-blue-400/15 text-blue-400' :
+                                  'bg-emerald-400/15 text-emerald-400'
+                                }`}>
+                                  {(h.level || 'basic').toUpperCase()}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-red-400 font-bold text-sm py-3">
+                                -{fee} USDT
+                              </TableCell>
+                              <TableCell className="text-gray-300 text-sm py-3">#{hPosNum}</TableCell>
+                              <TableCell className="py-3">
+                                {hPrize > 0 ? (
+                                  <span className="text-[#00C853] font-bold text-sm">+{formatNumber(hPrize)} USDT</span>
+                                ) : (
+                                  <span className={`text-sm font-medium ${hReturn >= 0 ? 'text-gray-400' : 'text-red-400'}`}>
+                                    {hReturn > 0 ? '+' : ''}{hReturn.toFixed(2)}%
+                                  </span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
               )}
             </div>
 

@@ -4,6 +4,18 @@ import axios from 'axios';
 import { Trophy, Shield, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import logo from '@/assets/Holypot-logo.webp';
 
+// Scroll to anchor on hash navigation (e.g. /ganadores#pagos-verificados)
+function useHashScroll() {
+  useEffect(() => {
+    if (!window.location.hash) return;
+    const id = window.location.hash.replace('#', '');
+    const el = document.getElementById(id);
+    if (el) {
+      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    }
+  }, []);
+}
+
 const API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
   : 'http://localhost:5000/api';
@@ -24,6 +36,7 @@ const medal = (pos) => pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '�
 
 export default function WinnersPage() {
   const navigate = useNavigate();
+  useHashScroll();
   const [hallOfFame, setHallOfFame] = useState([]);
   const [history, setHistory] = useState([]);
   const [page, setPage] = useState(1);
@@ -83,7 +96,7 @@ export default function WinnersPage() {
       <div className="max-w-7xl mx-auto px-4 py-10 space-y-20">
 
         {/* ── HALL OF FAME ─────────────────────────────────────────── */}
-        <section>
+        <section id="hall-of-fame">
           <div className="text-center mb-10">
             <div className="flex items-center justify-center gap-3 mb-3">
               <Trophy className="w-9 h-9 text-[#D4AF37]" />
@@ -168,7 +181,7 @@ export default function WinnersPage() {
         </section>
 
         {/* ── PAGOS VERIFICADOS ────────────────────────────────────── */}
-        <section>
+        <section id="pagos-verificados">
           <div className="text-center mb-10">
             <div className="flex items-center justify-center gap-3 mb-3">
               <Shield className="w-8 h-8 text-[#00C853]" />
