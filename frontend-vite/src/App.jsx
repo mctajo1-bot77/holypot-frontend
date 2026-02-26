@@ -365,6 +365,37 @@ function Dashboard() {
     fetchMyPayouts();
   }, [isAdminSession]);
 
+  // Cargar resultados de la última competencia si la competencia ya terminó y no hay resultados en memoria
+  useEffect(() => {
+    if (!competitionEnded || competitionResults || isAdminSession) return;
+    const fetchLastResults = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/last-competition-results`);
+        if (res.data && Object.keys(res.data).some(l => res.data[l]?.hasData)) {
+          // Convertir al formato esperado por CompetitionEndedModal
+          const converted = {};
+          Object.entries(res.data).forEach(([level, data]) => {
+            if (data.hasData) {
+              converted[level] = {
+                rollover: false,
+                participants: data.participants,
+                prizePool: data.prizePool,
+                top3: data.top3,
+                ranking: data.ranking
+              };
+            } else {
+              converted[level] = { rollover: true, participants: 0 };
+            }
+          });
+          setCompetitionResults(converted);
+        }
+      } catch (err) {
+        console.error('Error fetching last competition results:', err);
+      }
+    };
+    fetchLastResults();
+  }, [competitionEnded, competitionResults, isAdminSession]);
+
   const openTrade = async () => {
     if (!activeEntryId) {
       toast.warning('Sin entry activa', 'En test mode presiona "Activar" primero.');

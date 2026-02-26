@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 // medalPosition: 1 → 🥇  2 → 🥈  3 → 🥉
 const medal = (pos) => ['🥇', '🥈', '🥉'][pos - 1] || `${pos}º`;
 
 const CompetitionEndedModal = ({ open, onClose, results, userEntryId, userLevel, myAdvice }) => {
   const [generating, setGenerating] = useState(false);
+  const [showFullRanking, setShowFullRanking] = useState(false);
 
   if (!results || !userLevel) return null;
 
@@ -13,15 +15,21 @@ const CompetitionEndedModal = ({ open, onClose, results, userEntryId, userLevel,
   if (!levelData) return null;
 
   // Posición del usuario en el ranking de su nivel
-  const myRank = levelData.rollover
-    ? null
-    : levelData.ranking?.findIndex(r => r.entryId === userEntryId) + 1 || null;
+  const myRankIndex = levelData.rollover
+    ? -1
+    : (levelData.ranking?.findIndex(r => r.entryId === userEntryId) ?? -1);
+  const myRank = myRankIndex >= 0 ? myRankIndex + 1 : null;
 
   const myWin = !levelData.rollover && myRank >= 1 && myRank <= 3
     ? levelData.top3?.[myRank - 1]
     : null;
 
   const isRollover = levelData.rollover;
+
+  const handleReentry = () => {
+    onClose();
+    window.location.href = '/';
+  };
 
   const downloadCertificate = async () => {
     setGenerating(true);
@@ -159,9 +167,11 @@ const CompetitionEndedModal = ({ open, onClose, results, userEntryId, userLevel,
     }
   };
 
+  const fullRanking = levelData.ranking || [];
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg bg-[#060606] border border-holy/30 text-white p-0 rounded-2xl overflow-hidden">
+      <DialogContent className="max-w-lg bg-[#060606] border border-holy/30 text-white p-0 rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
 
         {/* Header */}
         <div className={`px-6 py-5 text-center ${myWin ? 'bg-gradient-to-b from-holy/20 to-transparent' : 'bg-gradient-to-b from-white/5 to-transparent'}`}>
@@ -182,7 +192,7 @@ const CompetitionEndedModal = ({ open, onClose, results, userEntryId, userLevel,
           </p>
         </div>
 
-        <div className="px-6 pb-6 space-y-5">
+        <div className="px-6 pb-6 space-y-4">
 
           {/* Resultado personal */}
           {!isRollover && myRank && (
@@ -200,9 +210,9 @@ const CompetitionEndedModal = ({ open, onClose, results, userEntryId, userLevel,
               ) : (
                 <>
                   <p className="text-lg font-semibold text-gray-300">Terminaste en <span className="text-white font-bold">{myRank}º lugar</span></p>
-                  {levelData.ranking?.[myRank - 1] && (
+                  {fullRanking[myRank - 1] && (
                     <p className="text-sm text-gray-500 mt-1">
-                      Retorno: {levelData.ranking[myRank - 1].retorno >= 0 ? '+' : ''}{levelData.ranking[myRank - 1].retorno}%
+                      Retorno: {fullRanking[myRank - 1].retorno >= 0 ? '+' : ''}{fullRanking[myRank - 1].retorno}%
                     </p>
                   )}
                   <p className="text-xs text-gray-600 mt-2">¡Sigue entrenando — el próximo ciclo empieza a las 00:00 UTC!</p>
@@ -241,6 +251,48 @@ const CompetitionEndedModal = ({ open, onClose, results, userEntryId, userLevel,
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Ranking completo (expandible) */}
+          {!isRollover && fullRanking.length > 3 && (
+            <div>
+              <button
+                onClick={() => setShowFullRanking(v => !v)}
+                className="w-full flex items-center justify-between text-xs text-gray-400 hover:text-white transition py-2 px-3 rounded-lg hover:bg-white/5"
+              >
+                <span className="font-semibold uppercase tracking-wider">
+                  Ranking completo — {fullRanking.length} participantes
+                </span>
+                {showFullRanking ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+              {showFullRanking && (
+                <div className="mt-2 space-y-1 max-h-48 overflow-y-auto pr-1">
+                  {fullRanking.map((r, idx) => (
+                    <div
+                      key={r.entryId}
+                      className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
+                        r.entryId === userEntryId
+                          ? 'bg-holy/10 border border-holy/25'
+                          : 'bg-white/3 border border-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500 text-xs w-5 text-right">{idx + 1}.</span>
+                        <span className={`font-medium ${r.entryId === userEntryId ? 'text-holy' : 'text-gray-200'}`}>
+                          {r.nickname}
+                        </span>
+                        {r.entryId === userEntryId && (
+                          <span className="text-[9px] bg-holy/30 text-holy px-1 py-0.5 rounded font-bold">TÚ</span>
+                        )}
+                      </div>
+                      <span className={`font-semibold text-xs ${r.retorno >= 0 ? 'text-profit' : 'text-red-400'}`}>
+                        {r.retorno >= 0 ? '+' : ''}{r.retorno}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -287,13 +339,25 @@ const CompetitionEndedModal = ({ open, onClose, results, userEntryId, userLevel,
             </button>
           )}
 
-          {/* CTA */}
-          <button
-            onClick={onClose}
-            className="w-full bg-gradient-to-r from-holy/80 to-purple-600/80 hover:from-holy hover:to-purple-600 text-black font-bold py-3 rounded-xl transition"
-          >
-            Entendido
-          </button>
+          {/* Botones finales */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Re-inscribirse mañana */}
+            {!isRollover && (
+              <button
+                onClick={handleReentry}
+                className="bg-gradient-to-r from-[#00C853]/80 to-emerald-700/80 hover:from-[#00C853] hover:to-emerald-600 text-white font-bold py-3 rounded-xl transition text-sm"
+              >
+                🔁 Inscribirme mañana
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className={`bg-gradient-to-r from-holy/80 to-purple-600/80 hover:from-holy hover:to-purple-600 text-black font-bold py-3 rounded-xl transition text-sm ${isRollover ? 'col-span-2' : ''}`}
+            >
+              Entendido
+            </button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
