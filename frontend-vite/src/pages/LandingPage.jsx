@@ -262,6 +262,14 @@ const LandingPage = () => {
         <div className="border-t border-b border-[#D4AF37]/12 bg-[#0F172A]/60 backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12">
             <LandingHeaderWinners />
+            <div className="text-center mt-6">
+              <a
+                href="/ganadores"
+                className="inline-flex items-center gap-2 text-sm text-[#D4AF37]/80 hover:text-[#FFD700] transition font-semibold underline underline-offset-4"
+              >
+                Ver Hall of Fame &amp; historial verificado →
+              </a>
+            </div>
           </div>
         </div>
       </section>

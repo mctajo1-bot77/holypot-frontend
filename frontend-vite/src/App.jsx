@@ -28,7 +28,8 @@ import {
   TrendingDown,
   Bot,
   Activity,
-  Target
+  Target,
+  Trophy
 } from "lucide-react";
 import {
   Tooltip,
@@ -593,6 +594,15 @@ function Dashboard() {
               <TooltipContent side="right"><p>{t('nav.profile')}</p></TooltipContent>
             </Tooltip>
 
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20" onClick={() => navigate('/ganadores')}>
+                  <Trophy className="h-8 w-8" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right"><p>Ganadores</p></TooltipContent>
+            </Tooltip>
+
             {isAdminSession && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -626,6 +636,9 @@ function Dashboard() {
           </Button>
           <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20 flex-1" onClick={() => navigate('/profile')}>
             <Coins className="h-6 w-6" />
+          </Button>
+          <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20 flex-1" onClick={() => navigate('/ganadores')}>
+            <Trophy className="h-6 w-6" />
           </Button>
           {isAdminSession && (
             <Button variant="ghost" size="icon" className="text-white hover:bg-[#FFD700]/20 flex-1" onClick={() => navigate('/admin')}>

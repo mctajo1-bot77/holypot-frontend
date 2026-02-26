@@ -14,6 +14,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import RulesPage from './pages/RulesPage';
+import WinnersPage from './pages/WinnersPage';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -25,6 +26,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/rules" element={<RulesPage />} />
+          <Route path="/ganadores" element={<WinnersPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
 
           {/* RUTAS PROTEGIDAS – solo accesibles con token normal o admin impersonando */}
