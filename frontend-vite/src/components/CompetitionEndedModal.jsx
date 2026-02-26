@@ -4,7 +4,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 // medalPosition: 1 → 🥇  2 → 🥈  3 → 🥉
 const medal = (pos) => ['🥇', '🥈', '🥉'][pos - 1] || `${pos}º`;
 
-const CompetitionEndedModal = ({ open, onClose, results, userEntryId, userLevel }) => {
+const CompetitionEndedModal = ({ open, onClose, results, userEntryId, userLevel, myAdvice }) => {
   if (!results || !userLevel) return null;
 
   const levelData = results[userLevel];
@@ -115,6 +115,21 @@ const CompetitionEndedModal = ({ open, onClose, results, userEntryId, userLevel 
               </p>
             </div>
           )}
+
+          {/* Consejos IA */}
+          <div className="rounded-xl bg-purple-900/20 border border-purple-500/30 px-4 py-3 space-y-2">
+            <p className="text-xs text-purple-300 font-bold flex items-center gap-1.5">
+              💡 Consejos de tu IA
+              {!myAdvice && <span className="text-[10px] text-gray-500 font-normal animate-pulse">generando...</span>}
+            </p>
+            {myAdvice ? (
+              myAdvice.split('\n').filter(l => l.trim()).map((line, i) => (
+                <p key={i} className="text-sm text-gray-300 leading-snug">{line}</p>
+              ))
+            ) : (
+              <p className="text-xs text-gray-600">Los consejos llegarán en unos segundos al terminar el análisis de tu sesión.</p>
+            )}
+          </div>
 
           {/* CTA */}
           <button
