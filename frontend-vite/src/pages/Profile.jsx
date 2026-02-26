@@ -864,7 +864,7 @@ const Profile = () => {
             {/* ── PROFITABILITY + SESSION SUCCESS ──────────────────────────── */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-              {/* Profitability gauge */}
+              {/* Profitability - Win Rate + Retorno */}
               <div className={`${card} p-5`}>
                 <div className="flex items-center gap-2.5 mb-4">
                   <div className="w-8 h-8 rounded-lg bg-[#00C853]/15 flex items-center justify-center">
@@ -872,76 +872,119 @@ const Profile = () => {
                   </div>
                   <h3 className="text-sm font-semibold text-gray-200">{t('profile.profitability')}</h3>
                 </div>
-                <div className="flex flex-col items-center">
-                  <ResponsiveContainer width={180} height={180}>
-                    <RadialBarChart cx="50%" cy="50%" innerRadius="50%" outerRadius="90%" data={gaugeData}>
-                      <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                      <RadialBar
-                        dataKey="value"
-                        cornerRadius={10}
-                        fill={dailyReturn >= 0 ? '#00C853' : '#FF4444'}
-                        background={{ fill: '#2A2A2A' }}
-                      />
-                    </RadialBarChart>
-                  </ResponsiveContainer>
-                  <p className={`text-4xl font-bold mt-2 ${dailyReturn >= 0 ? 'text-[#00C853]' : 'text-red-400'}`}>
-                    {formatPercent(dailyReturn)}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">{t('profile.hitRatio')}</p>
-                  <div className="mt-4 flex gap-6">
-                    <div className="text-center">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full bg-[#00C853]" />
-                        <span className="text-[#00C853] font-bold">{winningTrades}</span>
+
+                {/* Win rate gauge (donut-style) */}
+                {(() => {
+                  const winRate = totalTrades > 0 ? Math.round((winningTrades / totalTrades) * 100) : 0;
+                  const winRateData = [{ value: winRate }];
+                  return (
+                    <div className="flex flex-col items-center">
+                      <div className="relative">
+                        <ResponsiveContainer width={160} height={160}>
+                          <RadialBarChart cx="50%" cy="50%" innerRadius="55%" outerRadius="90%" data={winRateData} startAngle={90} endAngle={-270}>
+                            <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                            <RadialBar
+                              dataKey="value"
+                              cornerRadius={8}
+                              fill={winRate >= 50 ? '#00C853' : winRate >= 30 ? '#FFD700' : '#FF4444'}
+                              background={{ fill: '#2A2A2A' }}
+                            />
+                          </RadialBarChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className={`text-2xl font-bold ${winRate >= 50 ? 'text-[#00C853]' : winRate >= 30 ? 'text-[#FFD700]' : 'text-red-400'}`}>
+                            {winRate}%
+                          </span>
+                          <span className="text-[10px] text-gray-500">win rate</span>
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-500">{t('profile.wins')}</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full bg-red-400" />
-                        <span className="text-red-400 font-bold">{losingTrades}</span>
+
+                      {/* Retorno diario */}
+                      <div className={`mt-2 text-center px-4 py-2 rounded-xl ${dailyReturn >= 0 ? 'bg-[#00C853]/10' : 'bg-red-500/10'}`}>
+                        <p className={`text-xl font-bold ${dailyReturn >= 0 ? 'text-[#00C853]' : 'text-red-400'}`}>
+                          {dailyReturn >= 0 ? '+' : ''}{parseFloat(dailyReturn).toFixed(2)}%
+                        </p>
+                        <p className="text-[10px] text-gray-500">retorno de la sesión</p>
                       </div>
-                      <p className="text-xs text-gray-500">{t('profile.losses')}</p>
+
+                      <div className="mt-3 flex gap-5 text-sm">
+                        <div className="text-center">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-[#00C853]" />
+                            <span className="text-[#00C853] font-bold">{winningTrades}</span>
+                          </div>
+                          <p className="text-xs text-gray-500">{t('profile.wins')}</p>
+                        </div>
+                        <div className="text-center border-x border-[#2A2A2A] px-4">
+                          <p className="font-bold text-white">{totalTrades}</p>
+                          <p className="text-xs text-gray-500">total</p>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-red-400" />
+                            <span className="text-red-400 font-bold">{losingTrades}</span>
+                          </div>
+                          <p className="text-xs text-gray-500">{t('profile.losses')}</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  );
+                })()}
               </div>
 
-              {/* Session Success */}
+              {/* Session Success - Barras horizontales por sesión */}
               <div className={`${card} p-5`}>
-                <div className="flex items-center gap-2.5 mb-4">
+                <div className="flex items-center gap-2.5 mb-5">
                   <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
                     <Globe className="h-4 w-4 text-blue-400" />
                   </div>
                   <h3 className="text-sm font-semibold text-gray-200">{t('profile.sessionSuccess')}</h3>
                 </div>
                 {sessionSuccessData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={sessionSuccessData} layout="horizontal" margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-                      <XAxis
-                        type="number"
-                        stroke="#3A3A3A"
-                        tick={{ fill: '#6b7280', fontSize: 11 }}
-                        domain={[0, 100]}
-                        ticks={[0, 25, 50, 75, 100]}
-                        tickFormatter={v => `${v}%`}
-                      />
-                      <YAxis dataKey="session" type="category" stroke="#3A3A3A" tick={{ fill: '#6b7280', fontSize: 11 }} />
-                      <Tooltip contentStyle={ttStyle} formatter={v => `${v}%`} />
-                      <Line
-                        type="monotone"
-                        dataKey="success"
-                        stroke="#4a9eff"
-                        strokeWidth={3}
-                        dot={{ fill: '#4a9eff', r: 5 }}
-                        activeDot={{ r: 8 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <div className="space-y-4">
+                    {sessionSuccessData.map((s) => {
+                      const sessionColors = { 'New York': '#FFD700', 'London': '#4a9eff', 'Asia': '#a855f7' };
+                      const color = sessionColors[s.session] || '#4a9eff';
+                      const pct = parseFloat(s.success || 0);
+                      return (
+                        <div key={s.session}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                              <span className="text-sm font-medium text-gray-200">{s.session}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">{s.total} ops</span>
+                              <span className="text-sm font-bold" style={{ color }}>
+                                {pct.toFixed(0)}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="h-2.5 bg-[#2A2A2A] rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-700"
+                              style={{ width: `${pct}%`, backgroundColor: color }}
+                            />
+                          </div>
+                          <p className="text-[10px] text-gray-600 mt-0.5">
+                            {s.total > 0
+                              ? `${Math.round(s.total * pct / 100)} ganadoras de ${s.total} operaciones`
+                              : 'Sin operaciones en esta sesión'}
+                          </p>
+                        </div>
+                      );
+                    })}
+                    <div className="mt-2 pt-3 border-t border-[#2A2A2A]">
+                      <p className="text-[10px] text-gray-500">
+                        🌐 Asia: 00:00–09:00 UTC · London: 07:00–16:00 UTC · New York: 12:00–21:00 UTC
+                      </p>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="flex items-center justify-center h-[200px]">
-                    <p className="text-gray-500 text-sm">{t('profile.historySoon')}</p>
+                  <div className="flex flex-col items-center justify-center h-[200px] gap-3">
+                    <Globe className="h-10 w-10 text-gray-700" />
+                    <p className="text-gray-500 text-sm text-center">{t('profile.historySoon')}</p>
+                    <p className="text-[11px] text-gray-600 text-center">Cierra operaciones en diferentes sesiones para ver tu rendimiento</p>
                   </div>
                 )}
               </div>
@@ -949,11 +992,25 @@ const Profile = () => {
 
             {/* ── TOP INSTRUMENTS ───────────────────────────────────────────── */}
             <div className={`${card} p-5 md:p-6`}>
-              <div className="flex items-center gap-2.5 mb-5">
-                <div className="w-8 h-8 rounded-lg bg-[#FFD700]/15 flex items-center justify-center">
-                  <Trophy className="h-4 w-4 text-[#FFD700]" />
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[#FFD700]/15 flex items-center justify-center">
+                    <Trophy className="h-4 w-4 text-[#FFD700]" />
+                  </div>
+                  <h3 className="text-base font-semibold text-gray-200">{t('profile.topInstruments')}</h3>
                 </div>
-                <h3 className="text-base font-semibold text-gray-200">{t('profile.topInstruments')}</h3>
+                {topAssetsData.length > 0 && (
+                  <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded bg-[#00C853]" />
+                      <span className="text-gray-400">Compras (LONG)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded bg-red-500" />
+                      <span className="text-gray-400">Ventas (SHORT)</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {topAssetsData.length === 0 ? (
@@ -969,16 +1026,48 @@ const Profile = () => {
                   </Button>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={topAssetsData} layout="horizontal" margin={{ top: 4, right: 8, left: 10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-                    <XAxis type="number" stroke="#3A3A3A" tick={{ fill: '#6b7280', fontSize: 11 }} />
-                    <YAxis dataKey="asset" type="category" stroke="#3A3A3A" tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                    <Tooltip contentStyle={ttStyle} />
-                    <Bar dataKey="buys"  fill="#00C853" radius={[0, 4, 4, 0]} />
-                    <Bar dataKey="sells" fill="#FF4444" radius={[4, 0, 0, 4]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="space-y-3">
+                  {topAssetsData.map((asset, i) => {
+                    const total = asset.buys + asset.buys > 0 ? asset.buys + asset.sells : 1;
+                    const buyPct = total > 0 ? Math.round((asset.buys / total) * 100) : 0;
+                    const sellPct = 100 - buyPct;
+                    const rank = ['🥇', '🥈', '🥉'][i] || '';
+                    return (
+                      <div key={asset.symbol} className="bg-[#0F172A]/50 rounded-xl p-3 border border-[#2A2A2A]">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">{rank}</span>
+                            <span className="font-bold text-white text-sm">{asset.symbol}</span>
+                          </div>
+                          <span className="text-xs text-gray-500">{asset.buys + asset.sells} operaciones</span>
+                        </div>
+                        {/* Barra dividida LONG/SHORT */}
+                        <div className="flex h-4 rounded-lg overflow-hidden mb-1.5">
+                          {asset.buys > 0 && (
+                            <div
+                              className="bg-[#00C853] flex items-center justify-center text-[9px] font-bold text-black transition-all"
+                              style={{ width: `${buyPct}%` }}
+                            >
+                              {buyPct > 15 ? `${asset.buys}L` : ''}
+                            </div>
+                          )}
+                          {asset.sells > 0 && (
+                            <div
+                              className="bg-red-500 flex items-center justify-center text-[9px] font-bold text-white transition-all"
+                              style={{ width: `${sellPct}%` }}
+                            >
+                              {sellPct > 15 ? `${asset.sells}S` : ''}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex justify-between text-[10px] text-gray-500">
+                          <span className="text-[#00C853]">{asset.buys} LONG ({buyPct}%)</span>
+                          <span className="text-red-400">{asset.sells} SHORT ({sellPct}%)</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
 
@@ -1085,7 +1174,6 @@ const Profile = () => {
                         <TableHead className="text-[#FFD700] text-xs font-semibold">{t('profile.date')}</TableHead>
                         <TableHead className="text-[#FFD700] text-xs font-semibold">{t('profile.level')}</TableHead>
                         <TableHead className="text-[#FFD700] text-xs font-semibold hidden md:table-cell">{t('profile.positionCol')}</TableHead>
-                        <TableHead className="text-[#FFD700] text-xs font-semibold">{t('profile.achievedLevel')}</TableHead>
                         <TableHead className="text-[#FFD700] text-xs font-semibold">{t('profile.returnPct')}</TableHead>
                         <TableHead className="text-[#FFD700] text-xs font-semibold">{t('profile.prizeWon')}</TableHead>
                         <TableHead className="text-[#FFD700] text-xs font-semibold w-8" />
@@ -1094,45 +1182,47 @@ const Profile = () => {
                     <TableBody>
                       {history.map((h, i) => {
                         const hPosNum = parseInt((h.position ?? '999').toString().replace('#', ''));
-                        const hLevel  = getPositionLevel(h.position);
-                        const hLabel  = lang === 'en' ? hLevel.labelEn : hLevel.label;
                         const hReturn = parseFloat(h.return || 0);
                         const hPrize  = parseFloat(h.prize || 0);
                         const isExpanded = expandedRow === i;
+                        const isRollover = h.wasRollover === true;
+                        const isWinner = hPosNum <= 3 && hPrize > 0;
 
-                        const tierC = h.level === 'premium'
-                          ? 'bg-[#FFD700]/15 text-[#FFD700]' : h.level === 'medium'
+                        const tierC = (h.level || '').toLowerCase() === 'premium'
+                          ? 'bg-[#FFD700]/15 text-[#FFD700]' : (h.level || '').toLowerCase() === 'medium'
                           ? 'bg-blue-400/15 text-blue-400'   : 'bg-emerald-400/15 text-emerald-400';
+
+                        const medalEmoji = hPosNum === 1 ? '🥇' : hPosNum === 2 ? '🥈' : hPosNum === 3 ? '🥉' : null;
 
                         return (
                           <React.Fragment key={i}>
                             <TableRow
-                              className="border-[#2A2A2A] hover:bg-white/5 cursor-pointer transition-colors"
+                              className={`border-[#2A2A2A] hover:bg-white/5 cursor-pointer transition-colors ${isWinner ? 'bg-[#FFD700]/3' : ''}`}
                               onClick={() => setExpandedRow(isExpanded ? null : i)}
                             >
-                              <TableCell className="text-gray-300 text-sm py-3">{h.date}</TableCell>
+                              <TableCell className="text-gray-300 text-sm py-3">
+                                <div>{h.date}</div>
+                                {isRollover && (
+                                  <div className="text-[10px] text-blue-400 font-semibold mt-0.5">🔄 Rollover</div>
+                                )}
+                              </TableCell>
                               <TableCell className="py-3">
                                 <span className={`text-xs font-bold px-2 py-0.5 rounded ${tierC}`}>
                                   {(h.level || '-').toUpperCase()}
                                 </span>
                               </TableCell>
                               <TableCell className="text-gray-300 text-sm py-3 hidden md:table-cell">
-                                #{hPosNum}
+                                {hPosNum <= 3 && medalEmoji
+                                  ? <span className="text-base">{medalEmoji}</span>
+                                  : hPosNum < 999 ? `#${hPosNum}` : '—'
+                                }
                               </TableCell>
-                              <TableCell className="py-3">
-                                <span
-                                  className="text-xs font-bold px-2 py-0.5 rounded"
-                                  style={{ color: hLevel.color, backgroundColor: `${hLevel.color}20` }}
-                                >
-                                  {hLabel}
-                                </span>
-                              </TableCell>
-                              <TableCell className={`text-sm font-bold py-3 ${hReturn > 0 ? 'text-[#00C853]' : 'text-red-400'}`}>
+                              <TableCell className={`text-sm font-bold py-3 ${hReturn > 0 ? 'text-[#00C853]' : hReturn < 0 ? 'text-red-400' : 'text-gray-500'}`}>
                                 {hReturn > 0 ? '+' : ''}{hReturn.toFixed(2)}%
                               </TableCell>
                               <TableCell className="py-3">
                                 {hPrize > 0
-                                  ? <span className="text-[#FFD700] font-bold text-sm">{formatNumber(hPrize)} USDT</span>
+                                  ? <span className="text-[#FFD700] font-bold text-sm">+{formatNumber(hPrize)} USDT</span>
                                   : <span className="text-gray-600 text-sm">—</span>
                                 }
                               </TableCell>
@@ -1147,15 +1237,23 @@ const Profile = () => {
                             {/* Expanded row */}
                             {isExpanded && (
                               <TableRow className="border-[#2A2A2A] bg-[#1a1f2e]/40">
-                                <TableCell colSpan={7} className="py-3 px-4">
+                                <TableCell colSpan={6} className="py-3 px-4">
                                   <div className="flex flex-wrap gap-x-8 gap-y-2 text-xs">
                                     <div>
-                                      <span className="text-gray-500">{t('profile.positionCol')}: </span>
-                                      <span className="text-white font-medium">#{hPosNum}</span>
+                                      <span className="text-gray-500">Fecha de competencia: </span>
+                                      <span className="text-white font-medium">{h.date}</span>
                                     </div>
+                                    {h.paymentDate && h.paymentDate !== h.date && (
+                                      <div>
+                                        <span className="text-gray-500">Fecha de pago: </span>
+                                        <span className="text-gray-400 font-medium">{h.paymentDate}</span>
+                                      </div>
+                                    )}
                                     <div>
-                                      <span className="text-gray-500">{t('profile.achievedLevel')}: </span>
-                                      <span className="font-medium" style={{ color: hLevel.color }}>{hLabel}</span>
+                                      <span className="text-gray-500">{t('profile.positionCol')}: </span>
+                                      <span className="text-white font-medium">
+                                        {hPosNum < 999 ? `#${hPosNum}` : 'Sin clasificar'}
+                                      </span>
                                     </div>
                                     <div>
                                       <span className="text-gray-500">ROI: </span>
@@ -1166,9 +1264,14 @@ const Profile = () => {
                                     <div>
                                       <span className="text-gray-500">{t('profile.prizeWon')}: </span>
                                       <span className="text-[#FFD700] font-medium">
-                                        {hPrize > 0 ? `${formatNumber(hPrize)} USDT` : '—'}
+                                        {hPrize > 0 ? `+${formatNumber(hPrize)} USDT` : '—'}
                                       </span>
                                     </div>
+                                    {isRollover && (
+                                      <div className="w-full">
+                                        <span className="text-blue-400 text-[10px]">🔄 Esta competencia terminó en rollover (menos de 5 participantes). No se cobra entrada adicional.</span>
+                                      </div>
+                                    )}
                                   </div>
                                 </TableCell>
                               </TableRow>
@@ -1277,62 +1380,68 @@ const Profile = () => {
                   </div>
                 )
               ) : (
-                history.length === 0 ? (
-                  <div className="flex flex-col items-center py-10 gap-3">
-                    <ArrowUpRight className="h-10 w-10 text-gray-700" />
-                    <p className="text-gray-500 text-sm">Aún no has participado en ninguna competencia</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-[#2A2A2A] hover:bg-transparent">
-                          <TableHead className="text-[#FFD700] text-xs font-semibold">Fecha</TableHead>
-                          <TableHead className="text-[#FFD700] text-xs font-semibold">Nivel</TableHead>
-                          <TableHead className="text-[#FFD700] text-xs font-semibold">Entry Fee</TableHead>
-                          <TableHead className="text-[#FFD700] text-xs font-semibold">Posición</TableHead>
-                          <TableHead className="text-[#FFD700] text-xs font-semibold">Resultado</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {history.map((h, i) => {
-                          const FEES = { basic: 12, medium: 50, premium: 150 };
-                          const fee = FEES[(h.level || 'basic').toLowerCase()] || 12;
-                          const hReturn = parseFloat(h.return || 0);
-                          const hPrize  = parseFloat(h.prize  || 0);
-                          const hPosNum = parseInt((h.position ?? '999').toString().replace('#', ''));
-                          return (
-                            <TableRow key={i} className="border-[#2A2A2A] hover:bg-white/5">
-                              <TableCell className="text-gray-300 text-sm py-3">{h.date}</TableCell>
-                              <TableCell className="py-3">
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                                  (h.level || '') === 'premium' ? 'bg-[#FFD700]/15 text-[#FFD700]' :
-                                  (h.level || '') === 'medium'  ? 'bg-blue-400/15 text-blue-400' :
-                                  'bg-emerald-400/15 text-emerald-400'
-                                }`}>
-                                  {(h.level || 'basic').toUpperCase()}
-                                </span>
-                              </TableCell>
-                              <TableCell className="text-red-400 font-bold text-sm py-3">
-                                -{fee} USDT
-                              </TableCell>
-                              <TableCell className="text-gray-300 text-sm py-3">#{hPosNum}</TableCell>
-                              <TableCell className="py-3">
-                                {hPrize > 0 ? (
-                                  <span className="text-[#00C853] font-bold text-sm">+{formatNumber(hPrize)} USDT</span>
-                                ) : (
-                                  <span className={`text-sm font-medium ${hReturn >= 0 ? 'text-gray-400' : 'text-red-400'}`}>
-                                    {hReturn > 0 ? '+' : ''}{hReturn.toFixed(2)}%
+                (() => {
+                  // Solo mostrar entradas que NO son rollover puro (el usuario sí pagó)
+                  // Agrupa entradas consecutivas de rollover como un solo pago
+                  const paidEntries = history.filter(h => !h.wasRollover);
+                  return paidEntries.length === 0 ? (
+                    <div className="flex flex-col items-center py-10 gap-3">
+                      <ArrowUpRight className="h-10 w-10 text-gray-700" />
+                      <p className="text-gray-500 text-sm">Aún no has participado en ninguna competencia</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-[#2A2A2A] hover:bg-transparent">
+                            <TableHead className="text-[#FFD700] text-xs font-semibold">Fecha de pago</TableHead>
+                            <TableHead className="text-[#FFD700] text-xs font-semibold">Nivel</TableHead>
+                            <TableHead className="text-[#FFD700] text-xs font-semibold">Entry Fee</TableHead>
+                            <TableHead className="text-[#FFD700] text-xs font-semibold">Fecha competencia</TableHead>
+                            <TableHead className="text-[#FFD700] text-xs font-semibold">Resultado</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paidEntries.map((h, i) => {
+                            const FEES = { basic: 12, medium: 54, premium: 107 };
+                            const fee = FEES[(h.level || 'basic').toLowerCase()] || 12;
+                            const hReturn = parseFloat(h.return || 0);
+                            const hPrize  = parseFloat(h.prize  || 0);
+                            return (
+                              <TableRow key={i} className="border-[#2A2A2A] hover:bg-white/5">
+                                <TableCell className="text-gray-300 text-sm py-3">
+                                  {h.paymentDate || h.date}
+                                </TableCell>
+                                <TableCell className="py-3">
+                                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                                    (h.level || '').toLowerCase() === 'premium' ? 'bg-[#FFD700]/15 text-[#FFD700]' :
+                                    (h.level || '').toLowerCase() === 'medium'  ? 'bg-blue-400/15 text-blue-400' :
+                                    'bg-emerald-400/15 text-emerald-400'
+                                  }`}>
+                                    {(h.level || 'basic').toUpperCase()}
                                   </span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )
+                                </TableCell>
+                                <TableCell className="text-red-400 font-bold text-sm py-3">
+                                  -{fee} USDT
+                                </TableCell>
+                                <TableCell className="text-gray-400 text-sm py-3">{h.date}</TableCell>
+                                <TableCell className="py-3">
+                                  {hPrize > 0 ? (
+                                    <span className="text-[#00C853] font-bold text-sm">+{formatNumber(hPrize)} USDT</span>
+                                  ) : (
+                                    <span className={`text-sm font-medium ${hReturn > 0 ? 'text-gray-400' : hReturn < 0 ? 'text-red-400' : 'text-gray-600'}`}>
+                                      {hReturn > 0 ? '+' : ''}{hReturn.toFixed(2)}%
+                                    </span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  );
+                })()
               )}
             </div>
 

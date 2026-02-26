@@ -64,7 +64,7 @@ import HowItWorks from '../components/HowItWorks';
 import background from "@/assets/background.jpg";
 import logo from "@/assets/Holypot-logo.webp";
 import { useNavigate, Link } from 'react-router-dom';
-import { X, Shield, Lock, CheckCircle2, Clock, ChevronDown } from "lucide-react";
+import { X, Shield, Lock, CheckCircle2, Clock, ChevronDown, Trophy, DollarSign, ArrowRight } from "lucide-react";
 import { useI18n, LanguageToggle } from '@/i18n';
 
 const API_BASE = import.meta.env.VITE_API_URL
@@ -73,11 +73,17 @@ const API_BASE = import.meta.env.VITE_API_URL
 
 const HCAPTCHA_SITEKEY = 'a0b26f92-ba34-47aa-be42-c936e488a6f4';
 
+const MEDAL = (pos) => pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : `#${pos}`;
+const TIER_COLOR = (level) => level === 'PREMIUM' ? 'text-[#D4AF37]' : level === 'MEDIUM' ? 'text-blue-400' : 'text-emerald-400';
+const TIER_BG = (level) => level === 'PREMIUM' ? 'bg-[#D4AF37]/10' : level === 'MEDIUM' ? 'bg-blue-400/10' : 'bg-emerald-400/10';
+
 const LandingPage = () => {
   const navigate = useNavigate();
   const { t } = useI18n();
   const [competitions, setCompetitions] = useState({});
   const [loading, setLoading] = useState(true);
+  const [recentPayouts, setRecentPayouts] = useState([]);
+  const [payoutsLoading, setPayoutsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState('');
   const [form, setForm] = useState({
@@ -129,7 +135,23 @@ const LandingPage = () => {
       }
     };
     fetchCompetitions();
-    const interval = setInterval(fetchCompetitions, 60000);
+    const interval = setInterval(fetchCompetitions, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const fetchPayouts = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/winners-history?page=1`);
+        setRecentPayouts((res.data.winners || []).slice(0, 10));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setPayoutsLoading(false);
+      }
+    };
+    fetchPayouts();
+    const interval = setInterval(fetchPayouts, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -421,6 +443,90 @@ const LandingPage = () => {
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         <HowItWorks />
       </div>
+
+      {/* ── HISTORIAL DE PAGOS DE PREMIOS ── */}
+      <section className="max-w-7xl mx-auto px-4 md:px-8 py-12 md:py-20">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#00C853]/5 to-transparent rounded-3xl blur-2xl" />
+          <div className="relative bg-[#0F172A]/75 backdrop-blur-xl border border-[#00C853]/20 rounded-3xl p-6 md:p-12 shadow-2xl">
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+              <div>
+                <p className="text-xs text-[#00C853] font-bold uppercase tracking-widest mb-1">
+                  Verificado en blockchain
+                </p>
+                <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
+                  <Trophy className="w-7 h-7 text-[#D4AF37]" />
+                  Historial de Pagos de Premios
+                </h2>
+                <p className="text-gray-400 text-sm mt-1">Últimos premios enviados a ganadores reales</p>
+              </div>
+              <a
+                href="/pagos-verificados"
+                className="shrink-0 inline-flex items-center gap-2 text-sm text-[#D4AF37] hover:text-[#FFD700] font-semibold underline underline-offset-4 transition"
+              >
+                Ver historial completo <ArrowRight className="w-4 h-4" />
+              </a>
+            </div>
+
+            {payoutsLoading ? (
+              <div className="flex justify-center py-10">
+                <div className="w-8 h-8 border-2 border-[#00C853]/30 border-t-[#00C853] rounded-full animate-spin" />
+              </div>
+            ) : recentPayouts.length === 0 ? (
+              <div className="text-center py-10">
+                <DollarSign className="w-12 h-12 text-gray-700 mx-auto mb-3" />
+                <p className="text-gray-500">Aún no hay premios pagados — ¡sé el primero en ganar!</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[#2A2A2A]">
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 pr-4">Fecha</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 pr-4">Trader</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 pr-4 hidden md:table-cell">Nivel</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 pr-4">Pos.</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 pr-4 hidden sm:table-cell">Retorno</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 pr-4">Premio</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 hidden lg:table-cell">Red</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentPayouts.map((p, i) => (
+                      <tr key={i} className="border-b border-[#2A2A2A]/50 hover:bg-white/3 transition-colors">
+                        <td className="py-3 pr-4 text-gray-400 whitespace-nowrap">{p.date}</td>
+                        <td className="py-3 pr-4">
+                          <span className="font-semibold text-white">
+                            {p.country && p.country !== 'OTHER' ? `${p.country} ` : ''}{p.nickname}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4 hidden md:table-cell">
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded ${TIER_BG(p.level)} ${TIER_COLOR(p.level)}`}>
+                            {p.level}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4 text-lg">{MEDAL(p.position)}</td>
+                        <td className={`py-3 pr-4 font-semibold hidden sm:table-cell ${p.return >= 0 ? 'text-[#00C853]' : 'text-red-400'}`}>
+                          {p.return !== null ? `${p.return >= 0 ? '+' : ''}${p.return}%` : '—'}
+                        </td>
+                        <td className="py-3 pr-4">
+                          <span className="text-[#00C853] font-bold">+{formatNumber(p.amount)} USDT</span>
+                        </td>
+                        <td className="py-3 hidden lg:table-cell">
+                          <span className="text-xs text-gray-500 bg-[#2A2A2A] px-2 py-0.5 rounded font-mono">
+                            {p.network}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
 
       {/* ── REGLAS (resumen) ── */}
       <section className="max-w-7xl mx-auto px-4 md:px-8 py-12 md:py-20">
