@@ -108,6 +108,7 @@ function Dashboard() {
   const [competitionEnded, setCompetitionEnded] = useState(() => new Date().getUTCHours() >= 21);
   const [competitionResults, setCompetitionResults] = useState(null);
   const [showEndModal, setShowEndModal] = useState(false);
+  const [myAdvice, setMyAdvice] = useState(null);
 
   // entryId efectivo: en test mode usa el testEntryId temporal
   const activeEntryId = adminTestMode && testEntryId ? testEntryId : entryId;
@@ -321,11 +322,16 @@ function Dashboard() {
       setShowEndModal(true);
     });
 
+    socket.on('myAdvice', (data) => {
+      setMyAdvice(data.text);
+    });
+
     return () => {
       socket.off('liveUpdate');
       socket.off('tradeClosedAuto');
       socket.off('entryDisqualified');
       socket.off('competitionEnded');
+      socket.off('myAdvice');
     };
   }, [entryId]);
 
@@ -1204,6 +1210,7 @@ function Dashboard() {
                 results={competitionResults}
                 userEntryId={entryId}
                 userLevel={userLevel}
+                myAdvice={myAdvice}
               />
             )}
 

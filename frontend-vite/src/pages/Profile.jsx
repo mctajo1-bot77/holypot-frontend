@@ -214,6 +214,9 @@ const Profile = () => {
   const moreBuys     = buys > sells;
   const topAssetsData = stats.topAssets || [];
   const hasTrades    = totalTrades > 0;
+  const realWins     = stats.wins  ?? null;
+  const realLosses   = stats.losses ?? null;
+  const sessionSuccessReal = stats.sessionSuccess || [];
   const history      = profile?.history || [];
 
   // XP (visual, computed from history)
@@ -233,8 +236,8 @@ const Profile = () => {
   const totalComps   = history.length;
   const wonComps     = history.filter(h => parseFloat(h.prize || 0) > 0).length;
   const winRate      = totalComps > 0 ? Math.round((wonComps / totalComps) * 100) : 0;
-  const winningTrades = hasTrades ? Math.round(totalTrades * (dailyReturn >= 0 ? 0.6 : 0.35)) : 0;
-  const losingTrades  = totalTrades - winningTrades;
+  const winningTrades = realWins  !== null ? realWins  : (hasTrades ? Math.round(totalTrades * (dailyReturn >= 0 ? 0.6 : 0.35)) : 0);
+  const losingTrades  = realLosses !== null ? realLosses : (totalTrades - winningTrades);
 
   // Chart placeholders (shown only when no real trades)
   const dailyReturnData = hasTrades ? [] : [
@@ -242,11 +245,16 @@ const Profile = () => {
     { day: 'Mié', value: 803  }, { day: 'Jue', value: -588 },
     { day: 'Vie', value: -902 }
   ];
-  const sessionSuccessData = hasTrades ? [] : [
-    { session: 'New York', success: 28.1 },
-    { session: 'London',   success: 16.7 },
-    { session: 'Asia',     success: 62.5 }
-  ];
+  // sessionSuccess: usar datos reales del backend si existen, placeholder si no
+  const sessionSuccessData = sessionSuccessReal.length > 0
+    ? sessionSuccessReal
+    : hasTrades
+      ? []
+      : [
+          { session: 'New York', success: 28.1 },
+          { session: 'London',   success: 16.7 },
+          { session: 'Asia',     success: 62.5 }
+        ];
   const gaugeData = [{ value: Math.min(Math.abs(dailyReturn), 100) }];
 
   // Tier styling
@@ -842,11 +850,7 @@ const Profile = () => {
                   </div>
                   <h3 className="text-sm font-semibold text-gray-200">{t('profile.sessionSuccess')}</h3>
                 </div>
-                {hasTrades ? (
-                  <div className="flex items-center justify-center h-[200px]">
-                    <p className="text-gray-500 text-sm">{t('profile.historySoon')}</p>
-                  </div>
-                ) : (
+                {sessionSuccessData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={200}>
                     <LineChart data={sessionSuccessData} layout="horizontal" margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
@@ -870,6 +874,10 @@ const Profile = () => {
                       />
                     </LineChart>
                   </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[200px]">
+                    <p className="text-gray-500 text-sm">{t('profile.historySoon')}</p>
+                  </div>
                 )}
               </div>
             </div>
