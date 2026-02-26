@@ -1182,8 +1182,6 @@ const Profile = () => {
               )}
             </div>
 
-          </div>
-
             {/* ── HISTORIAL DE PAGOS ─────────────────────────────────────────── */}
             <div className={`${card} p-5 md:p-6`}>
               <div className="flex items-center gap-2.5 mb-5">
