@@ -1,19 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Trophy, Shield, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import logo from '@/assets/Holypot-logo.webp';
 
-// Scroll to anchor on hash navigation (e.g. /ganadores#pagos-verificados)
+// Scroll to anchor on hash navigation or when path is /pagos-verificados
 function useHashScroll() {
+  const location = useLocation();
   useEffect(() => {
-    if (!window.location.hash) return;
-    const id = window.location.hash.replace('#', '');
-    const el = document.getElementById(id);
-    if (el) {
-      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    const scrollToId = (id) => {
+      const el = document.getElementById(id);
+      if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    };
+    if (location.pathname === '/pagos-verificados') {
+      scrollToId('pagos-verificados');
+    } else if (window.location.hash) {
+      scrollToId(window.location.hash.replace('#', ''));
     }
-  }, []);
+  }, [location.pathname]);
 }
 
 const API_BASE = import.meta.env.VITE_API_URL
