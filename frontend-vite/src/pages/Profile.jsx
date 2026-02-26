@@ -394,7 +394,7 @@ const Profile = () => {
             <Button
               variant="ghost"
               className="w-full justify-start gap-3 text-gray-300 hover:text-white hover:bg-white/5 rounded-lg mb-1 h-10"
-              onClick={() => navigate('/ganadores#pagos-verificados')}
+              onClick={() => navigate('/pagos-verificados')}
             >
               <Shield className="h-5 w-5 shrink-0" />
               <span className="text-sm font-medium">Pagos Verificados</span>
@@ -448,7 +448,7 @@ const Profile = () => {
             <Trophy className="h-5 w-5" />
             <span className="text-[9px] font-medium">Hall of Fame</span>
           </Button>
-          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/ganadores#pagos-verificados')}>
+          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/pagos-verificados')}>
             <Shield className="h-5 w-5" />
             <span className="text-[9px] font-medium">Pagos</span>
           </Button>

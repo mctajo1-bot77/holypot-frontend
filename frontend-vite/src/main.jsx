@@ -27,6 +27,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/rules" element={<RulesPage />} />
           <Route path="/ganadores" element={<WinnersPage />} />
+          <Route path="/pagos-verificados" element={<WinnersPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
 
           {/* RUTAS PROTEGIDAS – solo accesibles con token normal o admin impersonando */}
