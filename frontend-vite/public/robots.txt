@@ -1,19 +1,24 @@
 User-agent: *
-# Páginas públicas: permitidas
-Allow: /$
-Allow: /login$
-Allow: /terms$
-Allow: /privacy$
-Allow: /rules$
-Allow: /ganadores$
-Allow: /pagos-verificados$
-Allow: /verify-email$
 
-# Páginas privadas: bloqueadas (requieren autenticación y redirigen a /login)
+# Páginas públicas indexables
+Allow: /$
+Allow: /login
+Allow: /terms
+Allow: /privacy
+Allow: /rules
+Allow: /ganadores
+Allow: /pagos-verificados
+Allow: /verify-email
+
+# Páginas privadas: NO indexar (requieren autenticación → redirigen a /login)
 Disallow: /dashboard
 Disallow: /profile
 Disallow: /admin
 Disallow: /admin-login
 
-# Sitemap
+# Archivos de sistema
+Disallow: /src/
+Disallow: /*.json$
+
+# Sitemaps (URL canónica HTTPS sin www)
 Sitemap: https://holypottrading.com/sitemap.xml
