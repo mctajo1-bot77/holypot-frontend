@@ -115,18 +115,21 @@ function Dashboard() {
   // entryId efectivo: en test mode usa el testEntryId temporal
   const activeEntryId = adminTestMode && testEntryId ? testEntryId : entryId;
 
+  // Para órdenes limit/stop el riesgo se calcula desde el targetPrice (entrada efectiva), no el precio actual
+  const riskRefPrice = (orderType !== 'market' && targetPrice) ? parseFloat(targetPrice) : currentPrice;
+
   const { calculateRealRisk, calculateOptimalLotSize, instrumentInfo } = useRiskCalculator(
-    symbol, 
-    currentPrice, 
-    stopLoss ? parseFloat(stopLoss) : null, 
+    symbol,
+    riskRefPrice,
+    stopLoss ? parseFloat(stopLoss) : null,
     virtualCapital
   );
 
   const riskInfo = calculateRealRisk(lotSize);
 
-  // Riesgo actual del portafolio (suma de posiciones abiertas)
+  // Riesgo actual del portafolio (solo posiciones filled; las pending aún no suman riesgo activo)
   const portfolioRisk = useMemo(() => {
-    return positions.filter(p => !p.closedAt).reduce((sum, p) => {
+    return positions.filter(p => !p.closedAt && p.orderStatus !== 'pending').reduce((sum, p) => {
       if (!p.entryPrice || p.entryPrice === 0) return sum;
       const lot = p.lotSize || 0.01;
       const cfg = instrumentConfig[p.symbol] || instrumentConfig['EURUSD'];
@@ -139,26 +142,26 @@ function Dashboard() {
   }, [positions]);
 
   // Máximo de lots para el nuevo trade = cuánto cabe hasta llegar al 10% de portafolio
-  // maxLots = (10% − riesgoPortafolio) / percentMoveNuevoPosicion
+  // Para órdenes limit/stop se usa el targetPrice como referencia de precio
   const maxLotByRisk = useMemo(() => {
-    if (!currentPrice || currentPrice === 0) return 5.0;
+    const refPrice = riskRefPrice || currentPrice;
+    if (!refPrice || refPrice === 0) return 5.0;
     const cfg = instrumentConfig[symbol] || instrumentConfig['EURUSD'];
     const remainingRisk = Math.max(0, 10 - portfolioRisk);
-    if (remainingRisk <= 0) return 0.01; // portafolio ya al límite
+    if (remainingRisk <= 0) return 0.01;
     let percentMove = 0;
     if (stopLoss) {
       const sl = parseFloat(stopLoss);
       if (!isNaN(sl) && sl > 0) {
-        percentMove = (Math.abs(currentPrice - sl) / currentPrice) * 100;
+        percentMove = (Math.abs(refPrice - sl) / refPrice) * 100;
       }
     }
     if (percentMove <= 0) {
       const defaultDist = 100 / cfg.pipMultiplier;
-      percentMove = (defaultDist / currentPrice) * 100;
+      percentMove = (defaultDist / refPrice) * 100;
     }
-    // Redondeamos hacia abajo para no exceder nunca el 10%
     return Math.min(parseFloat(Math.floor((remainingRisk / percentMove) * 100) / 100), 100.0);
-  }, [symbol, currentPrice, stopLoss, portfolioRisk]);
+  }, [symbol, riskRefPrice, currentPrice, stopLoss, portfolioRisk]);
 
   // ✅ FUNCIÓN PARA VERIFICAR SI ES ADMIN
   const isAdmin = () => {
@@ -328,12 +331,24 @@ function Dashboard() {
       setMyAdvice(data.text);
     });
 
+    socket.on('orderTriggered', (data) => {
+      if (data.entryId === entryId) {
+        const orderLabel = data.orderType === 'limit' ? 'Limit' : 'Stop';
+        toast.trade({
+          title: `¡Orden ${orderLabel} activada! ${data.direction.toUpperCase()} ${data.symbol}`,
+          detail: `Entrada a ${data.entryPrice}`,
+          pnl: null
+        });
+      }
+    });
+
     return () => {
       socket.off('liveUpdate');
       socket.off('tradeClosedAuto');
       socket.off('entryDisqualified');
       socket.off('competitionEnded');
       socket.off('myAdvice');
+      socket.off('orderTriggered');
     };
   }, [entryId]);
 
@@ -446,10 +461,16 @@ function Dashboard() {
         takeProfit: takeProfit ? parseFloat(takeProfit) : null,
         stopLoss: stopLoss ? parseFloat(stopLoss) : null
       });
+      const isPending = res.data.orderStatus === 'pending';
+      const entryPriceDisplay = isPending
+        ? parseFloat(targetPrice).toFixed(instrumentConfig[symbol]?.decimals ?? 5)
+        : (currentPrice?.toFixed(instrumentConfig[symbol]?.decimals ?? 5) ?? '');
       toast.trade({
-        title: `¡Trade Abierto! ${direction.toUpperCase()} ${symbol}`,
-        detail: `${lotSize} lots · entrada ${currentPrice?.toFixed(instrumentConfig[symbol]?.decimals ?? 5) ?? ''}`,
-        pnl: res.data.riskInfo?.riskPercent != null ? null : undefined
+        title: isPending
+          ? `¡Orden ${orderType} colocada! ${direction.toUpperCase()} ${symbol}`
+          : `¡Trade Abierto! ${direction.toUpperCase()} ${symbol}`,
+        detail: `${lotSize} lots · ${isPending ? 'objetivo' : 'entrada'}: ${entryPriceDisplay}`,
+        pnl: null
       });
       setTargetPrice('');
       setTakeProfit('');
@@ -467,6 +488,25 @@ function Dashboard() {
     } catch (err) {
       toast.error('Error al cerrar trade', err.response?.data?.error || err.message);
     }
+  };
+
+  const cancelPendingOrder = async (positionId) => {
+    try {
+      await axios.post(`${API_BASE}/cancel-pending-order`, { positionId });
+      toast.success('Orden cancelada', 'La orden pendiente fue cancelada');
+    } catch (err) {
+      toast.error('Error al cancelar', err.response?.data?.error || err.message);
+    }
+  };
+
+  // Spread estimado por instrumento (Finnhub no provee bid/ask en tiempo real)
+  const ESTIMATED_SPREADS = {
+    EURUSD: { display: '~1.0 pip',  note: 'spread típico' },
+    GBPUSD: { display: '~1.5 pips', note: 'spread típico' },
+    USDJPY: { display: '~1.0 pip',  note: 'spread típico' },
+    XAUUSD: { display: '~$0.30',    note: 'spread estimado' },
+    SPX500: { display: '~0.5 pts',  note: 'spread estimado' },
+    NAS100: { display: '~2.0 pts',  note: 'spread estimado' },
   };
 
   const userComp = competitions[userLevel] || { prizePool: 0, participants: 0, timeLeft: '00h 00m' };
@@ -865,6 +905,11 @@ function Dashboard() {
                     <div className="ml-auto text-right">
                       <p className="text-xs text-gray-500">{symbol}</p>
                       <p className="text-sm font-bold text-white">{currentPrice.toFixed(5)}</p>
+                      {ESTIMATED_SPREADS[symbol] && (
+                        <p className="text-[10px] text-gray-600">
+                          Spread: <span className="text-yellow-500">{ESTIMATED_SPREADS[symbol].display}</span>
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1085,67 +1130,96 @@ function Dashboard() {
                       </TableRow>
                     ) : (
                       positions.filter(p => !p.closedAt).map((pos) => {
+                        const isPending = pos.orderStatus === 'pending';
                         const positionRisk = calculatePositionRisk(pos);
                         const livePnl = parseFloat(pos.livePnl || 0).toFixed(2);
                         const config = instrumentConfig[pos.symbol] || instrumentConfig['EURUSD'];
-                        const pipsToTP = pos.takeProfit && currentPrice
+                        const refPrice = isPending ? (pos.targetPrice || pos.entryPrice) : pos.entryPrice;
+                        const pipsToTP = pos.takeProfit && currentPrice && !isPending
                           ? (pos.direction === 'long'
                               ? ((pos.takeProfit - currentPrice) * config.pipMultiplier).toFixed(0)
                               : ((currentPrice - pos.takeProfit) * config.pipMultiplier).toFixed(0))
                           : '-';
-                        const pipsToSL = pos.stopLoss && currentPrice
+                        const pipsToSL = pos.stopLoss && currentPrice && !isPending
                           ? (pos.direction === 'long'
                               ? ((currentPrice - pos.stopLoss) * config.pipMultiplier).toFixed(0)
                               : ((pos.stopLoss - currentPrice) * config.pipMultiplier).toFixed(0))
                           : '-';
 
                         return (
-                          <TableRow key={pos.id} className="border-[#2A2A2A] hover:bg-white/5 transition-colors">
+                          <TableRow key={pos.id} className={`border-[#2A2A2A] hover:bg-white/5 transition-colors ${isPending ? 'opacity-75' : ''}`}>
                             <TableCell className="text-gray-200 text-sm font-medium py-3">{pos.symbol}</TableCell>
                             <TableCell className="py-3">
-                              <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                                pos.direction === 'long' ? 'bg-[#00C853]/20 text-[#00C853]' : 'bg-red-500/20 text-red-400'
-                              }`}>
-                                {pos.direction.toUpperCase()}
-                              </span>
+                              <div className="flex flex-col gap-0.5">
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                                  pos.direction === 'long' ? 'bg-[#00C853]/20 text-[#00C853]' : 'bg-red-500/20 text-red-400'
+                                }`}>
+                                  {pos.direction.toUpperCase()}
+                                </span>
+                                {isPending && (
+                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
+                                    ⏳ {pos.orderType?.toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="py-3">
                               <span className={`text-sm ${positionRisk.riskPercent > 5 ? 'text-red-400' : 'text-gray-300'}`}>
                                 {pos.lotSize || 0.01}
-                                <span className="text-xs ml-1 text-gray-500">
-                                  ({positionRisk.riskPercent.toFixed(1)}%)
-                                </span>
+                                {!isPending && (
+                                  <span className="text-xs ml-1 text-gray-500">
+                                    ({positionRisk.riskPercent.toFixed(1)}%)
+                                  </span>
+                                )}
                               </span>
-                              {positionRisk.riskPercent > 5 && <AlertTriangle className="inline w-3.5 h-3.5 ml-1 text-red-400" />}
+                              {positionRisk.riskPercent > 5 && !isPending && <AlertTriangle className="inline w-3.5 h-3.5 ml-1 text-red-400" />}
                             </TableCell>
-                            <TableCell className="text-gray-300 text-sm py-3">{pos.entryPrice.toFixed(5)}</TableCell>
-                            <TableCell className={`text-sm font-bold py-3 ${parseFloat(livePnl) > 0 ? 'text-[#00C853]' : 'text-red-400'}`}>
-                              {livePnl}%
+                            <TableCell className="text-gray-300 text-sm py-3">
+                              {isPending
+                                ? <span className="text-yellow-400 font-mono">{refPrice?.toFixed(5)}</span>
+                                : pos.entryPrice.toFixed(5)
+                              }
+                            </TableCell>
+                            <TableCell className={`text-sm font-bold py-3 ${isPending ? 'text-gray-500' : parseFloat(livePnl) > 0 ? 'text-[#00C853]' : 'text-red-400'}`}>
+                              {isPending ? 'Pendiente' : `${livePnl}%`}
                             </TableCell>
                             <TableCell className={`hidden md:table-cell text-xs py-3 ${pipsToTP !== '-' && pipsToTP > 0 ? 'text-[#00C853]' : 'text-red-400'}`}>
-                              {pos.takeProfit || '—'} <span className="text-gray-600">({pipsToTP}p)</span>
+                              {pos.takeProfit || '—'} {!isPending && <span className="text-gray-600">({pipsToTP}p)</span>}
                             </TableCell>
                             <TableCell className={`hidden md:table-cell text-xs py-3 ${pipsToSL !== '-' && pipsToSL > 0 ? 'text-red-400' : 'text-[#00C853]'}`}>
-                              {pos.stopLoss || '—'} <span className="text-gray-600">({pipsToSL}p)</span>
+                              {pos.stopLoss || '—'} {!isPending && <span className="text-gray-600">({pipsToSL}p)</span>}
                             </TableCell>
                             <TableCell className="py-3">
                               <div className="flex gap-1.5">
-                                <Button
-                                  variant="outline" size="sm"
-                                  className="h-7 px-2.5 text-xs bg-[#FFD700]/10 border-[#FFD700]/30 text-[#FFD700] hover:bg-[#FFD700]/20"
-                                  onClick={() => setEditingPosition(pos)}
-                                  disabled={!entryId}
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  variant="destructive" size="sm"
-                                  className="h-7 px-2.5 text-xs bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
-                                  onClick={() => closeTrade(pos.id)}
-                                  disabled={!entryId}
-                                >
-                                  Close
-                                </Button>
+                                {isPending ? (
+                                  <Button
+                                    variant="outline" size="sm"
+                                    className="h-7 px-2.5 text-xs bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20"
+                                    onClick={() => cancelPendingOrder(pos.id)}
+                                    disabled={!entryId}
+                                  >
+                                    Cancelar
+                                  </Button>
+                                ) : (
+                                  <>
+                                    <Button
+                                      variant="outline" size="sm"
+                                      className="h-7 px-2.5 text-xs bg-[#FFD700]/10 border-[#FFD700]/30 text-[#FFD700] hover:bg-[#FFD700]/20"
+                                      onClick={() => setEditingPosition(pos)}
+                                      disabled={!entryId}
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      variant="destructive" size="sm"
+                                      className="h-7 px-2.5 text-xs bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
+                                      onClick={() => closeTrade(pos.id)}
+                                      disabled={!entryId}
+                                    >
+                                      Close
+                                    </Button>
+                                  </>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>

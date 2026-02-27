@@ -557,14 +557,21 @@ const EditPositionModal = ({
       return;
     }
 
+    // Para posiciones pending la validación es contra el targetPrice (entryPrice almacenado)
+    // Para posiciones filled la validación es contra el entryPrice real
     const entry = position.entryPrice;
-    if (tp !== null) {
-      if (position.direction === 'long'  && tp <= entry) { toast.warning('TP inválido', 'Debe ser mayor al entry en LONG');  return; }
-      if (position.direction === 'short' && tp >= entry) { toast.warning('TP inválido', 'Debe ser menor al entry en SHORT'); return; }
-    }
-    if (sl !== null) {
-      if (position.direction === 'long'  && sl >= entry) { toast.warning('SL inválido', 'Debe ser menor al entry en LONG');  return; }
-      if (position.direction === 'short' && sl <= entry) { toast.warning('SL inválido', 'Debe ser mayor al entry en SHORT'); return; }
+    const isPending = position.orderStatus === 'pending';
+
+    // Solo validar si tenemos un entry price válido
+    if (entry && entry > 0) {
+      if (tp !== null) {
+        if (position.direction === 'long'  && tp <= entry) { toast.warning('TP inválido', `Debe ser mayor al precio de entrada (${entry})`);  return; }
+        if (position.direction === 'short' && tp >= entry) { toast.warning('TP inválido', `Debe ser menor al precio de entrada (${entry})`); return; }
+      }
+      if (sl !== null) {
+        if (position.direction === 'long'  && sl >= entry) { toast.warning('SL inválido', `Debe ser menor al precio de entrada (${entry})`);  return; }
+        if (position.direction === 'short' && sl <= entry) { toast.warning('SL inválido', `Debe ser mayor al precio de entrada (${entry})`); return; }
+      }
     }
 
     onSave({ lotSize: lot, takeProfit: tp, stopLoss: sl });
@@ -592,21 +599,30 @@ const EditPositionModal = ({
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-white/10">
           <div>
-            <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+            <DialogTitle className="text-xl font-bold text-white flex items-center gap-2 flex-wrap">
               <span className="text-holy font-mono">{position.symbol}</span>
               <span className={`text-sm font-bold px-2 py-0.5 rounded ${position.direction === 'long' ? 'bg-profit/20 text-profit' : 'bg-red-500/20 text-red-400'}`}>
                 {dirLabel}
               </span>
+              {position.orderStatus === 'pending' && (
+                <span className="text-xs font-bold px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
+                  ⏳ {position.orderType?.toUpperCase()} PENDIENTE
+                </span>
+              )}
               <span className="text-gray-400 text-sm font-normal">× {position.lotSize}</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-gray-500 mt-0.5">
-              Entry: <span className="text-white font-mono">{position.entryPrice?.toFixed(getPriceDecimals(position.symbol))}</span>
-              {currentPrice && (
-                <> · Live: <span className="text-cyan-400 font-mono">{currentPrice.toFixed(getPriceDecimals(position.symbol))}</span></>
-              )}
-              {pnlPips !== 0 && (
-                <> · <span className={`font-bold ${pnlColor}`}>{pnlPips >= 0 ? '+' : ''}{pnlPips.toFixed(1)} pips</span></>
-              )}
+              {position.orderStatus === 'pending'
+                ? <>Objetivo: <span className="text-yellow-400 font-mono">{position.entryPrice?.toFixed(getPriceDecimals(position.symbol))}</span> · Live: <span className="text-cyan-400 font-mono">{currentPrice?.toFixed(getPriceDecimals(position.symbol))}</span></>
+                : <>Entry: <span className="text-white font-mono">{position.entryPrice?.toFixed(getPriceDecimals(position.symbol))}</span>
+                    {currentPrice && (
+                      <> · Live: <span className="text-cyan-400 font-mono">{currentPrice.toFixed(getPriceDecimals(position.symbol))}</span></>
+                    )}
+                    {pnlPips !== 0 && (
+                      <> · <span className={`font-bold ${pnlColor}`}>{pnlPips >= 0 ? '+' : ''}{pnlPips.toFixed(1)} pips</span></>
+                    )}
+                  </>
+              }
             </DialogDescription>
           </div>
 
