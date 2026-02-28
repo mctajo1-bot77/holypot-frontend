@@ -261,9 +261,9 @@ const Profile = () => {
 
   // Chart placeholders (shown only when no real trades)
   const dailyReturnData = hasTrades ? [] : [
-    { day: 'Lun', value: -413 }, { day: 'Mar', value: 166 },
-    { day: 'Mié', value: 803  }, { day: 'Jue', value: -588 },
-    { day: 'Vie', value: -902 }
+    { day: 'Mon', value: -413 }, { day: 'Tue', value: 166 },
+    { day: 'Wed', value: 803  }, { day: 'Thu', value: -588 },
+    { day: 'Fri', value: -902 }
   ];
   // sessionSuccess: usar datos reales del backend si existen, placeholder si no
   const sessionSuccessData = sessionSuccessReal.length > 0
@@ -380,7 +380,7 @@ const Profile = () => {
 
             {/* ─── COMUNIDAD ────────────────────────────────── */}
             <div className="border-t border-[#1E2A3A] my-3" />
-            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-2 mb-2">Comunidad</p>
+            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-2 mb-2">Community</p>
 
             <Button
               variant="ghost"
@@ -397,7 +397,7 @@ const Profile = () => {
               onClick={() => navigate('/pagos-verificados')}
             >
               <Shield className="h-5 w-5 shrink-0" />
-              <span className="text-sm font-medium">Pagos Verificados</span>
+              <span className="text-sm font-medium">Verified Payments</span>
             </Button>
 
             {/* ─── ADMIN ────────────────────────────────────── */}
@@ -442,7 +442,7 @@ const Profile = () => {
           </Button>
           <Button variant="ghost" size="icon" className="text-[#FFD700] bg-[#FFD700]/10 flex-1 flex-col gap-0.5 h-14 rounded-none">
             <Coins className="h-5 w-5" />
-            <span className="text-[9px] font-medium">Perfil</span>
+            <span className="text-[9px] font-medium">Profile</span>
           </Button>
           <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/ganadores')}>
             <Trophy className="h-5 w-5" />
@@ -450,7 +450,7 @@ const Profile = () => {
           </Button>
           <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/pagos-verificados')}>
             <Shield className="h-5 w-5" />
-            <span className="text-[9px] font-medium">Pagos</span>
+            <span className="text-[9px] font-medium">Payments</span>
           </Button>
           {isAdminSession && (
             <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/admin')}>
@@ -460,7 +460,7 @@ const Profile = () => {
           )}
           <Button variant="ghost" size="icon" className="text-red-400 hover:bg-red-900/20 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={handleLogout}>
             <Power className="h-5 w-5" />
-            <span className="text-[9px] font-medium">Salir</span>
+            <span className="text-[9px] font-medium">Sign Out</span>
           </Button>
         </nav>
 
@@ -904,7 +904,7 @@ const Profile = () => {
                         <p className={`text-xl font-bold ${dailyReturn >= 0 ? 'text-[#00C853]' : 'text-red-400'}`}>
                           {dailyReturn >= 0 ? '+' : ''}{parseFloat(dailyReturn).toFixed(2)}%
                         </p>
-                        <p className="text-[10px] text-gray-500">retorno de la sesión</p>
+                        <p className="text-[10px] text-gray-500">session return</p>
                       </div>
 
                       <div className="mt-3 flex gap-5 text-sm">
@@ -968,8 +968,8 @@ const Profile = () => {
                           </div>
                           <p className="text-[10px] text-gray-600 mt-0.5">
                             {s.total > 0
-                              ? `${Math.round(s.total * pct / 100)} ganadoras de ${s.total} operaciones`
-                              : 'Sin operaciones en esta sesión'}
+                              ? `${Math.round(s.total * pct / 100)} wins out of ${s.total} trades`
+                              : 'No trades in this session'}
                           </p>
                         </div>
                       );
@@ -984,7 +984,7 @@ const Profile = () => {
                   <div className="flex flex-col items-center justify-center h-[200px] gap-3">
                     <Globe className="h-10 w-10 text-gray-700" />
                     <p className="text-gray-500 text-sm text-center">{t('profile.historySoon')}</p>
-                    <p className="text-[11px] text-gray-600 text-center">Cierra operaciones en diferentes sesiones para ver tu rendimiento</p>
+                    <p className="text-[11px] text-gray-600 text-center">Close trades in different sessions to see your performance</p>
                   </div>
                 )}
               </div>
@@ -1003,11 +1003,11 @@ const Profile = () => {
                   <div className="flex items-center gap-4 text-xs">
                     <div className="flex items-center gap-1.5">
                       <div className="w-3 h-3 rounded bg-[#00C853]" />
-                      <span className="text-gray-400">Compras (LONG)</span>
+                      <span className="text-gray-400">Buys (LONG)</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <div className="w-3 h-3 rounded bg-red-500" />
-                      <span className="text-gray-400">Ventas (SHORT)</span>
+                      <span className="text-gray-400">Sells (SHORT)</span>
                     </div>
                   </div>
                 )}
@@ -1039,7 +1039,7 @@ const Profile = () => {
                             <span className="text-base">{rank}</span>
                             <span className="font-bold text-white text-sm">{asset.symbol}</span>
                           </div>
-                          <span className="text-xs text-gray-500">{asset.buys + asset.sells} operaciones</span>
+                          <span className="text-xs text-gray-500">{asset.buys + asset.sells} trades</span>
                         </div>
                         {/* Barra dividida LONG/SHORT */}
                         <div className="flex h-4 rounded-lg overflow-hidden mb-1.5">
@@ -1079,21 +1079,21 @@ const Profile = () => {
                     <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
                       <Activity className="h-4 w-4 text-blue-400" />
                     </div>
-                    <h3 className="text-base font-semibold text-gray-200">Operaciones cerradas hoy</h3>
+                    <h3 className="text-base font-semibold text-gray-200">Closed trades today</h3>
                   </div>
-                  <span className="text-xs text-gray-500">{profile.closedPositions.length} operaciones</span>
+                  <span className="text-xs text-gray-500">{profile.closedPositions.length} trades</span>
                 </div>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-[#2A2A2A] hover:bg-transparent">
-                        <TableHead className="text-[#FFD700] text-xs font-semibold">Par</TableHead>
+                        <TableHead className="text-[#FFD700] text-xs font-semibold">Pair</TableHead>
                         <TableHead className="text-[#FFD700] text-xs font-semibold">Dir.</TableHead>
                         <TableHead className="text-[#FFD700] text-xs font-semibold hidden md:table-cell">Lots</TableHead>
-                        <TableHead className="text-[#FFD700] text-xs font-semibold hidden md:table-cell">Entrada</TableHead>
+                        <TableHead className="text-[#FFD700] text-xs font-semibold hidden md:table-cell">Entry</TableHead>
                         <TableHead className="text-[#FFD700] text-xs font-semibold">P&L %</TableHead>
-                        <TableHead className="text-[#FFD700] text-xs font-semibold">Cierre</TableHead>
-                        <TableHead className="text-[#FFD700] text-xs font-semibold hidden md:table-cell">Hora</TableHead>
+                        <TableHead className="text-[#FFD700] text-xs font-semibold">Close</TableHead>
+                        <TableHead className="text-[#FFD700] text-xs font-semibold hidden md:table-cell">Time</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1104,10 +1104,10 @@ const Profile = () => {
                           'TP_hit':                 '🎯 TP',
                           'SL_hit':                 '🛑 SL',
                           'drawdown_disqualified':  '⚠️ Drawdown',
-                          'competition_end':        '🏁 Fin comp.',
+                          'competition_end':        '🏁 Comp. end',
                         }[pos.closeReason] || pos.closeReason || 'Manual';
                         const closedTime = pos.closedAt
-                          ? new Date(pos.closedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+                          ? new Date(pos.closedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
                           : '—';
 
                         return (
@@ -1240,19 +1240,19 @@ const Profile = () => {
                                 <TableCell colSpan={6} className="py-3 px-4">
                                   <div className="flex flex-wrap gap-x-8 gap-y-2 text-xs">
                                     <div>
-                                      <span className="text-gray-500">Fecha de competencia: </span>
+                                      <span className="text-gray-500">Competition date: </span>
                                       <span className="text-white font-medium">{h.date}</span>
                                     </div>
                                     {h.paymentDate && h.paymentDate !== h.date && (
                                       <div>
-                                        <span className="text-gray-500">Fecha de pago: </span>
+                                        <span className="text-gray-500">Payment date: </span>
                                         <span className="text-gray-400 font-medium">{h.paymentDate}</span>
                                       </div>
                                     )}
                                     <div>
                                       <span className="text-gray-500">{t('profile.positionCol')}: </span>
                                       <span className="text-white font-medium">
-                                        {hPosNum < 999 ? `#${hPosNum}` : 'Sin clasificar'}
+                                        {hPosNum < 999 ? `#${hPosNum}` : 'Unranked'}
                                       </span>
                                     </div>
                                     <div>
@@ -1269,7 +1269,7 @@ const Profile = () => {
                                     </div>
                                     {isRollover && (
                                       <div className="w-full">
-                                        <span className="text-blue-400 text-[10px]">🔄 Esta competencia terminó en rollover (menos de 5 participantes). No se cobra entrada adicional.</span>
+                                        <span className="text-blue-400 text-[10px]">🔄 This competition ended in rollover (less than 5 participants). No additional entry fee charged.</span>
                                       </div>
                                     )}
                                   </div>
@@ -1291,7 +1291,7 @@ const Profile = () => {
                 <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
                   <Wallet className="h-4 w-4 text-blue-400" />
                 </div>
-                <h3 className="text-base font-semibold text-gray-200">Historial de Pagos</h3>
+                <h3 className="text-base font-semibold text-gray-200">Payment History</h3>
               </div>
 
               {/* Tabs */}
@@ -1301,14 +1301,14 @@ const Profile = () => {
                   onClick={() => setActivePayTab('recibidos')}
                 >
                   <ArrowDownLeft className="h-3.5 w-3.5" />
-                  Recibidos
+                  Received
                 </button>
                 <button
                   className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-lg transition ${activePayTab === 'enviados' ? 'bg-[#FFD700] text-black' : 'text-gray-400 hover:text-white'}`}
                   onClick={() => setActivePayTab('enviados')}
                 >
                   <ArrowUpRight className="h-3.5 w-3.5" />
-                  Enviados
+                  Sent
                 </button>
               </div>
 
@@ -1320,25 +1320,25 @@ const Profile = () => {
                 ) : payouts.length === 0 ? (
                   <div className="flex flex-col items-center py-10 gap-3">
                     <ArrowDownLeft className="h-10 w-10 text-gray-700" />
-                    <p className="text-gray-500 text-sm">Aún no has recibido premios</p>
+                    <p className="text-gray-500 text-sm">You haven't received any prizes yet</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow className="border-[#2A2A2A] hover:bg-transparent">
-                          <TableHead className="text-[#00C853] text-xs font-semibold">Fecha</TableHead>
-                          <TableHead className="text-[#00C853] text-xs font-semibold">Nivel</TableHead>
+                          <TableHead className="text-[#00C853] text-xs font-semibold">Date</TableHead>
+                          <TableHead className="text-[#00C853] text-xs font-semibold">Level</TableHead>
                           <TableHead className="text-[#00C853] text-xs font-semibold">Pos.</TableHead>
-                          <TableHead className="text-[#00C853] text-xs font-semibold">Premio</TableHead>
-                          <TableHead className="text-[#00C853] text-xs font-semibold hidden md:table-cell">Red</TableHead>
-                          <TableHead className="text-[#00C853] text-xs font-semibold">Estado</TableHead>
+                          <TableHead className="text-[#00C853] text-xs font-semibold">Prize</TableHead>
+                          <TableHead className="text-[#00C853] text-xs font-semibold hidden md:table-cell">Network</TableHead>
+                          <TableHead className="text-[#00C853] text-xs font-semibold">Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {payouts.map((p, i) => (
                           <TableRow key={i} className="border-[#2A2A2A] hover:bg-white/5">
-                            <TableCell className="text-gray-300 text-sm py-3">{p.date ? new Date(p.date).toLocaleDateString('es-ES') : '—'}</TableCell>
+                            <TableCell className="text-gray-300 text-sm py-3">{p.date ? new Date(p.date).toLocaleDateString('en-US') : '—'}</TableCell>
                             <TableCell className="py-3">
                               <span className={`text-xs font-bold px-2 py-0.5 rounded ${
                                 p.level === 'premium' ? 'bg-[#FFD700]/15 text-[#FFD700]' :
@@ -1368,9 +1368,9 @@ const Profile = () => {
                                 p.status === 'failed'    ? 'bg-red-500/15 text-red-400' :
                                 'bg-gray-700/40 text-gray-400'
                               }`}>
-                                {p.status === 'confirmed' ? 'Confirmado' :
-                                 p.status === 'sent'      ? 'Enviado' :
-                                 p.status === 'failed'    ? 'Fallido' : 'Pendiente'}
+                                {p.status === 'confirmed' ? 'Confirmed' :
+                                 p.status === 'sent'      ? 'Sent' :
+                                 p.status === 'failed'    ? 'Failed' : 'Pending'}
                               </span>
                             </TableCell>
                           </TableRow>
@@ -1387,18 +1387,18 @@ const Profile = () => {
                   return paidEntries.length === 0 ? (
                     <div className="flex flex-col items-center py-10 gap-3">
                       <ArrowUpRight className="h-10 w-10 text-gray-700" />
-                      <p className="text-gray-500 text-sm">Aún no has participado en ninguna competencia</p>
+                      <p className="text-gray-500 text-sm">You haven't participated in any competition yet</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow className="border-[#2A2A2A] hover:bg-transparent">
-                            <TableHead className="text-[#FFD700] text-xs font-semibold">Fecha de pago</TableHead>
-                            <TableHead className="text-[#FFD700] text-xs font-semibold">Nivel</TableHead>
+                            <TableHead className="text-[#FFD700] text-xs font-semibold">Payment Date</TableHead>
+                            <TableHead className="text-[#FFD700] text-xs font-semibold">Level</TableHead>
                             <TableHead className="text-[#FFD700] text-xs font-semibold">Entry Fee</TableHead>
-                            <TableHead className="text-[#FFD700] text-xs font-semibold">Fecha competencia</TableHead>
-                            <TableHead className="text-[#FFD700] text-xs font-semibold">Resultado</TableHead>
+                            <TableHead className="text-[#FFD700] text-xs font-semibold">Competition Date</TableHead>
+                            <TableHead className="text-[#FFD700] text-xs font-semibold">Result</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
