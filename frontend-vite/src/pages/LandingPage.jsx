@@ -181,8 +181,18 @@ const LandingPage = () => {
       localStorage.setItem('holypotEntryId', res.data.entryId);
       window.open(res.data.paymentUrl, '_blank');
     } catch (err) {
+      const errCode = err.response?.data?.code;
       const errMsg = err.response?.data?.error || err.message;
       const errDetail = err.response?.data?.details;
+
+      if (errCode === 'ACTIVE_ENTRY_EXISTS') {
+        const entryId = err.response?.data?.entryId;
+        if (entryId) localStorage.setItem('holypotEntryId', entryId);
+        setShowForm(false);
+        navigate('/login');
+        return;
+      }
+
       alert('Error: ' + errMsg + (errDetail ? `\nDetalle: ${JSON.stringify(errDetail)}` : ''));
       captchaRef.current?.resetCaptcha();
       setCaptchaToken(null);

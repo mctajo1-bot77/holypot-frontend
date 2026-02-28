@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Trophy, ChevronLeft } from 'lucide-react';
 import logo from '@/assets/Holypot-logo.webp';
+import TopWinnersPyramid from '@/components/TopWinnersPyramid';
 
 const API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
@@ -25,20 +26,26 @@ const medal = (pos) => pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '�
 export default function WinnersPage() {
   const navigate = useNavigate();
   const [hallOfFame, setHallOfFame] = useState([]);
+  const [lastResults, setLastResults] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeLevel, setActiveLevel] = useState('medium');
 
   useEffect(() => {
-    const fetchHof = async () => {
+    const fetchData = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/hall-of-fame`);
-        setHallOfFame(res.data);
+        const [hofRes, lastRes] = await Promise.all([
+          axios.get(`${API_BASE}/hall-of-fame`),
+          axios.get(`${API_BASE}/last-competition-results`)
+        ]);
+        setHallOfFame(hofRes.data);
+        setLastResults(lastRes.data);
       } catch (err) {
-        console.error('hall-of-fame error:', err);
+        console.error('winners page error:', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchHof();
+    fetchData();
   }, []);
 
   return (
@@ -71,6 +78,53 @@ export default function WinnersPage() {
             Los mejores traders de la historia de Holypot — clasificados por tasa de éxito y mejor retorno.
           </p>
         </div>
+
+        {/* ── ÚLTIMA COMPETENCIA – PODIO ── */}
+        {!loading && lastResults && (
+          <div className="mb-12">
+            <p className="text-xs text-[#D4AF37] font-bold uppercase tracking-widest text-center mb-4">
+              Última competencia
+            </p>
+
+            {/* Level tabs */}
+            <div className="flex justify-center gap-2 mb-6">
+              {['basic', 'medium', 'premium'].map(lvl => (
+                <button
+                  key={lvl}
+                  onClick={() => setActiveLevel(lvl)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition ${
+                    activeLevel === lvl
+                      ? lvl === 'basic' ? 'bg-[#00C853] text-black'
+                        : lvl === 'medium' ? 'bg-blue-500 text-white'
+                        : 'bg-[#D4AF37] text-black'
+                      : 'bg-[#1a2035] text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {lvl}
+                </button>
+              ))}
+            </div>
+
+            {lastResults[activeLevel]?.hasData ? (
+              <TopWinnersPyramid
+                top3={lastResults[activeLevel].top3 || []}
+                level={activeLevel}
+                date={lastResults[activeLevel].date}
+                prizePool={lastResults[activeLevel].prizePool}
+              />
+            ) : (
+              <div className="text-center py-10 text-gray-600 border border-[#1a2035] rounded-2xl">
+                <Trophy className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                <p className="text-sm">Sin datos para {activeLevel.toUpperCase()} — ¡compite hoy!</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── HALL OF FAME TABLE ── */}
+        <p className="text-xs text-[#D4AF37] font-bold uppercase tracking-widest text-center mb-6">
+          Ranking histórico global
+        </p>
 
         {loading ? (
           <div className="flex justify-center py-20">
