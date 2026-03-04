@@ -656,13 +656,49 @@ const AdminDashboard = () => {
                         </TableCell>
                         <TableCell className="text-gray-200 text-sm">{formatNumber(u.virtualCapital || 0)}</TableCell>
                         <TableCell>
-                          <Button
-                            size="sm"
-                            className="bg-[#FFD700]/10 text-[#FFD700] hover:bg-[#FFD700]/20 border border-[#FFD700]/25 text-xs font-bold"
-                            onClick={() => viewAsUser(u.id)}
-                          >
-                            {t('admin.viewAsUser')}
-                          </Button>
+                          <div className="flex flex-col gap-1.5">
+                            <Button
+                              size="sm"
+                              className="bg-[#FFD700]/10 text-[#FFD700] hover:bg-[#FFD700]/20 border border-[#FFD700]/25 text-xs font-bold"
+                              onClick={() => viewAsUser(u.id)}
+                            >
+                              {t('admin.viewAsUser')}
+                            </Button>
+                            {u.email && !u.emailVerified && (
+                              <Button
+                                size="sm"
+                                className="bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/25 text-xs font-bold"
+                                onClick={async () => {
+                                  try {
+                                    await apiClient.post('/admin/verify-email-manual', { email: u.email });
+                                    alert(`✅ Email de ${u.email} verificado manualmente`);
+                                  } catch (e) {
+                                    alert('Error: ' + (e.response?.data?.error || e.message));
+                                  }
+                                }}
+                              >
+                                ✅ Verificar email
+                              </Button>
+                            )}
+                            {u.email && (
+                              <Button
+                                size="sm"
+                                className="bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/25 text-xs font-bold"
+                                onClick={async () => {
+                                  if (!confirm(`¿Eliminar al usuario ${u.email}? Esta acción no se puede deshacer.`)) return;
+                                  try {
+                                    await apiClient.delete('/admin/user', { data: { email: u.email } });
+                                    alert(`✅ Usuario ${u.email} eliminado`);
+                                    window.location.reload();
+                                  } catch (e) {
+                                    alert('Error: ' + (e.response?.data?.error || e.message));
+                                  }
+                                }}
+                              >
+                                🗑 Eliminar
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
