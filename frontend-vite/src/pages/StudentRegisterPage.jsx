@@ -15,6 +15,8 @@ import { GraduationCap, BookOpen, Trophy, TrendingUp, AlertTriangle, CheckCircle
 import logo from '@/assets/Holypot-logo.webp';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
 
+const HCAPTCHA_SITEKEY = 'a0b26f92-ba34-47aa-be42-c936e488a6f4';
+
 const LEVELS = [
   { id: 'basic', label: 'Basic', capital: '10,000', desc: 'Capital virtual $10,000', color: 'text-yellow-400 border-yellow-400' },
   { id: 'medium', label: 'Medium', capital: '50,000', desc: 'Capital virtual $50,000', color: 'text-blue-400 border-blue-400' },
@@ -277,7 +279,7 @@ export default function StudentRegisterPage() {
                 <div className="flex justify-center pt-1">
                   <HCaptcha
                     ref={captchaRef}
-                    sitekey={import.meta.env.VITE_HCAPTCHA_SITEKEY || '10000000-ffff-ffff-ffff-000000000001'}
+                    sitekey={HCAPTCHA_SITEKEY}
                     theme="dark"
                     onVerify={(token) => { setCaptchaToken(token); setErrors(prev => ({ ...prev, captcha: undefined })); }}
                     onExpire={() => setCaptchaToken('')}
