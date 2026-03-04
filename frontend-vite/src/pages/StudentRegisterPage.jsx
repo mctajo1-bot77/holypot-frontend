@@ -137,18 +137,38 @@ export default function StudentRegisterPage() {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#0A0A0A' }}>
         <Toaster />
-        <div className="text-center space-y-4 p-8 max-w-md">
-          <div className="w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto">
+        <div className="text-center space-y-5 p-8 max-w-md w-full">
+          <div className="w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto border border-blue-500/30">
             <span className="text-4xl">📧</span>
           </div>
           <h2 className="text-2xl font-bold text-white">Verifica tu email</h2>
           <p className="text-gray-400">
-            Te enviamos un enlace de verificación a <span className="text-blue-400 font-semibold">{form.email}</span>.
-            Haz clic en el enlace para activar tu cuenta y luego vuelve a iniciar sesión.
+            Te enviamos un enlace a <span className="text-blue-400 font-semibold">{form.email}</span>.
+            Haz clic en él para activar tu cuenta.
           </p>
-          <p className="text-gray-500 text-sm">Revisa también tu carpeta de spam.</p>
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 text-sm text-yellow-300 text-left space-y-1">
+            <p className="font-semibold">¿No llegó el email?</p>
+            <ul className="list-disc list-inside text-xs text-yellow-200/80 space-y-1">
+              <li>Revisa tu carpeta de <strong>spam / correo no deseado</strong></li>
+              <li>Espera 1-2 minutos y vuelve a revisar</li>
+              <li>El asunto es: <em>"Confirma tu email - Holypot Trading"</em></li>
+            </ul>
+          </div>
           <button
-            className="text-blue-400 underline text-sm hover:text-blue-300"
+            className="w-full py-2.5 px-4 rounded-lg border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 transition text-sm font-medium"
+            onClick={async () => {
+              try {
+                await apiClient.post('/resend-verification', { email: form.email });
+                toast.success('Email reenviado', 'Revisa tu bandeja de entrada y spam.');
+              } catch (e) {
+                toast.error('No se pudo reenviar', e.response?.data?.error || 'Intenta de nuevo en unos minutos.');
+              }
+            }}
+          >
+            🔁 Reenviar email de verificación
+          </button>
+          <button
+            className="text-gray-500 underline text-sm hover:text-gray-300"
             onClick={() => setStep('form')}
           >
             ← Volver al formulario
