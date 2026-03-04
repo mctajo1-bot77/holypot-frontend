@@ -42,6 +42,7 @@ import TradingViewChart from "@/components/TradingViewChart";
 import logo from "@/assets/Holypot-logo.webp";
 import background from "@/assets/background.jpg";
 import EditPositionModal from "@/components/EditPositionModal";
+import StudentSurveyModal from "@/components/StudentSurveyModal";
 
 const API_BASE = import.meta.env.VITE_API_URL 
   ? `${import.meta.env.VITE_API_URL}/api` 
@@ -79,7 +80,11 @@ function Dashboard() {
   const navigate = useNavigate();
   const { t } = useI18n();
 
-  const [entryId, setEntryId] = useState(localStorage.getItem('holypotEntryId') || '');
+  // Student mode detection
+  const isStudentMode = localStorage.getItem('holypotMode') === 'student';
+  const effectiveEntryKey = isStudentMode ? 'holypotStudentEntryId' : 'holypotEntryId';
+
+  const [entryId, setEntryId] = useState(localStorage.getItem(effectiveEntryKey) || '');
   const [symbol, setSymbol] = useState('EURUSD');
   const [orderType, setOrderType] = useState('market');
   const [direction, setDirection] = useState('long');
@@ -93,6 +98,7 @@ function Dashboard() {
   const [totalRisk, setTotalRisk] = useState(0);
   const [virtualCapital, setVirtualCapital] = useState(10000);
   const [competitions, setCompetitions] = useState({});
+  const [studentCompetitions, setStudentCompetitions] = useState([]);
   const [userLevel, setUserLevel] = useState('basic');
   const [selectedLevel, setSelectedLevel] = useState('basic');
   const [currentRanking, setCurrentRanking] = useState([]);
@@ -110,6 +116,9 @@ function Dashboard() {
   const [competitionEnded, setCompetitionEnded] = useState(() => new Date().getUTCHours() >= 21);
   const [competitionResults, setCompetitionResults] = useState(null);
   const [showEndModal, setShowEndModal] = useState(false);
+  // Student survey modal
+  const [showStudentSurvey, setShowStudentSurvey] = useState(false);
+  const [studentCompetitionEndData, setStudentCompetitionEndData] = useState(null);
   const [myAdvice, setMyAdvice] = useState(null);
 
   // entryId efectivo: en test mode usa el testEntryId temporal
@@ -238,6 +247,14 @@ function Dashboard() {
         });
         setCompetitions(comps);
 
+        // Load student competitions pool if student mode
+        if (isStudentMode) {
+          try {
+            const studentCompRes = await axios.get(`${API_BASE}/student/competitions/active`);
+            setStudentCompetitions(studentCompRes.data || []);
+          } catch (e) { /* non-critical */ }
+        }
+
         // ✅ CORRECCIÓN: Solo obtener posiciones si hay entryId
         if (entryId) {
           const posRes = await axios.get(`${API_BASE}/my-positions?entryId=${entryId}`);
@@ -271,7 +288,10 @@ function Dashboard() {
 
     const fetchRanking = async () => {
       try {
-        const rankRes = await axios.get(`${API_BASE}/ranking?level=${selectedLevel}`);
+        const rankEndpoint = isStudentMode
+          ? `${API_BASE}/student/ranking?level=${selectedLevel}`
+          : `${API_BASE}/ranking?level=${selectedLevel}`;
+        const rankRes = await axios.get(rankEndpoint);
         setCurrentRanking(rankRes.data || []);
       } catch (err) {
         console.error(err);
@@ -322,9 +342,19 @@ function Dashboard() {
     });
 
     socket.on('competitionEnded', (results) => {
-      setCompetitionEnded(true);
-      setCompetitionResults(results);
-      setShowEndModal(true);
+      if (!isStudentMode) {
+        setCompetitionEnded(true);
+        setCompetitionResults(results);
+        setShowEndModal(true);
+      }
+    });
+
+    socket.on('studentCompetitionEnded', (results) => {
+      if (isStudentMode) {
+        setCompetitionEnded(true);
+        setStudentCompetitionEndData(results);
+        setShowStudentSurvey(true);
+      }
     });
 
     socket.on('myAdvice', (data) => {
@@ -347,6 +377,7 @@ function Dashboard() {
       socket.off('tradeClosedAuto');
       socket.off('entryDisqualified');
       socket.off('competitionEnded');
+      socket.off('studentCompetitionEnded');
       socket.off('myAdvice');
       socket.off('orderTriggered');
     };
@@ -549,6 +580,29 @@ function Dashboard() {
           <img src={background} alt="" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/75" />
         </div>
+
+        {/* ── STUDENT MODE BANNER ─────────────────────────────────────────────── */}
+        {isStudentMode && (
+          <div className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-4 py-1.5 text-xs font-semibold"
+            style={{ background: 'rgba(59,130,246,0.9)', borderBottom: '1px solid #3b82f6' }}>
+            <span className="flex items-center gap-1.5">
+              🎓 <span>MODO ESTUDIANTE — Capital 100% Virtual</span>
+            </span>
+            <button
+              onClick={() => navigate('/')}
+              className="text-white/80 underline hover:text-white text-xs">
+              ¿Listo para el entorno real?
+            </button>
+          </div>
+        )}
+
+        {/* ── STUDENT SURVEY MODAL ─────────────────────────────────────────── */}
+        {showStudentSurvey && studentCompetitionEndData && (
+          <StudentSurveyModal
+            data={studentCompetitionEndData}
+            onClose={() => setShowStudentSurvey(false)}
+          />
+        )}
 
         {/* ── ADMIN ALERT ────────────────────────────────────────────────────── */}
         {isAdminSession && (
@@ -862,6 +916,33 @@ function Dashboard() {
                 </div>
               ))}
             </div>
+
+            {/* ── STUDENT POOL (visible to all) ───────────────────────────── */}
+            {studentCompetitions.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(59,130,246,0.2)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.4)' }}>
+                    🎓 POOL ESTUDIANTE (Virtual)
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {studentCompetitions.map(sc => (
+                    <div key={sc.level} className="rounded-xl p-4 text-sm" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)' }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-blue-400">{sc.name?.toUpperCase()}</span>
+                        <span className="text-xs text-blue-300/70 bg-blue-500/10 px-2 py-0.5 rounded-full">Virtual</span>
+                      </div>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between"><span className="text-gray-500">Participantes</span><span className="text-gray-300">{sc.participants}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Pool virtual</span><span className="text-blue-300 font-semibold">{sc.virtualPool?.toFixed(0)} USDT</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Equiv. real</span><span className="text-yellow-400/70">${sc.realEquivalentPool?.toFixed(0)}</span></div>
+                        <div className="flex justify-between pt-1 border-t border-blue-500/20"><span className="text-gray-500">Cierre</span><span className="text-red-400 animate-pulse">{sc.timeLeft}</span></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* ── CHART + NEW TRADE ─────────────────────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

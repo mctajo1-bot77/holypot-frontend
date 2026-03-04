@@ -16,6 +16,10 @@ import PrivacyPage from './pages/PrivacyPage';
 import RulesPage from './pages/RulesPage';
 import WinnersPage from './pages/WinnersPage';
 import PagosVerificadosPage from './pages/PagosVerificadosPage';
+import StudentRegisterPage from './pages/StudentRegisterPage';
+import StudentDashboard from './pages/StudentDashboard';
+import ForumPage from './pages/ForumPage';
+import ForumDetailPage from './pages/ForumDetailPage';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -30,6 +34,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/ganadores" element={<WinnersPage />} />
           <Route path="/pagos-verificados" element={<PagosVerificadosPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
+
+          {/* RUTAS ESTUDIANTE */}
+          <Route path="/student-register" element={<StudentRegisterPage />} />
+          <Route path="/student-dashboard" element={<PrivateRoute><StudentDashboard /></PrivateRoute>} />
+
+          {/* FORO – accesible a todos, comentar requiere auth */}
+          <Route path="/forum" element={<ForumPage />} />
+          <Route path="/forum/:id" element={<ForumDetailPage />} />
 
           {/* RUTAS PROTEGIDAS – solo accesibles con token normal o admin impersonando */}
           <Route path="/dashboard" element={<PrivateRoute><App /></PrivateRoute>} />

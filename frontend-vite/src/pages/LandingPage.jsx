@@ -282,12 +282,22 @@ const LandingPage = () => {
           </div>
 
           {/* CTA */}
-          <Button
-            onClick={() => document.getElementById('competitions')?.scrollIntoView({ behavior: 'smooth' })}
-            className="bg-gradient-to-r from-[#D4AF37] to-[#FFD700] text-black text-lg md:text-xl px-10 py-6 font-extrabold rounded-full shadow-2xl shadow-[#D4AF37]/20 hover:scale-105 transition duration-300"
-          >
-            {t('landing.seeCompetitions')} <ChevronDown className="ml-2 w-5 h-5" />
-          </Button>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <Button
+              onClick={() => document.getElementById('competitions')?.scrollIntoView({ behavior: 'smooth' })}
+              className="bg-gradient-to-r from-[#D4AF37] to-[#FFD700] text-black text-lg md:text-xl px-10 py-6 font-extrabold rounded-full shadow-2xl shadow-[#D4AF37]/20 hover:scale-105 transition duration-300"
+            >
+              {t('landing.seeCompetitions')} <ChevronDown className="ml-2 w-5 h-5" />
+            </Button>
+            <Link to="/student-register">
+              <Button
+                variant="outline"
+                className="border-blue-500/50 text-blue-300 hover:bg-blue-500/10 hover:text-blue-200 text-base md:text-lg px-8 py-6 font-bold rounded-full transition duration-300"
+              >
+                🎓 Try for Free (Student Mode)
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Winners strip */}

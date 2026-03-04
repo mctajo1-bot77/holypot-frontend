@@ -35,7 +35,8 @@ import {
   TrendingUp, TrendingDown, Sparkles, Bot, Share2,
   Globe, Zap, Activity, BarChart2, Star, Award,
   Calendar, DollarSign, ChevronDown, ChevronUp, Target,
-  Shield, Wallet, ArrowDownLeft, ArrowUpRight
+  Shield, Wallet, ArrowDownLeft, ArrowUpRight,
+  MessageSquare, GraduationCap
 } from "lucide-react";
 import {
   RadialBarChart, RadialBar, PolarAngleAxis,
@@ -400,6 +401,15 @@ const Profile = () => {
               <span className="text-sm font-medium">Verified Payments</span>
             </Button>
 
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 text-gray-300 hover:text-white hover:bg-white/5 rounded-lg mb-1 h-10"
+              onClick={() => navigate('/forum')}
+            >
+              <MessageSquare className="h-5 w-5 shrink-0" />
+              <span className="text-sm font-medium">Forum</span>
+            </Button>
+
             {/* ─── ADMIN ────────────────────────────────────── */}
             {isAdminSession && (
               <>
@@ -451,6 +461,10 @@ const Profile = () => {
           <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/pagos-verificados')}>
             <Shield className="h-5 w-5" />
             <span className="text-[9px] font-medium">Payments</span>
+          </Button>
+          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/forum')}>
+            <MessageSquare className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Forum</span>
           </Button>
           {isAdminSession && (
             <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/admin')}>
@@ -1187,6 +1201,7 @@ const Profile = () => {
                         const isExpanded = expandedRow === i;
                         const isRollover = h.wasRollover === true;
                         const isWinner = hPosNum <= 3 && hPrize > 0;
+                        const isStudentEntry = h.isStudent === true || h.mode === 'student';
 
                         const tierC = (h.level || '').toLowerCase() === 'premium'
                           ? 'bg-[#FFD700]/15 text-[#FFD700]' : (h.level || '').toLowerCase() === 'medium'
@@ -1204,6 +1219,11 @@ const Profile = () => {
                                 <div>{h.date}</div>
                                 {isRollover && (
                                   <div className="text-[10px] text-blue-400 font-semibold mt-0.5">🔄 Rollover</div>
+                                )}
+                                {isStudentEntry && (
+                                  <div className="flex items-center gap-0.5 text-[10px] text-blue-300 font-semibold mt-0.5">
+                                    <GraduationCap className="h-3 w-3" /> Student
+                                  </div>
                                 )}
                               </TableCell>
                               <TableCell className="py-3">
@@ -1270,6 +1290,11 @@ const Profile = () => {
                                     {isRollover && (
                                       <div className="w-full">
                                         <span className="text-blue-400 text-[10px]">🔄 This competition ended in rollover (less than 5 participants). No additional entry fee charged.</span>
+                                      </div>
+                                    )}
+                                    {isStudentEntry && (
+                                      <div className="w-full">
+                                        <span className="text-blue-300 text-[10px]">🎓 Student mode — virtual capital, no real money involved.</span>
                                       </div>
                                     )}
                                   </div>
