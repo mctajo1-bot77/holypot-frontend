@@ -76,6 +76,18 @@ const AdminDashboard = () => {
   const [userStatusFilter, setUserStatusFilter] = useState('all');
   const [payoutsStatusFilter, setPayoutsStatusFilter] = useState('all');
 
+  // ── Estado sección Estudiantes ─────────────────────────────────────────────
+  const [students, setStudents]           = useState([]);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentVerFilter, setStudentVerFilter] = useState('all'); // 'all' | 'verified' | 'unverified'
+  const [emailSubject, setEmailSubject]   = useState('');
+  const [emailBody, setEmailBody]         = useState('');
+  const [emailPreview, setEmailPreview]   = useState('');
+  const [emailOnlyVerified, setEmailOnlyVerified] = useState(true);
+  const [emailSending, setEmailSending]   = useState(false);
+  const [emailResult, setEmailResult]     = useState(null);
+
   // ── Fetch guards (prevent concurrent calls & throttle socket events) ───────
   const isFetchingRef  = useRef(false);
   const lastFetchedRef = useRef(0);   // timestamp of last completed fetch
@@ -195,6 +207,69 @@ const AdminDashboard = () => {
       window.open('/dashboard', '_blank');
     } catch (err) {
       showToast('error', 'Error test mode: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const fetchStudents = async () => {
+    setStudentsLoading(true);
+    try {
+      const res = await apiClient.get('/admin/students');
+      setStudents(res.data.students || []);
+    } catch (err) {
+      showToast('error', 'Error cargando estudiantes: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setStudentsLoading(false);
+    }
+  };
+
+  const verifyStudentEmail = async (email) => {
+    try {
+      await apiClient.post('/admin/verify-email-manual', { email });
+      showToast('success', `✅ Email de ${email} verificado`);
+      fetchStudents();
+    } catch (err) {
+      showToast('error', err.response?.data?.error || err.message);
+    }
+  };
+
+  const deleteStudent = async (email) => {
+    if (!window.confirm(`¿Eliminar al usuario ${email}? Esta acción no se puede deshacer.`)) return;
+    try {
+      await apiClient.delete('/admin/user', { data: { email } });
+      showToast('success', `✅ Usuario ${email} eliminado`);
+      fetchStudents();
+    } catch (err) {
+      showToast('error', err.response?.data?.error || err.message);
+    }
+  };
+
+  const sendMarketingEmail = async (previewOnly = false) => {
+    if (!emailSubject.trim() || !emailBody.trim()) {
+      showToast('error', 'Completa el asunto y el cuerpo del email');
+      return;
+    }
+    if (previewOnly && !emailPreview.trim()) {
+      showToast('error', 'Ingresa un email para el preview');
+      return;
+    }
+    setEmailSending(true);
+    setEmailResult(null);
+    try {
+      const res = await apiClient.post('/admin/send-marketing-email', {
+        subject: emailSubject,
+        html: emailBody.replace(/\n/g, '<br>'),
+        onlyVerified: emailOnlyVerified,
+        ...(previewOnly ? { previewEmail: emailPreview } : {})
+      });
+      setEmailResult(res.data);
+      showToast('success', previewOnly
+        ? `Preview enviado a ${emailPreview}`
+        : `Enviado: ${res.data.sent} OK, ${res.data.failed} fallidos`
+      );
+    } catch (err) {
+      showToast('error', err.response?.data?.error || err.message);
+    } finally {
+      setEmailSending(false);
     }
   };
 
@@ -488,10 +563,11 @@ const AdminDashboard = () => {
 
         {/* ── TABS ───────────────────────────────────────────────────────────── */}
         <Tabs defaultValue="competencias">
-          <TabsList className="grid w-full grid-cols-5 mb-5 bg-[#161616] border border-[#2A2A2A] rounded-xl overflow-hidden">
+          <TabsList className="grid w-full grid-cols-6 mb-5 bg-[#161616] border border-[#2A2A2A] rounded-xl overflow-hidden">
             {[
               ['competencias', t('admin.competitions')],
               ['usuarios',     t('admin.users')],
+              ['estudiantes',  '🎓 Estudiantes'],
               ['payouts',      t('admin.payouts')],
               ['settlement',   'Settlement'],
               ['analytics',    t('admin.analytics')],
@@ -1036,6 +1112,243 @@ const AdminDashboard = () => {
                   </ResponsiveContainer>
                 )}
               </div>
+            </div>
+          </TabsContent>
+
+          {/* ════════════════════════════════════════════════════════════════ */}
+          {/* TAB: ESTUDIANTES                                                */}
+          {/* ════════════════════════════════════════════════════════════════ */}
+          <TabsContent value="estudiantes" className="space-y-5" onFocus={fetchStudents}>
+            {/* Cargar estudiantes al entrar a la pestaña */}
+            {students.length === 0 && !studentsLoading && (
+              <div className="flex justify-end">
+                <Button size="sm" onClick={fetchStudents}
+                  className="bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30 text-xs">
+                  🔄 Cargar estudiantes
+                </Button>
+              </div>
+            )}
+
+            {/* ── STATS RÁPIDAS ─────────────────────────────────────────── */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { label: 'Total estudiantes', value: students.length, color: 'text-blue-400' },
+                { label: 'Email verificado', value: students.filter(s => s.emailVerified).length, color: 'text-green-400' },
+                { label: 'Sin verificar', value: students.filter(s => !s.emailVerified).length, color: 'text-yellow-400' },
+                { label: 'Con operaciones', value: students.filter(s => s.totalPositions > 0).length, color: 'text-purple-400' },
+              ].map(({ label, value, color }) => (
+                <div key={label} className={card + ' p-4 text-center'}>
+                  <p className={`text-2xl font-bold ${color}`}>{value}</p>
+                  <p className="text-xs text-gray-500 mt-1">{label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* ── TABLA DE ESTUDIANTES ──────────────────────────────────── */}
+            <div className={card}>
+              <div className="p-4 border-b border-[#2A2A2A] flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  🎓 Usuarios Estudiantes
+                  {studentsLoading && <span className="text-xs text-gray-500 animate-pulse">Cargando...</span>}
+                </h3>
+                <div className="flex gap-2 flex-wrap">
+                  <input
+                    type="text"
+                    placeholder="Buscar email o nickname..."
+                    value={studentSearch}
+                    onChange={e => setStudentSearch(e.target.value)}
+                    className="bg-black/40 border border-[#2A2A2A] text-white text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 w-48"
+                  />
+                  <select
+                    value={studentVerFilter}
+                    onChange={e => setStudentVerFilter(e.target.value)}
+                    className="bg-black/40 border border-[#2A2A2A] text-white text-xs rounded-lg px-2 py-1.5"
+                  >
+                    <option value="all">Todos</option>
+                    <option value="verified">Verificados</option>
+                    <option value="unverified">Sin verificar</option>
+                  </select>
+                  <Button size="sm" onClick={fetchStudents}
+                    className="bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30 text-xs">
+                    🔄 Actualizar
+                  </Button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-[#2A2A2A] hover:bg-transparent">
+                      <TableHead className="text-blue-400 text-xs">Email</TableHead>
+                      <TableHead className="text-blue-400 text-xs">Nickname</TableHead>
+                      <TableHead className="text-blue-400 text-xs hidden md:table-cell">País</TableHead>
+                      <TableHead className="text-blue-400 text-xs">Email</TableHead>
+                      <TableHead className="text-blue-400 text-xs hidden md:table-cell">Capital</TableHead>
+                      <TableHead className="text-blue-400 text-xs hidden lg:table-cell">Operaciones</TableHead>
+                      <TableHead className="text-blue-400 text-xs hidden lg:table-cell">Registro</TableHead>
+                      <TableHead className="text-blue-400 text-xs">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {students
+                      .filter(s => {
+                        const q = studentSearch.toLowerCase();
+                        const matchQ = !q || s.email.toLowerCase().includes(q) || s.nickname.toLowerCase().includes(q);
+                        const matchV = studentVerFilter === 'all'
+                          || (studentVerFilter === 'verified' && s.emailVerified)
+                          || (studentVerFilter === 'unverified' && !s.emailVerified);
+                        return matchQ && matchV;
+                      })
+                      .map(s => (
+                        <TableRow key={s.entryId} className="border-[#2A2A2A] hover:bg-white/3 transition">
+                          <TableCell className="text-gray-300 text-xs py-2.5">{s.email || '—'}</TableCell>
+                          <TableCell className="text-white text-xs font-medium py-2.5">{s.nickname}</TableCell>
+                          <TableCell className="text-gray-400 text-xs py-2.5 hidden md:table-cell">{s.country}</TableCell>
+                          <TableCell className="py-2.5">
+                            {s.emailVerified
+                              ? <span className="text-xs font-bold text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">✅ Verificado</span>
+                              : <span className="text-xs font-bold text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full">⚠ Sin verificar</span>
+                            }
+                          </TableCell>
+                          <TableCell className="text-gray-300 text-xs py-2.5 hidden md:table-cell">
+                            {Number(s.virtualCapital).toFixed(0)} USDT
+                          </TableCell>
+                          <TableCell className="text-gray-400 text-xs py-2.5 hidden lg:table-cell">
+                            {s.openPositions} abiertas / {s.totalPositions} total
+                          </TableCell>
+                          <TableCell className="text-gray-500 text-xs py-2.5 hidden lg:table-cell">
+                            {s.joinedAt ? new Date(s.joinedAt).toLocaleDateString('es-ES') : '—'}
+                          </TableCell>
+                          <TableCell className="py-2.5">
+                            <div className="flex flex-col gap-1">
+                              {!s.emailVerified && s.email && (
+                                <Button size="sm"
+                                  className="h-6 text-[10px] px-2 bg-green-500/15 text-green-400 border border-green-500/25 hover:bg-green-500/25"
+                                  onClick={() => verifyStudentEmail(s.email)}>
+                                  ✅ Verificar
+                                </Button>
+                              )}
+                              {s.email && (
+                                <Button size="sm"
+                                  className="h-6 text-[10px] px-2 bg-red-500/15 text-red-400 border border-red-500/25 hover:bg-red-500/25"
+                                  onClick={() => deleteStudent(s.email)}>
+                                  🗑 Eliminar
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    }
+                    {students.length === 0 && !studentsLoading && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-10 text-gray-600 text-sm">
+                          No hay estudiantes registrados · Haz clic en "Cargar estudiantes"
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* ── COMPOSITOR DE EMAIL MASIVO ────────────────────────────── */}
+            <div className={card + ' p-5 space-y-4'}>
+              <div className="flex items-center gap-2 pb-3 border-b border-[#2A2A2A]">
+                <span className="text-lg">📧</span>
+                <h3 className="text-sm font-bold text-white">Email Masivo a Estudiantes</h3>
+                <span className="ml-auto text-xs text-gray-500">
+                  Disponible: <span className="text-blue-400 font-semibold">
+                    {emailOnlyVerified
+                      ? students.filter(s => s.emailVerified).length
+                      : students.length} destinatarios
+                  </span>
+                </span>
+              </div>
+
+              {/* Configuración */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={emailOnlyVerified}
+                    onChange={e => setEmailOnlyVerified(e.target.checked)}
+                    className="accent-blue-500 w-4 h-4"
+                  />
+                  Solo enviar a emails <strong className="text-white">verificados</strong>
+                </label>
+                <span className="text-xs text-gray-500">(recomendado para evitar rebotes)</span>
+              </div>
+
+              {/* Asunto */}
+              <div>
+                <label className="text-xs text-gray-400 mb-1.5 block font-semibold">ASUNTO DEL EMAIL</label>
+                <input
+                  type="text"
+                  placeholder="ej: ¡Nueva competencia en Holypot Trading! 🏆"
+                  value={emailSubject}
+                  onChange={e => setEmailSubject(e.target.value)}
+                  className="w-full bg-black/40 border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              {/* Cuerpo */}
+              <div>
+                <label className="text-xs text-gray-400 mb-1.5 block font-semibold">
+                  CUERPO DEL EMAIL
+                  <span className="text-gray-600 ml-2 font-normal">Usa {'{{nickname}}'} para personalizar con el nombre del usuario</span>
+                </label>
+                <textarea
+                  placeholder={'Hola {{nickname}},\n\n¡Te informamos que...\n\nSaludos,\nEquipo Holypot Trading'}
+                  value={emailBody}
+                  onChange={e => setEmailBody(e.target.value)}
+                  rows={8}
+                  className="w-full bg-black/40 border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-500 resize-y font-mono"
+                />
+              </div>
+
+              {/* Preview email */}
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <label className="text-xs text-gray-400 mb-1.5 block font-semibold">EMAIL DE PRUEBA (preview)</label>
+                  <input
+                    type="email"
+                    placeholder="tu@email.com"
+                    value={emailPreview}
+                    onChange={e => setEmailPreview(e.target.value)}
+                    className="w-full bg-black/40 border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <Button
+                  onClick={() => sendMarketingEmail(true)}
+                  disabled={emailSending}
+                  className="bg-gray-700/50 text-gray-300 border border-gray-600 hover:bg-gray-700 text-sm h-10 px-4"
+                >
+                  {emailSending ? '⏳' : '📤'} Enviar preview
+                </Button>
+              </div>
+
+              {/* Resultado */}
+              {emailResult && (
+                <div className={`p-3 rounded-lg text-sm ${emailResult.sent > 0 ? 'bg-green-500/10 border border-green-500/20 text-green-400' : 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400'}`}>
+                  {emailResult.mode === 'preview'
+                    ? `✅ Preview enviado a ${emailResult.sentTo}`
+                    : `✅ Enviados: ${emailResult.sent} · Fallidos: ${emailResult.failed} · Total destinatarios: ${emailResult.total}`
+                  }
+                </div>
+              )}
+
+              {/* Botón envío masivo */}
+              <Button
+                onClick={() => {
+                  if (!window.confirm(`¿Enviar este email a ${emailOnlyVerified ? students.filter(s => s.emailVerified).length : students.length} estudiantes? Esta acción no se puede deshacer.`)) return;
+                  sendMarketingEmail(false);
+                }}
+                disabled={emailSending || !emailSubject.trim() || !emailBody.trim()}
+                className="w-full h-11 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold text-sm rounded-xl hover:opacity-90 disabled:opacity-40"
+              >
+                {emailSending ? '⏳ Enviando...' : `🚀 Enviar a todos los estudiantes`}
+              </Button>
             </div>
           </TabsContent>
 
