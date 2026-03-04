@@ -31,17 +31,28 @@ const LoginPage = () => {
       localStorage.removeItem('holypotAdminToken');
       localStorage.removeItem('holypotToken');
       localStorage.removeItem('holypotEntryId');
+      localStorage.removeItem('holypotStudentEntryId');
+      localStorage.removeItem('holypotMode');
 
-      // Guardar token y entryId en localStorage
+      // Guardar token y entryIds en localStorage
       if (res.data.token) {
         localStorage.setItem('holypotToken', res.data.token);
       }
       if (res.data.entryId) {
         localStorage.setItem('holypotEntryId', res.data.entryId);
       }
+      if (res.data.studentEntryId) {
+        localStorage.setItem('holypotStudentEntryId', res.data.studentEntryId);
+      }
 
-      // Navegar al dashboard
-      navigate('/dashboard');
+      // Navegar: si tiene entry real → dashboard real, sino si tiene estudiante → student dashboard
+      if (res.data.entryId) {
+        navigate('/dashboard');
+      } else if (res.data.studentEntryId) {
+        navigate('/student-dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       alert('Error: ' + (err.response?.data?.error || 'Credenciales incorrectas'));
     } finally {
