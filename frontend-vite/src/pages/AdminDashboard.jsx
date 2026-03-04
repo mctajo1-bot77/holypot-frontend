@@ -453,7 +453,7 @@ const AdminDashboard = () => {
               variant="outline"
               size="sm"
               className="border-[#2A2A2A] text-gray-400 hover:border-[#FFD700]/40 hover:text-white gap-1.5 text-xs"
-              onClick={fetchData}
+              onClick={() => { lastFetchedRef.current = 0; fetchData(); }}
             >
               <RefreshCw className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{t('admin.refresh')}</span>
