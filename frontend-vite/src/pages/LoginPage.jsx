@@ -54,7 +54,12 @@ const LoginPage = () => {
         navigate('/dashboard');
       }
     } catch (err) {
-      alert('Error: ' + (err.response?.data?.error || 'Credenciales incorrectas'));
+      const code = err.response?.data?.code;
+      if (code === 'EMAIL_NOT_VERIFIED') {
+        alert('Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada (y la carpeta spam).');
+      } else {
+        alert('Error: ' + (err.response?.data?.error || 'Credenciales incorrectas'));
+      }
     } finally {
       setLoading(false);
     }

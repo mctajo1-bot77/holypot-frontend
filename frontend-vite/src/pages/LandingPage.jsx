@@ -291,10 +291,9 @@ const LandingPage = () => {
             </Button>
             <Link to="/student-register">
               <Button
-                variant="outline"
-                className="border-blue-500/50 text-blue-300 hover:bg-blue-500/10 hover:text-blue-200 text-base md:text-lg px-8 py-6 font-bold rounded-full transition duration-300"
+                className="bg-[#0F172A] border-2 border-[#D4AF37]/60 text-[#D4AF37] hover:bg-[#D4AF37]/10 hover:border-[#FFD700] text-base md:text-lg px-8 py-6 font-bold rounded-full transition duration-300 shadow-lg shadow-[#D4AF37]/10"
               >
-                🎓 Try for Free (Student Mode)
+                🎓 Modo Estudiante — Gratis
               </Button>
             </Link>
           </div>

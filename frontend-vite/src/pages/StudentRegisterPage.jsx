@@ -17,10 +17,9 @@ import HCaptcha from '@hcaptcha/react-hcaptcha';
 
 const HCAPTCHA_SITEKEY = 'a0b26f92-ba34-47aa-be42-c936e488a6f4';
 
+// Modo estudiante: solo nivel básico (10,000 USDT virtual)
 const LEVELS = [
-  { id: 'basic', label: 'Basic', capital: '10,000', desc: 'Capital virtual $10,000', color: 'text-yellow-400 border-yellow-400' },
-  { id: 'medium', label: 'Medium', capital: '50,000', desc: 'Capital virtual $50,000', color: 'text-blue-400 border-blue-400' },
-  { id: 'premium', label: 'Premium', capital: '100,000', desc: 'Capital virtual $100,000', color: 'text-purple-400 border-purple-400' },
+  { id: 'basic', label: 'Basic', capital: '10,000', desc: 'Capital virtual $10,000 USDT', color: 'text-yellow-400 border-yellow-400' },
 ];
 
 const COUNTRIES = [
@@ -39,7 +38,7 @@ export default function StudentRegisterPage() {
   const navigate = useNavigate();
   const captchaRef = useRef(null);
 
-  const [step, setStep] = useState('form'); // 'form' | 'success'
+  const [step, setStep] = useState('form'); // 'form' | 'verify-email' | 'success'
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('basic');
@@ -103,8 +102,14 @@ export default function StudentRegisterPage() {
       }
 
       const res = await apiClient.post('/student/join', payload);
-      const { token, studentEntryId } = res.data;
 
+      // Nuevo usuario: requiere verificación de email
+      if (res.data.requireEmailVerification) {
+        setStep('verify-email');
+        return;
+      }
+
+      const { token, studentEntryId } = res.data;
       localStorage.setItem('holypotToken', token);
       localStorage.setItem('holypotStudentEntryId', studentEntryId);
 
@@ -116,6 +121,8 @@ export default function StudentRegisterPage() {
 
       if (code === 'SURVEY_REQUIRED') {
         toast.error('Debes completar la encuesta de la competencia anterior para volver a participar.');
+      } else if (code === 'EMAIL_NOT_VERIFIED') {
+        setStep('verify-email');
       } else {
         toast.error(msg);
       }
@@ -125,6 +132,31 @@ export default function StudentRegisterPage() {
       setLoading(false);
     }
   };
+
+  if (step === 'verify-email') {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0A0A0A' }}>
+        <Toaster />
+        <div className="text-center space-y-4 p-8 max-w-md">
+          <div className="w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto">
+            <span className="text-4xl">📧</span>
+          </div>
+          <h2 className="text-2xl font-bold text-white">Verifica tu email</h2>
+          <p className="text-gray-400">
+            Te enviamos un enlace de verificación a <span className="text-blue-400 font-semibold">{form.email}</span>.
+            Haz clic en el enlace para activar tu cuenta y luego vuelve a iniciar sesión.
+          </p>
+          <p className="text-gray-500 text-sm">Revisa también tu carpeta de spam.</p>
+          <button
+            className="text-blue-400 underline text-sm hover:text-blue-300"
+            onClick={() => setStep('form')}
+          >
+            ← Volver al formulario
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (step === 'success') {
     return (
@@ -170,11 +202,10 @@ export default function StudentRegisterPage() {
         </div>
 
         {/* Benefits */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {[
             { icon: <Coins className="w-5 h-5 text-yellow-400" />, text: 'Capital virtual gratuito' },
             { icon: <TrendingUp className="w-5 h-5 text-green-400" />, text: 'Trading real simulado' },
-            { icon: <Trophy className="w-5 h-5 text-purple-400" />, text: 'Rankings y ganadores' },
             { icon: <BookOpen className="w-5 h-5 text-blue-400" />, text: 'IA te da 3 consejos diarios' },
           ].map((b, i) => (
             <div key={i} className="flex flex-col items-center gap-2 p-3 rounded-lg text-center"
@@ -186,26 +217,17 @@ export default function StudentRegisterPage() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
-          {/* Level selection */}
+          {/* Competencia única */}
           <div className="space-y-3">
-            <h3 className="font-semibold text-gray-300">Selecciona tu nivel</h3>
-            {LEVELS.map(lv => (
-              <button
-                key={lv.id}
-                onClick={() => setSelectedLevel(lv.id)}
-                className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                  selectedLevel === lv.id
-                    ? `${lv.color} bg-white/5`
-                    : 'border-gray-700 text-gray-400 hover:border-gray-500'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold">{lv.label}</span>
-                  {selectedLevel === lv.id && <CheckCircle2 className="w-4 h-4" />}
-                </div>
-                <p className="text-sm mt-1 opacity-80">{lv.desc}</p>
-              </button>
-            ))}
+            <h3 className="font-semibold text-gray-300">Competencia Modo Estudiante</h3>
+
+            <div className="w-full text-left p-4 rounded-lg border-2 border-yellow-400 text-yellow-400 bg-white/5">
+              <div className="flex items-center justify-between">
+                <span className="font-bold">Basic — Capital Virtual</span>
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+              <p className="text-sm mt-1 opacity-80">$10,000 USDT virtual · Sin costo</p>
+            </div>
 
             <div className="p-3 rounded-lg text-sm" style={{ background: '#1a1a2e', border: '1px solid #3a3a6e' }}>
               <AlertTriangle className="w-4 h-4 text-yellow-400 inline mr-2" />
