@@ -106,6 +106,7 @@ function Dashboard() {
 
   const [editingPosition, setEditingPosition] = useState(null);
 
+  const [userNickname, setUserNickname] = useState('');
   const [myPayouts, setMyPayouts] = useState([]);
   const [showWinModal, setShowWinModal] = useState(false);
   const [latestWin, setLatestWin] = useState(null);
@@ -202,6 +203,14 @@ function Dashboard() {
     localStorage.clear();
     navigate('/login');
   };
+
+  // Cargar nickname del usuario al montar
+  useEffect(() => {
+    if (isAdminSession) { setUserNickname('Admin'); return; }
+    apiClient.get('/me').then(res => {
+      if (res.data?.user?.nickname) setUserNickname(res.data.user.nickname);
+    }).catch(() => {});
+  }, [isAdminSession]);
 
   // ✅ CORRECCIÓN: Permitir admins sin entryId
   useEffect(() => {
@@ -703,6 +712,16 @@ function Dashboard() {
         <aside className="hidden md:flex fixed left-0 top-[112px] bottom-0 w-56 bg-[#0B1120] border-r border-[#1E2A3A] flex-col z-30">
           <nav className="flex flex-col flex-1 px-3 py-5 overflow-y-auto">
 
+            {/* ─── USER NICKNAME ────────────────────────────── */}
+            {userNickname && (
+              <div className="flex items-center gap-2 px-2 mb-4 pb-3 border-b border-[#1E2A3A]">
+                <div className="w-7 h-7 rounded-full bg-[#FFD700]/20 flex items-center justify-center shrink-0">
+                  <span className="text-[#FFD700] text-xs font-bold">{userNickname.charAt(0).toUpperCase()}</span>
+                </div>
+                <span className="text-[#FFD700] text-xs font-semibold truncate">{userNickname}</span>
+              </div>
+            )}
+
             {/* ─── TRADING ──────────────────────────────────── */}
             <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-2 mb-2">Trading</p>
 
@@ -746,7 +765,7 @@ function Dashboard() {
             </Button>
 
             {/* ─── ADMIN ────────────────────────────────────── */}
-            {isAdminSession && (
+            {isAdminSession && adminTestMode && (
               <>
                 <div className="border-t border-[#1E2A3A] my-3" />
                 <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-2 mb-2">Admin</p>
@@ -797,7 +816,7 @@ function Dashboard() {
             <Shield className="h-5 w-5" />
             <span className="text-[9px] font-medium">Pagos</span>
           </Button>
-          {isAdminSession && (
+          {isAdminSession && adminTestMode && (
             <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 flex-1 flex-col gap-0.5 h-14 rounded-none" onClick={() => navigate('/admin')}>
               <Crown className="h-5 w-5" />
               <span className="text-[9px] font-medium">Admin</span>
@@ -917,8 +936,8 @@ function Dashboard() {
               ))}
             </div>
 
-            {/* ── STUDENT POOL (visible to all) ───────────────────────────── */}
-            {studentCompetitions.length > 0 && (
+            {/* ── STUDENT POOL (solo en modo real, oculto en modo estudiante) ── */}
+            {!isStudentMode && studentCompetitions.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(59,130,246,0.2)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.4)' }}>
@@ -1349,8 +1368,8 @@ function Dashboard() {
               />
             )}
 
-            {/* ── RANKING ───────────────────────────────────────────────────── */}
-            <div className="bg-[#161616] border border-[#2A2A2A] rounded-2xl overflow-hidden">
+            {/* ── RANKING (oculto en modo estudiante) ──────────────────────── */}
+            {!isStudentMode && <div className="bg-[#161616] border border-[#2A2A2A] rounded-2xl overflow-hidden">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 border-b border-[#2A2A2A]">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-[#FFD700]/15 flex items-center justify-center">
@@ -1433,7 +1452,7 @@ function Dashboard() {
                   </TableBody>
                 </Table>
               </div>
-            </div>
+            </div>}
 
             {/* ── COMPETITION ENDED MODAL ───────────────────────────────────── */}
             {!isAdminSession && (
