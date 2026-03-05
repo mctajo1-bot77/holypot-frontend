@@ -6,7 +6,7 @@ import { Navigate } from 'react-router-dom';
 // - Usuario normal: tiene 'token'
 // - Admin en modo "ver como usuario": tiene 'holypotAdminToken' + 'holypotEntryId'
 const isAuthenticated = () => {
-  const userToken = localStorage.getItem('token');
+  const userToken = localStorage.getItem('holypotToken');
   if (userToken) return true;
 
   const adminToken = localStorage.getItem('holypotAdminToken');
