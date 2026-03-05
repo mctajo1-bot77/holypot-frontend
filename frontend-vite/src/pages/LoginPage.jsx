@@ -131,12 +131,17 @@ const LoginPage = () => {
                 </Button>
               </form>
 
-              <div className="mt-6 md:mt-8 text-center text-gray-300">
+              <div className="mt-6 md:mt-8 text-center text-gray-300 space-y-3">
                 <p className="text-sm md:text-base">
                   {t('form.noAccount')}{' '}
                   <Button asChild variant="link" className="text-holy text-base md:text-xl underline hover:text-holyGlow">
                     <Link to="/">{t('form.registerHere')}</Link>
                   </Button>
+                </p>
+                <p className="text-sm">
+                  <Link to="/forgot-password" className="text-gray-400 hover:text-gray-200 underline text-sm">
+                    ¿Olvidaste tu contraseña?
+                  </Link>
                 </p>
               </div>
             </CardContent>

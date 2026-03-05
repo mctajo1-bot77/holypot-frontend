@@ -20,6 +20,7 @@ import StudentRegisterPage from './pages/StudentRegisterPage';
 import StudentDashboard from './pages/StudentDashboard';
 import ForumPage from './pages/ForumPage';
 import ForumDetailPage from './pages/ForumDetailPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -34,6 +35,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/ganadores" element={<WinnersPage />} />
           <Route path="/pagos-verificados" element={<PagosVerificadosPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
           {/* RUTAS ESTUDIANTE */}
           <Route path="/student-register" element={<StudentRegisterPage />} />

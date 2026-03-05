@@ -270,12 +270,19 @@ export default function StudentRegisterPage() {
               <CardTitle className="text-white text-lg">
                 {existingUser ? 'Inicia sesión para unirte' : 'Crear cuenta de estudiante'}
               </CardTitle>
-              <button
-                className="text-xs text-blue-400 underline mt-1"
-                onClick={() => { setExistingUser(!existingUser); setErrors({}); }}
-              >
-                {existingUser ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
-              </button>
+              <div className="flex items-center gap-3 mt-1">
+                <button
+                  className="text-xs text-blue-400 underline"
+                  onClick={() => { setExistingUser(!existingUser); setErrors({}); }}
+                >
+                  {existingUser ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
+                </button>
+                {existingUser && (
+                  <Link to="/forgot-password" className="text-xs text-gray-500 hover:text-gray-300 underline">
+                    ¿Olvidaste tu contraseña?
+                  </Link>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {emailVerifiedReturn && (
