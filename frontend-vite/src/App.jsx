@@ -936,14 +936,24 @@ function Dashboard() {
               ))}
             </div>
 
-            {/* ── STUDENT POOL (solo en modo real, oculto en modo estudiante) ── */}
-            {!isStudentMode && studentCompetitions.length > 0 && (
+            {/* ── STUDENT POOL (visible en modo estudiante y modo real/admin) ── */}
+            {studentCompetitions.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(59,130,246,0.2)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.4)' }}>
-                    🎓 POOL ESTUDIANTE (Virtual)
+                    🎓 COMPETENCIA ESTUDIANTE
                   </span>
+                  {isStudentMode && (
+                    <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(34,197,94,0.15)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.3)' }}>
+                      Tu competencia activa
+                    </span>
+                  )}
                 </div>
+                {isStudentMode && (
+                  <div className="mb-3 p-3 rounded-lg text-xs text-blue-300/80" style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)' }}>
+                    💡 Este pool es <strong>100% virtual</strong>. Practicas con capital simulado sin arriesgar dinero real.
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {studentCompetitions.map(sc => (
                     <div key={sc.level} className="rounded-xl p-4 text-sm" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)' }}>
@@ -952,9 +962,9 @@ function Dashboard() {
                         <span className="text-xs text-blue-300/70 bg-blue-500/10 px-2 py-0.5 rounded-full">Virtual</span>
                       </div>
                       <div className="space-y-1 text-xs">
-                        <div className="flex justify-between"><span className="text-gray-500">Participantes</span><span className="text-gray-300">{sc.participants}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Estudiantes</span><span className="text-gray-300">{sc.participants}</span></div>
                         <div className="flex justify-between"><span className="text-gray-500">Pool virtual</span><span className="text-blue-300 font-semibold">{sc.virtualPool?.toFixed(0)} USDT</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500">Equiv. real</span><span className="text-yellow-400/70">${sc.realEquivalentPool?.toFixed(0)}</span></div>
+                        {!isStudentMode && <div className="flex justify-between"><span className="text-gray-500">Equiv. real</span><span className="text-yellow-400/70">${sc.realEquivalentPool?.toFixed(0)}</span></div>}
                         <div className="flex justify-between pt-1 border-t border-blue-500/20"><span className="text-gray-500">Cierre</span><span className="text-red-400 animate-pulse">{sc.timeLeft}</span></div>
                       </div>
                     </div>

@@ -43,6 +43,7 @@ export default function StudentRegisterPage() {
   const [captchaToken, setCaptchaToken] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('basic');
   const [existingUser, setExistingUser] = useState(false);
+  const [emailVerifiedReturn, setEmailVerifiedReturn] = useState(false);
 
   const [form, setForm] = useState({
     email: '',
@@ -168,6 +169,13 @@ export default function StudentRegisterPage() {
             🔁 Reenviar email de verificación
           </button>
           <button
+            className="w-full py-3 px-4 rounded-lg font-semibold text-sm transition"
+            style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)', color: '#4ade80' }}
+            onClick={() => { setEmailVerifiedReturn(true); setExistingUser(true); setStep('form'); }}
+          >
+            ✅ Ya verifiqué mi email → Continuar
+          </button>
+          <button
             className="text-gray-500 underline text-sm hover:text-gray-300"
             onClick={() => setStep('form')}
           >
@@ -262,14 +270,26 @@ export default function StudentRegisterPage() {
               <CardTitle className="text-white text-lg">
                 {existingUser ? 'Inicia sesión para unirte' : 'Crear cuenta de estudiante'}
               </CardTitle>
-              <button
-                className="text-xs text-blue-400 underline mt-1"
-                onClick={() => { setExistingUser(!existingUser); setErrors({}); }}
-              >
-                {existingUser ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
-              </button>
+              <div className="flex items-center gap-3 mt-1">
+                <button
+                  className="text-xs text-blue-400 underline"
+                  onClick={() => { setExistingUser(!existingUser); setErrors({}); }}
+                >
+                  {existingUser ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
+                </button>
+                {existingUser && (
+                  <Link to="/forgot-password" className="text-xs text-gray-500 hover:text-gray-300 underline">
+                    ¿Olvidaste tu contraseña?
+                  </Link>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
+              {emailVerifiedReturn && (
+                <div className="mb-3 p-3 rounded-lg text-sm" style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.35)', color: '#4ade80' }}>
+                  ✅ ¡Email verificado! Ingresa tu contraseña, resuelve el captcha y haz clic en <strong>Continuar</strong>.
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="space-y-3">
                 <div>
                   <Label className="text-gray-400 text-xs">Email</Label>
