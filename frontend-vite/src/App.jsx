@@ -212,25 +212,26 @@ function Dashboard() {
     }).catch(() => {});
   }, [isAdminSession]);
 
-  // ✅ CORRECCIÓN: Permitir admins sin entryId
+  // ✅ CORRECCIÓN: Permitir admins sin entryId y estudiantes con studentEntryId
   useEffect(() => {
     const stored = localStorage.getItem('holypotEntryId');
+    const studentStored = localStorage.getItem('holypotStudentEntryId');
     const isUserAdmin = isAdmin();
-    
-    // Si NO hay entryId Y NO es admin → redirigir
-    if (!stored && !isUserAdmin) {
+
+    // Si NO hay entryId Y NO es admin Y NO es estudiante → redirigir
+    if (!stored && !isUserAdmin && !studentStored) {
       console.log('❌ No entryId y no es admin - redirigiendo a /');
       window.location.href = '/';
       return;
     }
-    
+
     // Si es admin SIN entryId → mostrar mensaje pero permitir acceso
     if (!stored && isUserAdmin) {
       console.log('✅ Admin sin entryId - acceso permitido (modo vista)');
       setEntryId(''); // Dejar vacío
       return;
     }
-    
+
     // Usuario normal con entryId
     console.log('✅ Usuario con entryId:', stored);
     setEntryId(stored);
