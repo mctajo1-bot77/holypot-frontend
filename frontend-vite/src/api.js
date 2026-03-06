@@ -11,9 +11,14 @@ const apiClient = axios.create({
 });
 
 // INTERCEPTOR: Envía token como Authorization header en CADA petición
+// Prioridad: holypotToken (usuario) → holypotAdminToken (admin sin impersonar)
 apiClient.interceptors.request.use(config => {
-  const token = localStorage.getItem('holypotToken');
-  if (token && token !== 'undefined' && token !== 'null') {
+  const userToken = localStorage.getItem('holypotToken');
+  const adminToken = localStorage.getItem('holypotAdminToken');
+  const token = (userToken && userToken !== 'undefined' && userToken !== 'null')
+    ? userToken
+    : adminToken;
+  if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
