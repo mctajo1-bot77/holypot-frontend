@@ -118,7 +118,10 @@ const Profile = () => {
   const { t, lang } = useI18n();
 
   // ── State (unchanged from original) ──────────────────────────────────────
-  const [entryId] = useState(localStorage.getItem('holypotEntryId') || '');
+  const [entryId] = useState(
+    localStorage.getItem('holypotEntryId') ||
+    localStorage.getItem('holypotStudentEntryId') || ''
+  );
   const [profile, setProfile] = useState(null);
   const [advice, setAdvice] = useState(null);
   const [loading, setLoading] = useState(true);
